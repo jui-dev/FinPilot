@@ -1,0 +1,30 @@
+# dependencies
+/node_modules
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# production
+/build
+
+# typescript
+*.tsbuildinfo
+
+# local databases (SQLite arrives in F2; never commit data files)
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+
+# env files
+.env*
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*

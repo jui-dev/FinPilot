@@ -1,0 +1,10 @@
+.next/
+out/
+build/
+coverage/
+node_modules/
+package-lock.json
+next-env.d.ts
+
+# Frozen decision records: prose and hand-aligned tables, not reformatted by tooling.
+docs/
