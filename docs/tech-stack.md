@@ -28,14 +28,15 @@ src/components/  UI components + charts
 
 | Area | Choice | Why it fits FinPilot | Alternatives considered | Trade-off | Need or fashion? |
 |---|---|---|---|---|---|
-| Runtime / package manager | Node 24 LTS (exact LTS pinned at scaffold time), **npm** | A stable LTS; npm by decision | pnpm, Bun | none of consequence | need |
+| Runtime / package manager | **Node 22 (≥ 22.12) or Node 24 LTS**, enforced by `engines` + `engine-strict`; `.nvmrc` recommends 24.21.0. **npm** | Works on both LTS lines. Nothing in the stack needs Node 24: the highest floors are Vitest/Vite ≥ 22.12 and better-sqlite3 ≥ 22. | Node ≥ 24.16 only, to use the built-in `crypto.randomUUIDv7()` (rejected: see the IDs row); pnpm, Bun | Node 22 support ends April 2027; raise the floor to 24 during production evolution | need |
 | Language | **TypeScript, `strict`** | Money and type invariants benefit from strict typing; one language across the stack | — | — | need |
 | App framework | **Next.js (App Router)**, React 19, **one app** (no separate backend) | Derived numbers are computed on the server next to the DB, with no client-side financial maths. Server actions give fast forms; route handlers are there for later ingestion. One deployable. | Vite SPA + Fastify API (a cleaner API boundary, but two apps and more plumbing); React Router 7; SvelteKit | Coupling risk (contained by §1); some App Router caching complexity | Mostly need. It's also the market default, which helps interview familiarity. |
 | Database (V1) | **SQLite** via **`better-sqlite3`** (Drizzle `better-sqlite3` driver) | Zero setup, one file, easy reset. The most mature local SQLite driver, bundling upstream SQLite. Simple, fast test isolation. See §4. | `@libsql/client` (rejected for V1, §4); `node:sqlite` | Transactions must be synchronous (§4) | need |
 | ORM / migrations | **Drizzle ORM + drizzle-kit** | SQL-first. CHECK constraints and partial indexes are declared in the schema, views can be declared for typed queries, and typed raw SQL is available. Types are inferred from the schema. | Prisma (excellent DX, but CHECKs and views need hand-edited SQL, and it hides the SQL we want to show); Kysely (a great query builder, but hand-written migrations) | Schemas are dialect-specific, so moving to Postgres means porting the schema file (mechanical; §3). SQLite views need a custom migration (§3). | need |
 | Validation | **Zod** | One schema per input (e.g. `TransactionInput`), reused by the UI form, server actions, the future ingestion API and future **MCP tool definitions** (the TS MCP SDK also uses Zod schemas) | Valibot, ArkType | — | need; a strong reuse story |
 | Money | **Own small module** over safe integers | Single currency, integer minor units, one rounding point ([domain-model.md §3](domain-model.md)) | dinero.js | We must test it ourselves (unit + property tests) | need; a library would be overkill |
-| Dates | Calendar dates as `YYYY-MM-DD` values behind a small `CalendarDate` module, plus **date-fns v4** (with its timezone support) for arithmetic and "today in Asia/Dhaka" | The domain works with calendar dates, not instants | Temporal (adopt once runtime support is universal); Day.js; Luxon | A small helper to maintain | need |
+| Dates | Calendar dates as `YYYY-MM-DD` values behind a small `CalendarDate` module using **integer day-number arithmetic** (no JS `Date` objects). "Today in Asia/Dhaka" comes from the server-side Clock using the built-in `Intl.DateTimeFormat`. **date-fns v4** stays approved and allowlisted in the domain, but is installed only when a feature needs it. | The domain works with calendar dates, not instants. Day-number arithmetic can't be affected by the machine's time zone or daylight saving, and is verified against the JS engine's UTC calendar by property tests. | date-fns for calendar arithmetic (it operates on `Date` objects in local time); `@date-fns/tz` (not needed: time zones belong only to the Clock); Temporal (adopt once runtime support is universal); Day.js; Luxon | ~200 lines of our own code, fully property-tested | need |
+| IDs | **`uuid` v7** behind a domain `IdGenerator` interface; the implementation lives in `src/server` | Works on Node 22 and 24. Zero dependencies. Its RFC 9562 counter keeps IDs increasing within a millisecond (measured: 10,000/10,000 increasing, vs ~50% out of order for Node 24's built-in). **IDs are opaque: their time-ordering helps index locality but is never a business ordering of financial records.** | Node ≥ 24.16 built-in `crypto.randomUUIDv7()` (no ordering within a millisecond; forces Node 24) | One small dependency | need |
 | Styling | **Tailwind CSS v4** with **FinPilot's own design tokens** | Fast iteration; the tokens enforce the palette decided at the design gate | CSS Modules, vanilla-extract | Utility-class noise | need (speed) |
 | Components | **Radix primitives** (copied in via shadcn where convenient), **restyled completely** | Accessible dialogs, popovers and the keyboard-first Quick Add combobox | Hand-built components; Mantine; MUI | **Risk:** the default shadcn look is exactly the "generic SaaS dashboard" to avoid. We take the behaviour, not the appearance. | Need for behaviour. The shadcn look itself would be fashion, so it isn't used. |
 | Charts | **visx** (D3 scales and shapes for React) + our own SVG chart components. **Per-chart fallback to Recharts** if a chart in visx becomes disproportionately complex. **FinPilot must not become a charting-library project.** | V1 needs a small set of bespoke charts: the cash-flow bridge by category, the Available bridge, diverging month-over-month contribution bars, budget bullet bars and composition bars. Full control is what makes them read as serious financial charts rather than templates. | Recharts (faster, but waterfalls and diverging bars are workarounds, and it looks generic); ECharts (powerful but heavy, canvas-based, less React-native); Tremor (dashboard look, rejected); Observable Plot | More code per chart; tooltips and axes are ours to build | need, since charts are a differentiator |
@@ -123,17 +124,28 @@ Sources checked on 2026-09-22:
 - The better-sqlite3 native binary. Pin a Node LTS version that has prebuilt Windows binaries, so no C++ build tools are needed.
 - Chart effort. Use the per-chart Recharts fallback when visx becomes disproportionate.
 
-## 7. Open checks at scaffold time (F0/F1)
+## 7. Open checks at scaffold time (F0/F1) — resolved 2026-09-22
 
-Each item is to be verified against current package docs **before** code depends on it:
+1. **Node / better-sqlite3:** Node 24.21.0 is the Active LTS and 22.x is in maintenance; both are supported (see §2). better-sqlite3 13.0.3 bundles a Node-API `win32-x64` prebuild, so nothing is compiled on install. Verified on Node 22.22.0 and 24.21.0: it loads (SQLite 3.53.4), a `typeof` CHECK is enforced, serialise → clone works, and an immediate transaction rolls back. Note for F2: `@types/better-sqlite3` is at 9.6.0, behind the runtime's 13.
+2. **Versions:** see `package.json`. TypeScript is pinned to 5.9.x because typescript-eslint requires < 6.1 (TypeScript 7 exists). ESLint is pinned to 9.x because eslint-config-next's bundled plugins don't support ESLint 10. React follows Next's own template (19.2.x).
+3. **Transaction behaviour:** Drizzle 0.45.3 SQLite transactions accept `behavior: 'deferred' | 'immediate' | 'exclusive'`.
+4. **Views:** `sqliteView(...).existing()` exists; view DDL goes in a custom migration.
+5. **Partial indexes:** `index(...).on(...).where(sql)` exists.
+6. **UUIDv7:** the `uuid` package (see the IDs row in §2).
+7. **Domain protections:** ESLint rules scoped to `src/domain/**` (see §7.1).
 
-1. The exact Node LTS version, and better-sqlite3 prebuild availability for it on Windows.
-2. Current stable versions of Next.js, React, Drizzle ORM/drizzle-kit, Tailwind v4, Vitest, fast-check, Playwright, date-fns and Zod.
-3. Drizzle's SQLite transaction `behavior` option (immediate mode) with better-sqlite3.
-4. Drizzle `sqliteView(...).existing()` usage and the custom-migration workflow (`drizzle-kit generate --custom`).
-5. Partial unique index generation for SQLite (`uniqueIndex().on(...).where(...)`).
-6. The UUIDv7 generation approach (a small library, or a built-in if the runtime provides one).
-7. The ESLint mechanism for the `src/domain` import boundary.
+### 7.1 Domain protections (ESLint, `src/domain/**` only)
+
+- **Import allowlist:** only `./…` modules, `@/domain/…`, `zod` and `date-fns`. Everything else (frameworks, persistence, Node built-ins, outer layers, `uuid`, `@date-fns/tz`, any new package) is rejected by default. No `../` imports, no dynamic `import()`, no `require()`.
+- **Determinism:** the domain may not read ambient time or randomness:
+  - `Date.now()`, a zero-argument `new Date()`, and `Date()` called as a function
+  - `Math.random()` and `Temporal.Now`
+  - the `crypto` and `performance` globals
+  - the 22 date-fns functions that read the current time (list derived from the date-fns 4.4.0 source), including their deep and `fp` imports, and namespace imports of date-fns
+
+  Construction and parsing from explicit values stays allowed: `new Date(x)`, `Date.UTC`, `Date.parse`, and pure date-fns functions. "Today" comes only from the injected `Clock`; the real implementation is `src/server/clock.ts`.
+- **No local suppression:** `linterOptions.noInlineConfig` makes `eslint-disable` and `/* eslint … */` comments ineffective in the domain; ESLint reports them as warnings, which fail lint because warnings aren't allowed. An exception requires changing `eslint.config.mjs`, which is an architecture decision.
+- **Proof:** `tests/architecture/` runs the real ESLint config on forbidden and allowed probes. Removing any protection turns these tests red.
 
 ## 8. Explicit non-goals for V1 infrastructure
 
@@ -147,3 +159,7 @@ The public-demo architecture does **not** drive V1. There is no sandbox, per-vis
 | 2026-09-22 | Acceptance tests use an in-memory DB per test, built from a serialised migrated template (not a temporary file) | Aligns the stack table with the roadmap and the driver analysis |
 | 2026-09-22 | The E2E suite is "about four flows", not "2–3" | The approved roadmap defines four Playwright flows |
 | 2026-09-22 | UUIDv7 added to the open checks | It was proposed in the domain model and used in roadmap F1, but not listed in the stack table |
+| 2026-09-22 | **Runtime: Node 22 (≥ 22.12) or 24**, not 24 only; IDs via the `uuid` package | Approved decision B. Nothing else needs Node 24, cloning works on either LTS, and `uuid` orders IDs within a millisecond where Node's built-in doesn't. |
+| 2026-09-22 | UUIDv7 ordering is **not** a business ordering | Approved clarification: financial ordering is modelled explicitly (domain-model §2) |
+| 2026-09-22 | `CalendarDate` uses integer day-number arithmetic; date-fns not installed yet; `@date-fns/tz` removed from the domain allowlist | Found during F1: calendar-date arithmetic needs no library, and using `Date` objects would bring in local-time and daylight-saving hazards. Time zones belong only to the Clock (server), which uses `Intl`. date-fns remains approved for later use. |
+| 2026-09-22 | Deterministic-domain ESLint rules, and a ban on suppression comments in `src/domain` (§7.1) | Approved for F1 |
