@@ -23,14 +23,19 @@
     "ledger:scenario": "tsx scripts/ledger-scenario.ts"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "1.1.23",
     "better-sqlite3": "13.0.3",
     "drizzle-orm": "0.45.3",
+    "lucide-react": "1.47.0",
     "next": "16.3.5",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "uuid": "14.0.2"
+    "uuid": "14.0.2",
+    "zod": "4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@tailwindcss/postcss": "4.3.3",
     "@types/better-sqlite3": "9.6.0",
     "@types/node": "24.13.6",
     "@types/react": "19.2.18",
@@ -41,6 +46,7 @@
     "eslint-config-prettier": "10.1.8",
     "fast-check": "4.10.2",
     "prettier": "3.9.8",
+    "tailwindcss": "4.3.3",
     "tsx": "4.23.15",
     "typescript": "5.9.3",
     "vite": "8.3.0",
