@@ -116,7 +116,7 @@
   - `feat(ledger): transaction services and derived balances`
   - `test: ledger constraints, properties and first acceptance assertions`
 
-> **Design gate:** the UI/UX architecture and visual direction must be approved before Stage 3.
+> **Design gate:** the UI/UX architecture and visual direction must be approved before Stage 3. **Direction approved 2026-09-22 → [design-direction.md](design-direction.md).** The Stage 3 implementation boundary still needs its own approval.
 
 ### Milestone A — "A ledger you can trust" — tag `v0.1-ledger`
 

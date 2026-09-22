@@ -248,3 +248,4 @@ FinPilot must immediately read as a serious **money-management** product. It mus
 - **Layout:** excellent whitespace, subtle borders and shadows, strong information hierarchy, serious financial charts.
 - **Avoid:** mountains, motivational illustrations, quotes, lifestyle imagery, excessive gradients, and decorative cards without a function.
 - **Design gate:** the UI/UX architecture and visual design are agreed in a dedicated discussion during foundation stages F0–F2, and **must be approved before Stage 3** (see [roadmap.md](roadmap.md)). No generic dashboard design is improvised during implementation.
+- **Design gate outcome (2026-09-22):** the approved direction is recorded in [design-direction.md](design-direction.md). It refines this palette into semantic tokens and lists the reference-driven proposals that would touch frozen decisions (§6, §9) as open items. Nothing in this baseline changes until those items are decided.
