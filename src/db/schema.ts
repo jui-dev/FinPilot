@@ -1,4 +1,6 @@
 import { sql } from "drizzle-orm";
+import { ACCOUNT_TYPES } from "@/domain/ledger/accounts";
+import { CATEGORY_KINDS, TRANSACTION_TYPES } from "@/domain/ledger/transactions";
 import {
   check,
   foreignKey,
@@ -52,14 +54,6 @@ export const owners = sqliteTable(
 // accounts
 // ---------------------------------------------------------------------------
 
-export const ACCOUNT_TYPE_VALUES = [
-  "cash",
-  "bank",
-  "mobile_wallet",
-  "savings",
-  "credit_card",
-] as const;
-
 export const accounts = sqliteTable(
   "accounts",
   {
@@ -69,7 +63,7 @@ export const accounts = sqliteTable(
       .references(() => owners.id, { onDelete: "restrict" }),
     name: text("name").notNull(),
     /** Asset/liability class is derived from the type in domain code, never stored. */
-    type: text("type", { enum: ACCOUNT_TYPE_VALUES }).notNull(),
+    type: text("type", { enum: ACCOUNT_TYPES }).notNull(),
     currency: text("currency").notNull(),
     includedInAvailable: integer("included_in_available", { mode: "boolean" }).notNull(),
     /** The account's start date: no transaction may be dated before it. */
@@ -96,8 +90,6 @@ export const accounts = sqliteTable(
 // categories
 // ---------------------------------------------------------------------------
 
-export const CATEGORY_KIND_VALUES = ["income", "expense"] as const;
-
 export const categories = sqliteTable(
   "categories",
   {
@@ -106,7 +98,7 @@ export const categories = sqliteTable(
       .notNull()
       .references(() => owners.id, { onDelete: "restrict" }),
     name: text("name").notNull(),
-    kind: text("kind", { enum: CATEGORY_KIND_VALUES }).notNull(),
+    kind: text("kind", { enum: CATEGORY_KINDS }).notNull(),
     archivedAt: text("archived_at"),
     ...timestamps,
   },
@@ -122,15 +114,6 @@ export const categories = sqliteTable(
 // transactions — Model S (docs/domain-model.md §1)
 // ---------------------------------------------------------------------------
 
-export const TRANSACTION_TYPE_VALUES = [
-  "income",
-  "expense",
-  "refund",
-  "transfer",
-  "opening_balance",
-  "adjustment",
-] as const;
-
 export const transactions = sqliteTable(
   "transactions",
   {
@@ -141,7 +124,7 @@ export const transactions = sqliteTable(
       .references(() => owners.id, { onDelete: "restrict" }),
     /** Deterministic per-owner recording order; immutable once assigned. */
     sequence: integer("sequence").notNull(),
-    type: text("type", { enum: TRANSACTION_TYPE_VALUES }).notNull(),
+    type: text("type", { enum: TRANSACTION_TYPES }).notNull(),
     /** Calendar date (no time, no zone). Business order: (occurred_on, sequence). */
     occurredOn: text("occurred_on").notNull(),
     /** Signed effect on account_id, in integer minor units. */

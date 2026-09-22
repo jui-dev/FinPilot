@@ -21,4 +21,5 @@ export const ARCHITECTURE_RULES: ReadonlySet<string> = new Set([
   "no-restricted-imports",
   "no-restricted-syntax",
   "no-restricted-globals",
+  "no-restricted-properties",
 ]);

@@ -1,6 +1,6 @@
 import { integer, sqliteView, text } from "drizzle-orm/sqlite-core";
 
-import { TRANSACTION_TYPE_VALUES } from "./schema";
+import { TRANSACTION_TYPES } from "@/domain/ledger/transactions";
 
 /**
  * Typed declarations of the views created by migration 0001_ledger_views.sql.
@@ -11,7 +11,7 @@ export const activeTransactions = sqliteView("active_transactions", {
   id: text("id").notNull(),
   ownerId: text("owner_id").notNull(),
   sequence: integer("sequence").notNull(),
-  type: text("type", { enum: TRANSACTION_TYPE_VALUES }).notNull(),
+  type: text("type", { enum: TRANSACTION_TYPES }).notNull(),
   occurredOn: text("occurred_on").notNull(),
   amountMinor: integer("amount_minor").notNull(),
   accountId: text("account_id").notNull(),
@@ -33,5 +33,5 @@ export const accountEntries = sqliteView("account_entries", {
   deltaMinor: integer("delta_minor").notNull(),
   occurredOn: text("occurred_on").notNull(),
   sequence: integer("sequence").notNull(),
-  type: text("type", { enum: TRANSACTION_TYPE_VALUES }).notNull(),
+  type: text("type", { enum: TRANSACTION_TYPES }).notNull(),
 }).existing();

@@ -124,10 +124,32 @@ const domainRules = {
   },
 };
 
+/**
+ * Only repositories open database transactions (docs/tech-stack.md §4): every
+ * multi-step write is a synchronous transaction script inside
+ * src/server/repositories; services stay async and never call .transaction().
+ * (A separate rule from no-restricted-syntax, so the domain's list is not overridden.)
+ */
+const transactionBoundary = {
+  files: ["src/**/*.{ts,tsx}"],
+  ignores: ["src/server/repositories/**"],
+  rules: {
+    "no-restricted-properties": [
+      "error",
+      {
+        property: "transaction",
+        message:
+          "Database transactions are opened only in src/server/repositories (synchronous transaction scripts). See docs/tech-stack.md §4.",
+      },
+    ],
+  },
+};
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   domainRules,
+  transactionBoundary,
   prettier,
   globalIgnores([".next/**", "out/**", "build/**", "coverage/**", "next-env.d.ts"]),
 ]);
