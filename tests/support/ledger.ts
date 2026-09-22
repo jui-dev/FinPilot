@@ -12,10 +12,11 @@ import { freshDatabase } from "./database";
 export const d = calendarDateFromIso;
 export const taka = fromMajor;
 
-/** Unwraps a successful ServiceResult, failing the test with the error otherwise. */
-export function ok<T>(result: ServiceResult<T>): T {
-  if (!result.ok)
-    throw new Error(`Expected success, got ${result.error.code}: ${result.error.message}`);
+/** Unwraps a successful ServiceResult or CommandResult, failing the test with the error otherwise. */
+export function ok<T>(
+  result: { readonly ok: true; readonly value: T } | { readonly ok: false },
+): T {
+  if (!result.ok) throw new Error(`Expected success, got ${JSON.stringify(result)}`);
   return result.value;
 }
 

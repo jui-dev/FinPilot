@@ -6,6 +6,7 @@ import type { CategoryKind } from "@/domain/ledger/transactions";
 import { ZERO, type Money } from "@/domain/money";
 import { writeContext, type ServiceContext } from "@/server/context";
 import { runScript, type ServiceResult } from "@/server/errors";
+import * as setup from "@/server/repositories/setup-repository";
 import {
   insertAccount,
   insertCategory,
@@ -58,4 +59,68 @@ export async function getAccounts(ctx: ServiceContext) {
 
 export async function getCategories(ctx: ServiceContext) {
   return listCategories(ctx.db, ctx.ownerId);
+}
+
+// ---------------------------------------------------------------------------
+// Account and category lifecycle
+// ---------------------------------------------------------------------------
+
+/** Archives an account; only allowed at a zero balance. */
+export async function archiveAccount(
+  ctx: ServiceContext,
+  id: string,
+): Promise<ServiceResult<void>> {
+  return runScript(() => setup.archiveAccount(ctx.db, writeContext(ctx), id));
+}
+
+export async function restoreAccount(
+  ctx: ServiceContext,
+  id: string,
+): Promise<ServiceResult<void>> {
+  return runScript(() => setup.restoreAccount(ctx.db, writeContext(ctx), id));
+}
+
+/** Deletes an account that no transaction has ever referenced; otherwise archive it. */
+export async function deleteAccount(ctx: ServiceContext, id: string): Promise<ServiceResult<void>> {
+  return runScript(() => setup.deleteAccount(ctx.db, writeContext(ctx), id));
+}
+
+/** How many rows (including soft-deleted ones) reference each account. */
+export async function getAccountReferenceCounts(ctx: ServiceContext) {
+  return setup.accountReferenceCounts(ctx.db, ctx.ownerId);
+}
+
+export async function renameCategory(
+  ctx: ServiceContext,
+  id: string,
+  name: string,
+): Promise<ServiceResult<void>> {
+  return runScript(() => setup.renameCategory(ctx.db, writeContext(ctx), id, name));
+}
+
+export async function archiveCategory(
+  ctx: ServiceContext,
+  id: string,
+): Promise<ServiceResult<void>> {
+  return runScript(() => setup.setCategoryArchived(ctx.db, writeContext(ctx), id, true));
+}
+
+export async function restoreCategory(
+  ctx: ServiceContext,
+  id: string,
+): Promise<ServiceResult<void>> {
+  return runScript(() => setup.setCategoryArchived(ctx.db, writeContext(ctx), id, false));
+}
+
+/** Deletes a category no transaction has ever used; otherwise archive it. */
+export async function deleteCategory(
+  ctx: ServiceContext,
+  id: string,
+): Promise<ServiceResult<void>> {
+  return runScript(() => setup.deleteCategory(ctx.db, writeContext(ctx), id));
+}
+
+/** How many rows (including soft-deleted ones) use each category. */
+export async function getCategoryReferenceCounts(ctx: ServiceContext) {
+  return setup.categoryReferenceCounts(ctx.db, ctx.ownerId);
 }

@@ -6,6 +6,14 @@ import type { DatabaseHandle } from "./client";
 
 export const MIGRATIONS_FOLDER = path.resolve(process.cwd(), "src/db/migrations");
 
+/** True when the database has been migrated (the ledger tables exist). */
+export function hasLedgerSchema(handle: DatabaseHandle): boolean {
+  const row = handle.sqlite
+    .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'owners'")
+    .get();
+  return row !== undefined;
+}
+
 /**
  * Applies all pending migrations. Forward-only; applied migrations are never edited.
  *
