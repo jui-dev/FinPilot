@@ -28,16 +28,18 @@ describe("acceptance catalogue", () => {
     expect(new Set(catalogued)).toEqual(documented);
   });
 
-  it("repeats an ID only when split into (ledger) and (Available) parts", () => {
-    const seen = new Map<string, string[]>();
+  it("repeats an ID only as distinct (ledger) / (net worth) / (Available) parts, one per stage", () => {
+    const seen = new Map<string, { part: string | undefined; stage: string }[]>();
     for (const stage of ACCEPTANCE_CATALOGUE) {
-      for (const a of stage.assertions) seen.set(a.id, [...(seen.get(a.id) ?? []), a.title]);
+      for (const a of stage.assertions) {
+        const part = a.title.match(/^\((ledger|net worth|Available)\)/)?.[1];
+        seen.set(a.id, [...(seen.get(a.id) ?? []), { part, stage: stage.stage }]);
+      }
     }
-    for (const [, titles] of [...seen].filter(([, t]) => t.length > 1)) {
-      expect(titles.map((t) => t.match(/^\((ledger|Available)\)/)?.[1]).sort()).toEqual([
-        "Available",
-        "ledger",
-      ]);
+    for (const [, parts] of [...seen].filter(([, p]) => p.length > 1)) {
+      expect(parts.every((p) => p.part !== undefined)).toBe(true);
+      expect(new Set(parts.map((p) => p.part)).size).toBe(parts.length);
+      expect(new Set(parts.map((p) => p.stage)).size).toBe(parts.length);
     }
   });
 });

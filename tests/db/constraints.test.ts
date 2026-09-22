@@ -1,0 +1,321 @@
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
+import type { DatabaseHandle } from "@/db/client";
+
+import { freshDatabase } from "../support/database";
+
+/**
+ * The database is the last line of defence: these tests bypass the domain and
+ * services entirely and insert raw rows, proving each constraint on its own.
+ */
+let h: DatabaseHandle;
+let seq = 100;
+
+const NOW = "2026-09-22T00:00:00.000Z";
+
+function exec(sql: string, ...params: unknown[]) {
+  return h.sqlite.prepare(sql).run(...params);
+}
+
+function seedOwner(id: string) {
+  exec(
+    "INSERT INTO owners (id, name, base_currency, time_zone, created_at, updated_at) VALUES (?, 'O', 'BDT', 'Asia/Dhaka', ?, ?)",
+    id,
+    NOW,
+    NOW,
+  );
+  for (const [acc, type] of [
+    ["bank", "bank"],
+    ["cash", "cash"],
+    ["visa", "credit_card"],
+  ] as const) {
+    exec(
+      "INSERT INTO accounts (id, owner_id, name, type, currency, included_in_available, opened_on, created_at, updated_at) VALUES (?, ?, ?, ?, 'BDT', 1, '2026-08-01', ?, ?)",
+      `${id}-${acc}`,
+      id,
+      acc,
+      type,
+      NOW,
+      NOW,
+    );
+  }
+  exec(
+    "INSERT INTO categories (id, owner_id, name, kind, created_at, updated_at) VALUES (?, ?, 'Shopping', 'expense', ?, ?)",
+    `${id}-shopping`,
+    id,
+    NOW,
+    NOW,
+  );
+}
+
+interface Row {
+  id: string;
+  owner_id: string;
+  sequence: number;
+  type: string;
+  occurred_on: string;
+  amount_minor: unknown;
+  account_id: string;
+  counter_account_id: string | null;
+  category_id: string | null;
+  refund_of_id: string | null;
+  deleted_at: string | null;
+}
+
+function insert(patch: Partial<Row> = {}) {
+  const row: Row = {
+    id: `tx-${++seq}`,
+    owner_id: "o1",
+    sequence: seq,
+    type: "expense",
+    occurred_on: "2026-09-10",
+    amount_minor: -500,
+    account_id: "o1-bank",
+    counter_account_id: null,
+    category_id: "o1-shopping",
+    refund_of_id: null,
+    deleted_at: null,
+    ...patch,
+  };
+  exec(
+    `INSERT INTO transactions (id, owner_id, sequence, type, occurred_on, amount_minor, account_id,
+       counter_account_id, category_id, refund_of_id, deleted_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    row.id,
+    row.owner_id,
+    row.sequence,
+    row.type,
+    row.occurred_on,
+    row.amount_minor,
+    row.account_id,
+    row.counter_account_id,
+    row.category_id,
+    row.refund_of_id,
+    row.deleted_at,
+    NOW,
+    NOW,
+  );
+  return row.id;
+}
+
+function rejects(patch: Partial<Row>, pattern: RegExp) {
+  expect(() => insert(patch)).toThrow(pattern);
+}
+
+beforeEach(() => {
+  h = freshDatabase();
+  seedOwner("o1");
+  seedOwner("o2");
+});
+afterEach(() => h.close());
+
+describe("valid rows are accepted", () => {
+  it.each<[string, Partial<Row>]>([
+    ["expense", {}],
+    ["income", { type: "income", amount_minor: 100 }],
+    ["refund", { type: "refund", amount_minor: 100 }],
+    ["transfer", { type: "transfer", counter_account_id: "o1-cash", category_id: null }],
+    [
+      "opening balance (negative, liability)",
+      {
+        type: "opening_balance",
+        amount_minor: -1_200_000,
+        account_id: "o1-visa",
+        category_id: null,
+      },
+    ],
+    ["adjustment", { type: "adjustment", amount_minor: -35_000, category_id: null }],
+  ])("%s", (_label, patch) => {
+    expect(() => insert(patch)).not.toThrow();
+  });
+});
+
+describe("per-type shape CHECKs (named)", () => {
+  it.each<[string, Partial<Row>, string]>([
+    ["expense with a positive amount", { amount_minor: 500 }, "ck_transactions_expense"],
+    ["expense without a category", { category_id: null }, "ck_transactions_expense"],
+    [
+      "expense with a counter account",
+      { counter_account_id: "o1-cash" },
+      "ck_transactions_expense",
+    ],
+    ["income with a negative amount", { type: "income" }, "ck_transactions_income"],
+    [
+      "income without a category",
+      { type: "income", amount_minor: 1, category_id: null },
+      "ck_transactions_income",
+    ],
+    ["refund with a negative amount", { type: "refund" }, "ck_transactions_refund"],
+    [
+      "transfer without a counter account",
+      { type: "transfer", category_id: null },
+      "ck_transactions_transfer",
+    ],
+    [
+      "transfer to itself",
+      { type: "transfer", category_id: null, counter_account_id: "o1-bank" },
+      "ck_transactions_transfer",
+    ],
+    [
+      "transfer with a category",
+      { type: "transfer", counter_account_id: "o1-cash" },
+      "ck_transactions_transfer",
+    ],
+    [
+      "transfer with a positive amount",
+      { type: "transfer", amount_minor: 5, category_id: null, counter_account_id: "o1-cash" },
+      "ck_transactions_transfer",
+    ],
+    [
+      "zero opening balance",
+      { type: "opening_balance", amount_minor: 0, category_id: null },
+      "ck_transactions_opening_adjustment",
+    ],
+    [
+      "adjustment with a category",
+      { type: "adjustment", amount_minor: 5 },
+      "ck_transactions_opening_adjustment",
+    ],
+    ["unknown type", { type: "gift", amount_minor: 5 }, "ck_transactions_type"],
+  ])("rejects %s", (_label, patch, constraint) => {
+    rejects(patch, new RegExp(`CHECK constraint failed: ${constraint}`));
+  });
+
+  it("rejects refund_of_id on a non-refund", () => {
+    const expense = insert();
+    rejects({ refund_of_id: expense }, /ck_transactions_expense/);
+  });
+});
+
+describe("type-shape CHECKs (SQLite-only; native types in PostgreSQL)", () => {
+  it("rejects a non-integer amount", () => {
+    rejects({ amount_minor: -5.5 }, /ck_transactions_amount_integer/);
+    rejects({ amount_minor: "abc" as unknown }, /ck_transactions_amount_integer/);
+  });
+
+  it("stores integer-looking text as an integer (column affinity), which the CHECK then accepts", () => {
+    const id = insert({ amount_minor: "-500" as unknown });
+    expect(
+      h.sqlite.prepare("SELECT typeof(amount_minor) AS t FROM transactions WHERE id = ?").get(id),
+    ).toEqual({ t: "integer" });
+  });
+
+  it.each([
+    "2026-02-30",
+    "2026-9-10",
+    "10-09-2026",
+    "2026-09-10T00:00",
+    "2026-13-01",
+    "not a date",
+  ])("rejects the date %s", (date) => {
+    rejects({ occurred_on: date }, /ck_transactions_occurred_on/);
+  });
+
+  it("rejects an invalid account opened_on", () => {
+    expect(() =>
+      exec(
+        "INSERT INTO accounts (id, owner_id, name, type, currency, included_in_available, opened_on, created_at, updated_at) VALUES ('x', 'o1', 'X', 'cash', 'BDT', 1, '2026-13-01', ?, ?)",
+        NOW,
+        NOW,
+      ),
+    ).toThrow(/ck_accounts_opened_on/);
+  });
+});
+
+describe("owner-consistent composite foreign keys (D1)", () => {
+  it("rejects an unknown account", () => {
+    rejects({ account_id: "nope" }, /FOREIGN KEY constraint failed/);
+  });
+
+  it("rejects another owner's account, counter account, category or refund target", () => {
+    rejects({ account_id: "o2-bank" }, /FOREIGN KEY constraint failed/);
+    rejects(
+      { type: "transfer", category_id: null, counter_account_id: "o2-cash" },
+      /FOREIGN KEY constraint failed/,
+    );
+    rejects({ category_id: "o2-shopping" }, /FOREIGN KEY constraint failed/);
+    const foreignExpense = insert({
+      owner_id: "o2",
+      account_id: "o2-bank",
+      category_id: "o2-shopping",
+    });
+    rejects(
+      { type: "refund", amount_minor: 1, refund_of_id: foreignExpense },
+      /FOREIGN KEY constraint failed/,
+    );
+  });
+
+  it("restricts deleting an account that has transactions", () => {
+    insert();
+    expect(() => exec("DELETE FROM accounts WHERE id = 'o1-bank'")).toThrow(
+      /FOREIGN KEY constraint failed/,
+    );
+  });
+});
+
+describe("uniqueness", () => {
+  it("allows at most one ACTIVE opening balance per account", () => {
+    const first = insert({ type: "opening_balance", amount_minor: 100, category_id: null });
+    rejects(
+      { type: "opening_balance", amount_minor: 200, category_id: null },
+      /UNIQUE constraint failed/,
+    );
+    exec("UPDATE transactions SET deleted_at = ? WHERE id = ?", NOW, first);
+    expect(() =>
+      insert({ type: "opening_balance", amount_minor: 200, category_id: null }),
+    ).not.toThrow();
+    expect(() => exec("UPDATE transactions SET deleted_at = NULL WHERE id = ?", first)).toThrow(
+      /UNIQUE constraint failed/,
+    );
+  });
+
+  it("permits opening balances on different accounts", () => {
+    insert({ type: "opening_balance", amount_minor: 100, category_id: null });
+    expect(() =>
+      insert({
+        type: "opening_balance",
+        amount_minor: 100,
+        category_id: null,
+        account_id: "o1-cash",
+      }),
+    ).not.toThrow();
+  });
+
+  it("rejects a duplicate (owner, sequence) but allows the same sequence for another owner", () => {
+    insert({ sequence: 7 });
+    rejects({ sequence: 7 }, /UNIQUE constraint failed/);
+    expect(() =>
+      insert({ sequence: 7, owner_id: "o2", account_id: "o2-bank", category_id: "o2-shopping" }),
+    ).not.toThrow();
+  });
+
+  it("rejects duplicate account names per owner, case-insensitively", () => {
+    expect(() =>
+      exec(
+        "INSERT INTO accounts (id, owner_id, name, type, currency, included_in_available, opened_on, created_at, updated_at) VALUES ('y', 'o1', 'BANK', 'bank', 'BDT', 1, '2026-08-01', ?, ?)",
+        NOW,
+        NOW,
+      ),
+    ).toThrow(/UNIQUE constraint failed/);
+  });
+});
+
+describe("account_entries view", () => {
+  it("mirrors transfers so they net to zero, and hides soft-deleted rows", () => {
+    insert({
+      type: "transfer",
+      amount_minor: -2_000,
+      counter_account_id: "o1-cash",
+      category_id: null,
+    });
+    const deleted = insert({ amount_minor: -700 });
+    exec("UPDATE transactions SET deleted_at = ? WHERE id = ?", NOW, deleted);
+    const entries = h.sqlite
+      .prepare("SELECT account_id, delta_minor FROM account_entries ORDER BY account_id")
+      .all();
+    expect(entries).toEqual([
+      { account_id: "o1-bank", delta_minor: -2_000 },
+      { account_id: "o1-cash", delta_minor: 2_000 },
+    ]);
+  });
+});

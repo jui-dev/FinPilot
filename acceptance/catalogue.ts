@@ -5,8 +5,8 @@
  *
  * Amounts are whole taka; the implementation stores integer poisha.
  * Mutations M1–M3 are applied independently to the base scenario.
- * Where one documented assertion is verified in two stages, it appears twice
- * with a "(ledger)" / "(Available)" suffix.
+ * Where one documented assertion is verified across stages, it appears once per
+ * stage with a "(ledger)", "(net worth)" or "(Available)" part.
  */
 export interface AcceptanceAssertion {
   readonly id: string;
@@ -56,7 +56,7 @@ export const ACCEPTANCE_CATALOGUE: readonly AcceptanceStage[] = [
       {
         id: "M3-1",
         title:
-          "(ledger) card payment entered as expense −12,000 Bank/Other: Bank 133,000 · Visa −18,000 · spending 78,487 · net worth 218,163",
+          "(ledger) card payment entered as expense −12,000 Bank/Other: Bank 133,000 · Visa −18,000 · spending 78,487",
       },
       {
         id: "M3-2",
@@ -65,7 +65,7 @@ export const ACCEPTANCE_CATALOGUE: readonly AcceptanceStage[] = [
       },
       {
         id: "M3-3",
-        title: "(ledger) after correction: Visa −6,000 · spending 66,487 · net worth 230,163",
+        title: "(ledger) after correction: Visa −6,000 · spending 66,487",
       },
     ],
   },
@@ -92,6 +92,8 @@ export const ACCEPTANCE_CATALOGUE: readonly AcceptanceStage[] = [
         id: "M2-2",
         title: "(ledger) Cash 4,650 · bKash 8,513 · net worth 230,163 · spending 66,487 unchanged",
       },
+      { id: "M3-1", title: "(net worth) card payment as expense: net worth 218,163" },
+      { id: "M3-3", title: "(net worth) after correction: net worth 230,163" },
     ],
   },
   {

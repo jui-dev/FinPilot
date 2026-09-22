@@ -141,7 +141,7 @@ export function listAccounts(db: AppDatabase, ownerId: string) {
     .select()
     .from(accounts)
     .where(eq(accounts.ownerId, ownerId))
-    .orderBy(asc(accounts.name))
+    .orderBy(sql`lower(${accounts.name})`)
     .all();
 }
 

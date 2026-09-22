@@ -108,7 +108,7 @@
     - net worth = Σ balances
     - soft-deleted rows are invisible
     - type edits preserve the invariants
-  - **Acceptance:** A-01…A-08 and the M3 ledger values (see [acceptance-scenarios.md §8](acceptance-scenarios.md)).
+  - **Acceptance:** A-01…A-08 and the M3 ledger values; M3's net worth waits for Stage 4 (see [acceptance-scenarios.md §8](acceptance-scenarios.md)).
 - **What you can see at the end:** `npm run ledger:scenario` prints the scenario balances. The financial core is proven on a real database.
 - **Deferred:** UI; reconciliation (Cash and net worth assertions stay `todo`).
 - **Commits:**
@@ -147,7 +147,7 @@
 - **Why here:** it completes "truth" before analysis is built on top of it. The stage is small.
 - **Domain concepts:** adjustments, checkpoints, history integrity.
 - **Tests that must pass:**
-  - **Acceptance:** A-10…A-14, and M2-1/M2-2 (the ledger values).
+  - **Acceptance:** A-10…A-14, M2-1/M2-2 (the ledger values), and M3-1/M3-3 net worth.
   - **Playwright flow 2:** reconcile.
 - **What you can see at the end:** balances that match reality, and detection of backdated edits.
 - **Deferred:** the revision log (V1.1).
@@ -280,7 +280,7 @@
 |---|---|
 | F1 | none (all written as `todo`) |
 | F2 | A-01…A-08, M3 ledger values |
-| 4 | A-10…A-14, M2 ledger values |
+| 4 | A-10…A-14, M2 ledger values, M3 net worth |
 | 5 | A-20…A-23 |
 | 6 | A-30…A-32, M1-1, M1-2 |
 | 7 | A-40, M1-4 |

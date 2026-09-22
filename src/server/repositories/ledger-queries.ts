@@ -29,7 +29,7 @@ export function accountBalances(db: AppDatabase, ownerId: string, asOf?: Calenda
     .leftJoin(accountEntries, joinOn)
     .where(eq(accounts.ownerId, ownerId))
     .groupBy(accounts.id)
-    .orderBy(asc(accounts.name))
+    .orderBy(sql`lower(${accounts.name})`)
     .all();
 }
 
