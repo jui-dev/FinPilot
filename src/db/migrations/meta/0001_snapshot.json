@@ -1,0 +1,646 @@
+{
+  "id": "981f4a2e-e847-4df6-97de-8992e7af4c9a",
+  "prevId": "70607edb-6d92-4907-aa3f-7a8996af8579",
+  "version": "6",
+  "dialect": "sqlite",
+  "tables": {
+    "accounts": {
+      "name": "accounts",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "included_in_available": {
+          "name": "included_in_available",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "opened_on": {
+          "name": "opened_on",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ux_accounts_owner_id": {
+          "name": "ux_accounts_owner_id",
+          "columns": [
+            "owner_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "ux_accounts_owner_name": {
+          "name": "ux_accounts_owner_name",
+          "columns": [
+            "owner_id",
+            "lower(\"name\")"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "accounts_owner_id_owners_id_fk": {
+          "name": "accounts_owner_id_owners_id_fk",
+          "tableFrom": "accounts",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "tableTo": "owners",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "ck_accounts_type": {
+          "name": "ck_accounts_type",
+          "value": "\"accounts\".\"type\" IN ('cash', 'bank', 'mobile_wallet', 'savings', 'credit_card')"
+        },
+        "ck_accounts_currency": {
+          "name": "ck_accounts_currency",
+          "value": "length(\"accounts\".\"currency\") = 3"
+        },
+        "ck_accounts_included_bool": {
+          "name": "ck_accounts_included_bool",
+          "value": "\"accounts\".\"included_in_available\" IN (0, 1)"
+        },
+        "ck_accounts_name": {
+          "name": "ck_accounts_name",
+          "value": "length(trim(\"accounts\".\"name\")) > 0"
+        },
+        "ck_accounts_opened_on": {
+          "name": "ck_accounts_opened_on",
+          "value": "\"accounts\".\"opened_on\" = date(\"accounts\".\"opened_on\")"
+        }
+      }
+    },
+    "categories": {
+      "name": "categories",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ux_categories_owner_id": {
+          "name": "ux_categories_owner_id",
+          "columns": [
+            "owner_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "ux_categories_owner_kind_name": {
+          "name": "ux_categories_owner_kind_name",
+          "columns": [
+            "owner_id",
+            "kind",
+            "lower(\"name\")"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "categories_owner_id_owners_id_fk": {
+          "name": "categories_owner_id_owners_id_fk",
+          "tableFrom": "categories",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "tableTo": "owners",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "ck_categories_kind": {
+          "name": "ck_categories_kind",
+          "value": "\"categories\".\"kind\" IN ('income', 'expense')"
+        },
+        "ck_categories_name": {
+          "name": "ck_categories_name",
+          "value": "length(trim(\"categories\".\"name\")) > 0"
+        }
+      }
+    },
+    "owners": {
+      "name": "owners",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "base_currency": {
+          "name": "base_currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "time_zone": {
+          "name": "time_zone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "next_transaction_sequence": {
+          "name": "next_transaction_sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "ck_owners_currency": {
+          "name": "ck_owners_currency",
+          "value": "length(\"owners\".\"base_currency\") = 3"
+        },
+        "ck_owners_sequence": {
+          "name": "ck_owners_sequence",
+          "value": "\"owners\".\"next_transaction_sequence\" >= 1"
+        }
+      }
+    },
+    "transactions": {
+      "name": "transactions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sequence": {
+          "name": "sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "occurred_on": {
+          "name": "occurred_on",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount_minor": {
+          "name": "amount_minor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "counter_account_id": {
+          "name": "counter_account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "category_id": {
+          "name": "category_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "refund_of_id": {
+          "name": "refund_of_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "group_id": {
+          "name": "group_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ux_transactions_owner_id": {
+          "name": "ux_transactions_owner_id",
+          "columns": [
+            "owner_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "ux_transactions_owner_sequence": {
+          "name": "ux_transactions_owner_sequence",
+          "columns": [
+            "owner_id",
+            "sequence"
+          ],
+          "isUnique": true
+        },
+        "ux_transactions_active_opening_balance": {
+          "name": "ux_transactions_active_opening_balance",
+          "columns": [
+            "account_id"
+          ],
+          "where": "\"transactions\".\"type\" = 'opening_balance' AND \"transactions\".\"deleted_at\" IS NULL",
+          "isUnique": true
+        },
+        "ix_transactions_account_date": {
+          "name": "ix_transactions_account_date",
+          "columns": [
+            "owner_id",
+            "account_id",
+            "occurred_on"
+          ],
+          "isUnique": false
+        },
+        "ix_transactions_counter_account_date": {
+          "name": "ix_transactions_counter_account_date",
+          "columns": [
+            "owner_id",
+            "counter_account_id",
+            "occurred_on"
+          ],
+          "where": "\"transactions\".\"counter_account_id\" IS NOT NULL",
+          "isUnique": false
+        },
+        "ix_transactions_owner_order": {
+          "name": "ix_transactions_owner_order",
+          "columns": [
+            "owner_id",
+            "occurred_on",
+            "sequence"
+          ],
+          "isUnique": false
+        },
+        "ix_transactions_category_date": {
+          "name": "ix_transactions_category_date",
+          "columns": [
+            "owner_id",
+            "category_id",
+            "occurred_on"
+          ],
+          "isUnique": false
+        },
+        "ix_transactions_group": {
+          "name": "ix_transactions_group",
+          "columns": [
+            "group_id"
+          ],
+          "where": "\"transactions\".\"group_id\" IS NOT NULL",
+          "isUnique": false
+        },
+        "ix_transactions_refund_of": {
+          "name": "ix_transactions_refund_of",
+          "columns": [
+            "owner_id",
+            "refund_of_id"
+          ],
+          "where": "\"transactions\".\"refund_of_id\" IS NOT NULL",
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "transactions_owner_id_owners_id_fk": {
+          "name": "transactions_owner_id_owners_id_fk",
+          "tableFrom": "transactions",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "tableTo": "owners",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "fk_transactions_account": {
+          "name": "fk_transactions_account",
+          "tableFrom": "transactions",
+          "columnsFrom": [
+            "owner_id",
+            "account_id"
+          ],
+          "tableTo": "accounts",
+          "columnsTo": [
+            "owner_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "fk_transactions_counter_account": {
+          "name": "fk_transactions_counter_account",
+          "tableFrom": "transactions",
+          "columnsFrom": [
+            "owner_id",
+            "counter_account_id"
+          ],
+          "tableTo": "accounts",
+          "columnsTo": [
+            "owner_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "fk_transactions_category": {
+          "name": "fk_transactions_category",
+          "tableFrom": "transactions",
+          "columnsFrom": [
+            "owner_id",
+            "category_id"
+          ],
+          "tableTo": "categories",
+          "columnsTo": [
+            "owner_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "fk_transactions_refund_of": {
+          "name": "fk_transactions_refund_of",
+          "tableFrom": "transactions",
+          "columnsFrom": [
+            "owner_id",
+            "refund_of_id"
+          ],
+          "tableTo": "transactions",
+          "columnsTo": [
+            "owner_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "ck_transactions_type": {
+          "name": "ck_transactions_type",
+          "value": "\"transactions\".\"type\" IN ('income', 'expense', 'refund', 'transfer', 'opening_balance', 'adjustment')"
+        },
+        "ck_transactions_amount_integer": {
+          "name": "ck_transactions_amount_integer",
+          "value": "typeof(\"transactions\".\"amount_minor\") = 'integer'"
+        },
+        "ck_transactions_occurred_on": {
+          "name": "ck_transactions_occurred_on",
+          "value": "\"transactions\".\"occurred_on\" = date(\"transactions\".\"occurred_on\")"
+        },
+        "ck_transactions_sequence": {
+          "name": "ck_transactions_sequence",
+          "value": "\"transactions\".\"sequence\" >= 1"
+        },
+        "ck_transactions_income": {
+          "name": "ck_transactions_income",
+          "value": "\"transactions\".\"type\" <> 'income' OR (\"transactions\".\"amount_minor\" > 0 AND \"transactions\".\"category_id\" IS NOT NULL AND \"transactions\".\"counter_account_id\" IS NULL AND \"transactions\".\"refund_of_id\" IS NULL)"
+        },
+        "ck_transactions_expense": {
+          "name": "ck_transactions_expense",
+          "value": "\"transactions\".\"type\" <> 'expense' OR (\"transactions\".\"amount_minor\" < 0 AND \"transactions\".\"category_id\" IS NOT NULL AND \"transactions\".\"counter_account_id\" IS NULL AND \"transactions\".\"refund_of_id\" IS NULL)"
+        },
+        "ck_transactions_refund": {
+          "name": "ck_transactions_refund",
+          "value": "\"transactions\".\"type\" <> 'refund' OR (\"transactions\".\"amount_minor\" > 0 AND \"transactions\".\"category_id\" IS NOT NULL AND \"transactions\".\"counter_account_id\" IS NULL)"
+        },
+        "ck_transactions_transfer": {
+          "name": "ck_transactions_transfer",
+          "value": "\"transactions\".\"type\" <> 'transfer' OR (\"transactions\".\"amount_minor\" < 0 AND \"transactions\".\"counter_account_id\" IS NOT NULL AND \"transactions\".\"counter_account_id\" <> \"transactions\".\"account_id\" AND \"transactions\".\"category_id\" IS NULL AND \"transactions\".\"refund_of_id\" IS NULL)"
+        },
+        "ck_transactions_opening_adjustment": {
+          "name": "ck_transactions_opening_adjustment",
+          "value": "\"transactions\".\"type\" NOT IN ('opening_balance', 'adjustment') OR (\"transactions\".\"amount_minor\" <> 0 AND \"transactions\".\"category_id\" IS NULL AND \"transactions\".\"counter_account_id\" IS NULL AND \"transactions\".\"refund_of_id\" IS NULL)"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  },
+  "internal": {
+    "indexes": {
+      "ux_accounts_owner_name": {
+        "columns": {
+          "lower(\"name\")": {
+            "isExpression": true
+          }
+        }
+      },
+      "ux_categories_owner_kind_name": {
+        "columns": {
+          "lower(\"name\")": {
+            "isExpression": true
+          }
+        }
+      }
+    }
+  }
+}

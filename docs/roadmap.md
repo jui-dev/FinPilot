@@ -87,7 +87,7 @@
   - **Drizzle schema** for owner, account, category and transaction:
     - per-type CHECKs
     - `typeof` integer checks on money columns
-    - the partial unique index "one opening balance per account"
+    - the partial unique index "at most one active opening balance per account"
     - soft delete
   - **The `account_entries` view** as a custom migration, declared with `.existing()`.
   - **Connection PRAGMAs** (foreign keys, WAL).
