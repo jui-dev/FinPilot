@@ -8,7 +8,7 @@ const file = databasePath();
 mkdirSync(path.dirname(path.resolve(file)), { recursive: true });
 const handle = openDatabase(file);
 try {
-  migrateDatabase(handle.db);
+  migrateDatabase(handle);
   console.log(`Migrated ${file}`);
 } finally {
   handle.close();

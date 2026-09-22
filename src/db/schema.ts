@@ -81,8 +81,12 @@ export const accounts = sqliteTable(
     check("ck_accounts_currency", sql`length(${t.currency}) = 3`),
     check("ck_accounts_included_bool", sql`${t.includedInAvailable} IN (0, 1)`),
     check("ck_accounts_name", sql`length(trim(${t.name})) > 0`),
-    // SQLite-only: a real calendar date in ISO form (PostgreSQL: DATE).
-    check("ck_accounts_opened_on", sql`${t.openedOn} = date(${t.openedOn})`),
+    // SQLite-only: a real calendar date in ISO form (PostgreSQL: DATE). `date()` returns
+    // NULL for malformed input and a NULL CHECK result passes, hence IS NOT NULL.
+    check(
+      "ck_accounts_opened_on",
+      sql`date(${t.openedOn}) IS NOT NULL AND ${t.openedOn} = date(${t.openedOn})`,
+    ),
   ],
 );
 
@@ -193,7 +197,10 @@ export const transactions = sqliteTable(
     ),
     // SQLite-only shape checks (PostgreSQL: bigint, DATE).
     check("ck_transactions_amount_integer", sql`typeof(${t.amountMinor}) = 'integer'`),
-    check("ck_transactions_occurred_on", sql`${t.occurredOn} = date(${t.occurredOn})`),
+    check(
+      "ck_transactions_occurred_on",
+      sql`date(${t.occurredOn}) IS NOT NULL AND ${t.occurredOn} = date(${t.occurredOn})`,
+    ),
     check("ck_transactions_sequence", sql`${t.sequence} >= 1`),
 
     // Per-type shape (docs/domain-model.md §4.1). Mirrored by the pure domain rule

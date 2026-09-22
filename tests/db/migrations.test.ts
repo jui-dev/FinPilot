@@ -42,7 +42,7 @@ describe("migrations", () => {
   it("are idempotent: re-running applies nothing and changes nothing", () => {
     handle = freshDatabase();
     const before = handle.sqlite.serialize();
-    migrateDatabase(handle.db);
+    migrateDatabase(handle);
     expect(Buffer.compare(handle.sqlite.serialize(), before)).toBe(0);
   });
 

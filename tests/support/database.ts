@@ -7,7 +7,7 @@ let template: Buffer | undefined;
 function migratedTemplate(): Buffer {
   if (!template) {
     const handle = openDatabase(":memory:");
-    migrateDatabase(handle.db);
+    migrateDatabase(handle);
     template = handle.sqlite.serialize();
     handle.close();
   }
