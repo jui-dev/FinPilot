@@ -2,6 +2,10 @@
  * npm run db:reset — replaces the local database with a freshly migrated one
  * holding the demo ledger (dated relative to today in Asia/Dhaka).
  * Honours DATABASE_PATH, like the app.
+ *
+ * The file is replaced outright when possible. If another process is holding
+ * it (a dev server, an end-to-end run), the data is cleared in place instead,
+ * so the demo can be reset without stopping anything.
  */
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
@@ -9,37 +13,44 @@ import path from "node:path";
 import { databasePath, openDatabase } from "@/db/client";
 import { migrateDatabase } from "@/db/migrate";
 import { DEMO_TIME_ZONE, seedDemo } from "@/db/seed/demo-seed";
+import { clearAllData } from "@/db/seed/reset";
 import { formatMoney } from "@/domain/money";
 import { systemClock } from "@/server/clock";
 import type { ServiceContext } from "@/server/context";
 import { uuidV7Generator } from "@/server/ids";
 import { getAccountBalances } from "@/server/services/ledger-service";
 
-async function main() {
-  const file = path.resolve(databasePath());
-  mkdirSync(path.dirname(file), { recursive: true });
-
+/** Removes the database file, or reports that it is in use. */
+function removeFile(file: string): boolean {
+  let removed = false;
   for (const part of [file, `${file}-wal`, `${file}-shm`]) {
     if (!existsSync(part)) continue;
     try {
       rmSync(part);
+      removed = true;
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
-      if (code === "EBUSY" || code === "EPERM") {
-        console.error(`${part} is in use. Stop the dev server (or anything holding it) and retry.`);
-        process.exit(1);
-      }
+      if (code === "EBUSY" || code === "EPERM") return false;
       throw error;
     }
   }
+  return removed || !existsSync(file);
+}
+
+async function main() {
+  const file = path.resolve(databasePath());
+  mkdirSync(path.dirname(file), { recursive: true });
+  const replaced = removeFile(file);
 
   const handle = openDatabase(file);
   try {
     migrateDatabase(handle);
+    if (!replaced) clearAllData(handle);
     const today = systemClock(DEMO_TIME_ZONE).today();
     const result = await seedDemo(handle, today);
+    const how = replaced ? "Reset" : "Reset in place (the file was in use)";
     console.log(
-      `Reset ${databasePath()}: ${result.transactions} transactions, ${result.from} → ${result.to}.`,
+      `${how} ${databasePath()}: ${result.transactions} transactions, ${result.from} → ${result.to}.`,
     );
     const ctx: ServiceContext = {
       db: handle.db,
