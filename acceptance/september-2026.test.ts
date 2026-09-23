@@ -14,6 +14,8 @@ import {
   updateTransaction,
 } from "@/server/services/ledger-service";
 
+import { getAccountVerifications } from "@/server/services/reconciliation-service";
+
 import { ACCEPTANCE_CATALOGUE } from "./catalogue";
 import { buildSeptember2026, TODAY, type Scenario } from "./fixtures/september-2026";
 
@@ -261,6 +263,31 @@ const implemented: Record<string, () => Promise<void>> = {
     expect(netWorth).toBe(taka(230_163));
     expect(subtract(netWorth, openingNetWorth)).toBe(taka(28_163));
     expect(subtract(subtract(income, spending), taka(350))).toBe(taka(28_163));
+  },
+
+  "A-13": async () => {
+    const s = await base();
+    const status = (await getAccountVerifications(s.ctx, [s.accounts.cash])).get(s.accounts.cash)!;
+    expect(status).toMatchObject({
+      status: "verified",
+      asOf: "2026-09-20",
+      stated: taka(4_200),
+      recorded: taka(4_200),
+      drift: 0,
+    });
+  },
+
+  "M2-1": async () => {
+    const s = await m2();
+    const status = (await getAccountVerifications(s.ctx, [s.accounts.cash])).get(s.accounts.cash)!;
+    // Moving the lunch off Cash leaves Sep 20 deriving 4,650 against a stated 4,200.
+    expect(status).toMatchObject({
+      status: "changed",
+      asOf: "2026-09-20",
+      stated: taka(4_200),
+      recorded: taka(4_650),
+      drift: taka(450),
+    });
   },
 
   "M2-2 (ledger)": async () => {

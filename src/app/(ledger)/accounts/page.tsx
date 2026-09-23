@@ -10,8 +10,13 @@ import { Money } from "@/components/ui/money";
 import { EmptyState, PageHeader, Panel, Tag } from "@/components/ui/panel";
 import type { CalendarDate } from "@/domain/calendar-date";
 import { accountClass, type AccountType } from "@/domain/ledger/accounts";
+import { NEVER_VERIFIED } from "@/domain/ledger/verification";
 import { negate, type Money as MoneyValue } from "@/domain/money";
 import { getAccountBalances, getPosition } from "@/server/services/ledger-service";
+import {
+  getAccountVerifications,
+  type Verification,
+} from "@/server/services/reconciliation-service";
 import { getAccountReferenceCounts, getAccounts } from "@/server/services/setup-service";
 
 export const metadata: Metadata = { title: "Accounts" };
@@ -24,6 +29,7 @@ interface AccountView {
   readonly balance: MoneyValue;
   readonly archived: boolean;
   readonly references: number;
+  readonly verification: Verification;
 }
 
 const GROUPS: ReadonlyArray<{ title: string; types: readonly AccountType[]; note: string }> = [
@@ -41,11 +47,15 @@ export default async function AccountsPage() {
   if (!request.ok) return null;
   const { ctx, today } = request;
 
-  const [accounts, balances, position, references] = await Promise.all([
-    getAccounts(ctx),
+  const accounts = await getAccounts(ctx);
+  const [balances, position, references, verifications] = await Promise.all([
     getAccountBalances(ctx),
     getPosition(ctx),
     getAccountReferenceCounts(ctx),
+    getAccountVerifications(
+      ctx,
+      accounts.map((a) => a.id),
+    ),
   ]);
 
   const views: AccountView[] = accounts.map((account) => ({
@@ -56,6 +66,7 @@ export default async function AccountsPage() {
     balance: balances.find((b) => b.accountId === account.id)?.balance ?? (0 as MoneyValue),
     archived: account.archivedAt !== null,
     references: references.get(account.id) ?? 0,
+    verification: verifications.get(account.id) ?? NEVER_VERIFIED,
   }));
   const active = views.filter((a) => !a.archived);
   const archived = views.filter((a) => a.archived);
@@ -159,6 +170,10 @@ function AccountRow({
         </div>
         <p className="mt-0.5 truncate text-[12.5px] text-ink-2">
           {ACCOUNT_TYPE_LABEL[account.type]} · since {shortDate(account.openedOn, today)}
+          {account.verification.status === "verified" &&
+            ` · Verified ${shortDate(account.verification.asOf!, today)}`}
+          {account.verification.status === "changed" &&
+            ` · Changed since ${shortDate(account.verification.asOf!, today)}`}
         </p>
       </div>
       <div className="flex items-center gap-3">
