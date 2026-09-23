@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   accountInputSchema,
   fieldForRule,
-  signedOpeningBalance,
+  signedBalance,
   toTransactionEntry,
   transactionInputSchema,
 } from "@/domain/ledger/input";
@@ -94,8 +94,8 @@ describe("account input", () => {
       startingAmount: "3,200",
     });
     expect(parsed.name).toBe("Visa");
-    expect(signedOpeningBalance(parsed.type, parsed.startingAmount)).toBe(fromMajor(-3_200));
-    expect(signedOpeningBalance("bank", fromMajor(500))).toBe(fromMajor(500));
+    expect(signedBalance(parsed.type, parsed.startingAmount)).toBe(fromMajor(-3_200));
+    expect(signedBalance("bank", fromMajor(500))).toBe(fromMajor(500));
     expect(
       accountInputSchema.parse({
         name: "Cash",

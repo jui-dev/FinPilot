@@ -21,7 +21,13 @@ describe("migrations", () => {
   it("create the F2 tables and ledger views", () => {
     handle = freshDatabase();
     expect(names(handle, "table")).toEqual(
-      expect.arrayContaining(["accounts", "categories", "owners", "transactions"]),
+      expect.arrayContaining([
+        "accounts",
+        "categories",
+        "owners",
+        "reconciliation_checkpoints",
+        "transactions",
+      ]),
     );
     expect(names(handle, "view")).toEqual(["account_entries", "active_transactions"]);
   });
@@ -35,6 +41,7 @@ describe("migrations", () => {
         "ux_transactions_owner_id",
         "ux_transactions_owner_sequence",
         "ux_transactions_active_opening_balance",
+        "ux_reconciliation_checkpoints_owner_id",
       ]),
     );
   });

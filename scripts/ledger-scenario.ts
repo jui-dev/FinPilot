@@ -1,7 +1,6 @@
 /**
  * Prints the acceptance scenario's derived ledger state (docs/acceptance-scenarios.md),
  * computed by the real services on a fresh in-memory database.
- * Stage F2: row 10 (the Cash reconciliation) is not applied yet.
  */
 import { buildSeptember2026, TODAY } from "../acceptance/fixtures/september-2026";
 
@@ -27,7 +26,7 @@ async function main() {
   for (const b of await getAccountBalances(s.ctx)) {
     console.log(`  ${b.name.padEnd(10)} ${formatMoney(b.balance).padStart(12)}`);
   }
-  console.log("  (Cash awaits the Sep 20 reconciliation in Stage 4)\n");
+  console.log("  (Cash 4,200 includes the Sep 20 reconciliation adjustment of −350)\n");
 
   for (const [label, range] of [
     ["Spending Sep 1–22", current],

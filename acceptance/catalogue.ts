@@ -70,7 +70,7 @@ export const ACCEPTANCE_CATALOGUE: readonly AcceptanceStage[] = [
     ],
   },
   {
-    stage: "4 — Reconciliation",
+    stage: "4a — Reconciliation write path",
     assertions: [
       {
         id: "A-10",
@@ -78,15 +78,9 @@ export const ACCEPTANCE_CATALOGUE: readonly AcceptanceStage[] = [
       },
       { id: "A-11", title: "net worth 230,163; assets 236,163; liabilities 6,000" },
       { id: "A-12", title: "adjustment excluded from analytics: spending remains 66,487" },
-      { id: "A-13", title: "Cash checkpoint Sep 20 status matches (balance as of Sep 20 = 4,200)" },
       {
         id: "A-14",
         title: "230,163 − 202,000 = 28,163 = income 95,000 − spending 66,487 − adjustment 350",
-      },
-      {
-        id: "M2-1",
-        title:
-          "lunch moved to bKash: Cash as of Sep 20 = 4,650 vs stated 4,200 → checkpoint broken by 450",
       },
       {
         id: "M2-2",
@@ -94,6 +88,18 @@ export const ACCEPTANCE_CATALOGUE: readonly AcceptanceStage[] = [
       },
       { id: "M3-1", title: "(net worth) card payment as expense: net worth 218,163" },
       { id: "M3-3", title: "(net worth) after correction: net worth 230,163" },
+    ],
+  },
+  {
+    // Deriving a checkpoint's status is its own boundary: these stay todo until it.
+    stage: "4b — Verification status",
+    assertions: [
+      { id: "A-13", title: "Cash checkpoint Sep 20 status matches (balance as of Sep 20 = 4,200)" },
+      {
+        id: "M2-1",
+        title:
+          "lunch moved to bKash: Cash as of Sep 20 = 4,650 vs stated 4,200 → checkpoint broken by 450",
+      },
     ],
   },
   {

@@ -165,6 +165,9 @@ function AccountRow({
         <AccountActions
           id={account.id}
           name={account.name}
+          type={account.type}
+          balance={account.balance}
+          today={today}
           archived={account.archived}
           canArchive={!account.archived && account.balance === 0}
           canDelete={account.references === 0}

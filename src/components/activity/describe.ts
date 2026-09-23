@@ -89,11 +89,10 @@ export function describeEvent(item: ActivityItem, perspectiveAccountId?: string)
         amountClass: "text-ink-2",
       };
     }
-    case "opening_balance":
-    case "adjustment": {
+    case "opening_balance": {
       const owed = accountClass(row.account.type) === "liability";
       return {
-        title: row.type === "opening_balance" ? "Opening balance" : "Balance adjustment",
+        title: "Opening balance",
         meta: [row.account.name, owed ? "Owed at start" : "Starting balance"],
         icon: OpeningIcon,
         tone: "neutral",
@@ -103,6 +102,20 @@ export function describeEvent(item: ActivityItem, perspectiveAccountId?: string)
         amountClass: "text-ink-2",
       };
     }
+    case "adjustment":
+      // An adjustment is a signed correction, not a balance: it is shown with
+      // its direction on every account class, liabilities included, because
+      // "৳350" alone cannot say whether the balance went up or down.
+      return {
+        title: "Balance adjustment",
+        meta: [row.account.name, "From verifying the balance"],
+        icon: OpeningIcon,
+        tone: "neutral",
+        tag: null,
+        amount: row.amount,
+        sign: "always",
+        amountClass: "text-ink-2",
+      };
   }
 }
 

@@ -2,10 +2,11 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { likeForLikeWindows, type CalendarDate } from "@/domain/calendar-date";
 import { formatPercent } from "@/domain/ledger/analytics";
-import { fromMajor, type Money } from "@/domain/money";
+import { fromMajor, subtract, sum, type Money } from "@/domain/money";
 import {
   getAccountBalances,
   getIncome,
+  getPosition,
   getSavingsRate,
   getSpendingByCategory,
   getTotalSpending,
@@ -45,8 +46,12 @@ const m3 = once(async () => {
   built.push(s);
   return s;
 });
+// Its own instance: correcting the row edits it in place, so sharing m3()
+// would make every assertion about the *uncorrected* state depend on whether
+// this one had run yet.
 const m3Corrected = once(async () => {
-  const s = await m3();
+  const s = await buildSeptember2026("m3-card-payment-as-expense");
+  built.push(s);
   const before = (await getTransactions(s.ctx)).find((r) => r.id === s.rows.R5)!;
   const result = await updateTransaction(s.ctx, s.rows.R5!, {
     type: "transfer",
@@ -57,6 +62,20 @@ const m3Corrected = once(async () => {
   });
   expect(result.ok).toBe(true);
   return { s, before };
+});
+/** M2: the Sep 15 lunch was really paid from bKash, not Cash. */
+const m2 = once(async () => {
+  const s = await buildSeptember2026();
+  built.push(s);
+  const result = await updateTransaction(s.ctx, s.rows.R8!, {
+    type: "expense",
+    amount: taka(450),
+    accountId: s.accounts.bkash,
+    categoryId: s.category("Food & Dining"),
+    occurredOn: "2026-09-15" as CalendarDate,
+  });
+  expect(result.ok).toBe(true);
+  return s;
 });
 afterAll(() => built.forEach((s) => s.handle.close()));
 
@@ -111,7 +130,6 @@ const implemented: Record<string, () => Promise<void>> = {
 
   "A-02": async () => {
     const b = await balances(await base());
-    // Cash is asserted in Stage 4 (it depends on the row-10 reconciliation).
     expect({ bank: b.bank, bkash: b.bkash, savings: b.savings, visa: b.visa }).toEqual({
       bank: taka(133_000),
       bkash: taka(8_963),
@@ -199,6 +217,70 @@ const implemented: Record<string, () => Promise<void>> = {
     expect({ bank: b.bank, visa: b.visa }).toEqual({ bank: taka(133_000), visa: taka(-18_000) });
     expect(await getTotalSpending(s.ctx, SEP_1_22)).toBe(taka(78_487));
     expect((await spendingByName(s)).Other).toBe(taka(12_000));
+  },
+
+  "A-10": async () => {
+    const s = await base();
+    const adjustment = (await getTransactions(s.ctx)).find((r) => r.id === s.rows.R10)!;
+    expect(adjustment).toMatchObject({
+      type: "adjustment",
+      occurredOn: "2026-09-20",
+      amountMinor: taka(-350),
+      accountId: s.accounts.cash,
+      categoryId: null,
+      counterAccountId: null,
+    });
+    expect((await balances(s)).cash).toBe(taka(4_200));
+  },
+
+  "A-11": async () => {
+    const position = await getPosition((await base()).ctx);
+    expect(position).toMatchObject({
+      netWorth: taka(230_163),
+      assets: taka(236_163),
+      liabilities: taka(6_000),
+    });
+  },
+
+  "A-12": async () => {
+    const s = await base();
+    // The adjustment moved Cash by −350 and changed no analytic total.
+    expect(await getTotalSpending(s.ctx, SEP_1_22)).toBe(taka(66_487));
+    expect(await getIncome(s.ctx, SEP_1_22)).toBe(taka(95_000));
+  },
+
+  "A-14": async () => {
+    const s = await base();
+    const opening = await balances(s, "2026-08-31" as CalendarDate);
+    const openingNetWorth = sum(Object.values(opening));
+    const netWorth = (await getPosition(s.ctx)).netWorth;
+    const income = await getIncome(s.ctx, SEP_1_22);
+    const spending = await getTotalSpending(s.ctx, SEP_1_22);
+
+    expect(openingNetWorth).toBe(taka(202_000));
+    expect(netWorth).toBe(taka(230_163));
+    expect(subtract(netWorth, openingNetWorth)).toBe(taka(28_163));
+    expect(subtract(subtract(income, spending), taka(350))).toBe(taka(28_163));
+  },
+
+  "M2-2 (ledger)": async () => {
+    const s = await m2();
+    const b = await balances(s);
+    expect({ cash: b.cash, bkash: b.bkash }).toEqual({
+      cash: taka(4_650),
+      bkash: taka(8_513),
+    });
+    expect((await getPosition(s.ctx)).netWorth).toBe(taka(230_163));
+    expect(await getTotalSpending(s.ctx, SEP_1_22)).toBe(taka(66_487));
+  },
+
+  "M3-1 (net worth)": async () => {
+    expect((await getPosition((await m3()).ctx)).netWorth).toBe(taka(218_163));
+  },
+
+  "M3-3 (net worth)": async () => {
+    const { s } = await m3Corrected();
+    expect((await getPosition(s.ctx)).netWorth).toBe(taka(230_163));
   },
 
   "M3-2": async () => {

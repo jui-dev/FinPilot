@@ -202,13 +202,13 @@ export const accountInputSchema = z.object({
 export type AccountInput = z.input<typeof accountInputSchema>;
 
 /**
- * The signed opening balance for an account type: a card's starting amount is
- * money owed, so it is stored negative (docs/domain-model.md §5).
+ * Converts a balance a person typed into the signed ledger representation its
+ * account requires: on a liability the amount is money owed, so it is stored
+ * negative (docs/domain-model.md §5). Used both for an opening balance and for
+ * the balance stated when verifying an account.
  */
-export const signedOpeningBalance = (type: AccountType, startingAmount: Money): Money =>
-  accountClass(type) === "liability" && startingAmount !== 0
-    ? negate(startingAmount)
-    : startingAmount;
+export const signedBalance = (type: AccountType, amount: Money): Money =>
+  accountClass(type) === "liability" && amount !== 0 ? negate(amount) : amount;
 
 export const categoryInputSchema = z.object({
   name: name(40, "Give the category a name."),
@@ -221,6 +221,20 @@ export const categoryNameSchema = name(40, "Give the category a name.");
 export const openingBalanceInputSchema = z.object({
   startingAmount: positiveAmount("Enter an amount above zero, or delete the account instead."),
 });
+
+/**
+ * Verifying an account: what it actually held on a date. Unlike an opening
+ * balance, zero is a legitimate answer — an account really can be empty — so
+ * this uses the non-negative amount. The sign is applied from the account's
+ * type inside the reconciliation write transaction, never here.
+ */
+export const verifyBalanceInputSchema = z.object({
+  accountId: reference("Choose an account."),
+  asOf: date,
+  countedAmount: nonNegativeAmount,
+});
+
+export type VerifyBalanceInput = z.input<typeof verifyBalanceInputSchema>;
 
 // ---------------------------------------------------------------------------
 // Mapping rule rejections to the field a person should fix

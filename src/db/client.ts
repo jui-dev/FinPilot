@@ -1,9 +1,18 @@
-import Database from "better-sqlite3";
+import Database, { type RunResult } from "better-sqlite3";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 
 import * as schema from "./schema";
 
 export type AppDatabase = BetterSQLite3Database<typeof schema>;
+
+/**
+ * The synchronous interface shared by the connection and by a transaction
+ * handle. Repository write scripts run against a transaction, so any read query
+ * they need is typed on this rather than on `AppDatabase` (to which it is
+ * assignable) — one query then works inside and outside a transaction alike.
+ */
+export type SyncDb = BaseSQLiteDatabase<"sync", RunResult, typeof schema>;
 
 export interface DatabaseHandle {
   readonly db: AppDatabase;

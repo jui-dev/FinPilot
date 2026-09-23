@@ -1,6 +1,6 @@
 import { and, asc, eq, gte, inArray, lt, lte, sql } from "drizzle-orm";
 
-import type { AppDatabase } from "@/db/client";
+import type { AppDatabase, SyncDb } from "@/db/client";
 import { accounts } from "@/db/schema";
 import { accountEntries, activeTransactions } from "@/db/views";
 import type { CalendarDate, DateRange } from "@/domain/calendar-date";
@@ -10,6 +10,33 @@ import type { CalendarDate, DateRange } from "@/domain/calendar-date";
  * transfer mirroring live there). Date windows are computed in TypeScript and
  * passed as parameters — no SQL date functions, so queries port unchanged.
  */
+
+/**
+ * One account's balance: Σ account_entries up to and including `asOf`.
+ *
+ * Typed on SyncDb so a write script can call it with its own transaction
+ * handle: reconciliation must read the recorded balance and write the
+ * adjustment in one transaction, or the two could disagree.
+ */
+export function accountBalanceAsOf(
+  db: SyncDb,
+  ownerId: string,
+  accountId: string,
+  asOf: CalendarDate,
+): number {
+  const row = db
+    .select({ balanceMinor: sql<number>`coalesce(sum(${accountEntries.deltaMinor}), 0)` })
+    .from(accountEntries)
+    .where(
+      and(
+        eq(accountEntries.ownerId, ownerId),
+        eq(accountEntries.accountId, accountId),
+        lte(accountEntries.occurredOn, asOf),
+      ),
+    )
+    .get();
+  return row?.balanceMinor ?? 0;
+}
 
 /** Every account's balance: Σ account_entries, optionally as of a date (inclusive). */
 export function accountBalances(db: AppDatabase, ownerId: string, asOf?: CalendarDate) {

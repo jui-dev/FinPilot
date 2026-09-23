@@ -39,7 +39,8 @@
 | F2 | Ledger persistence | foundation (with first real numbers) | — |
 | — | **Design gate approved** | gate | — |
 | 3 | Accounts, transactions, Quick Add UI | visible | A — `v0.1-ledger` |
-| 4 | Reconciliation | visible | A — `v0.1-ledger` |
+| 4a | Reconciliation write path (Verify balance) | visible | A — `v0.1-ledger` |
+| 4b | Verification status | visible | A — `v0.1-ledger` |
 | 5 | Monthly analysis | visible | B — `v0.2-understand` → **review** |
 | 6 | Commitments | visible | C — `v0.3-plan` |
 | 7 | Budgets | visible | C — `v0.3-plan` |
@@ -138,12 +139,16 @@
 - **Deferred:** analytics, overview, reconciliation.
 - **Commit:** `feat(ui): accounts, transaction list and Quick Add`
 
-#### 4 — Reconciliation
+#### 4a — Reconciliation write path
 - **Builds:**
   - The checkpoint table.
   - The reconcile service, which computes and posts the adjustment.
+  - The "Verify balance" flow: state what an account really holds, as of today.
+
+#### 4b — Verification status
+- **Builds:**
   - Checkpoint status: the balance as of the checkpoint date vs the stated balance.
-  - The "Verify balance" flow, showing "verified ✓" or "changed since verified".
+  - "Verified ✓" / "changed since verified" in the UI.
 - **Why here:** it completes "truth" before analysis is built on top of it. The stage is small.
 - **Domain concepts:** adjustments, checkpoints, history integrity.
 - **Tests that must pass:**
@@ -280,7 +285,8 @@
 |---|---|
 | F1 | none (all written as `todo`) |
 | F2 | A-01…A-08, M3 ledger values |
-| 4 | A-10…A-14, M2 ledger values, M3 net worth |
+| 4a | A-10, A-11, A-12, A-14, M2-2 ledger values, M3 net worth |
+| 4b | A-13, M2-1 |
 | 5 | A-20…A-23 |
 | 6 | A-30…A-32, M1-1, M1-2 |
 | 7 | A-40, M1-4 |

@@ -9,15 +9,16 @@ import type { ServiceContext } from "@/server/context";
 import type { ServiceResult } from "@/server/errors";
 import { uuidV7Generator } from "@/server/ids";
 import { recordTransaction, recordTransferWithFee } from "@/server/services/ledger-service";
+import { verifyAccountBalance } from "@/server/services/reconciliation-service";
 import { createAccount, createOwner, getCategories } from "@/server/services/setup-service";
 
 /**
  * The mandatory acceptance scenario (docs/acceptance-scenarios.md), built
  * through the real services on a real, freshly migrated database.
  *
- * Stage F2 builds the August prologue (P0–P7) and September rows 1–9 and 11.
- * Row 10 (the Cash reconciliation, −350) is added in Stage 4, when the
- * reconcile service exists; commitment links (P2, P7, row 2) arrive in Stage 6.
+ * Stage F2 built the August prologue (P0–P7) and September rows 1–9 and 11;
+ * Stage 4a adds row 10 (the Cash reconciliation, −350) through the real
+ * reconcile service. Commitment links (P2, P7, row 2) arrive in Stage 6.
  * Amounts are whole taka here and stored as integer poisha.
  */
 export const TODAY = calendarDateFromIso("2026-09-22");
@@ -35,6 +36,8 @@ export interface Scenario {
   readonly category: (name: string) => string;
   /** Transaction ids by scenario row label (P1…P7, R1…R11). */
   readonly rows: Readonly<Record<string, string>>;
+  /** Reconciliation checkpoint ids by scenario row label. */
+  readonly checkpoints: Readonly<Record<string, string>>;
 }
 
 const d = calendarDateFromIso;
@@ -93,6 +96,7 @@ export async function buildSeptember2026(variant: ScenarioVariant = "base"): Pro
   };
 
   const rows: Record<string, string> = {};
+  const checkpoints: Record<string, string> = {};
   const record = async (label: string, draft: TransactionDraft) => {
     rows[label] = unwrap(label, await recordTransaction(ctx, draft));
   };
@@ -164,8 +168,21 @@ export async function buildSeptember2026(variant: ScenarioVariant = "base"): Pro
     refundOfId: rows.R4!,
     occurredOn: d("2026-09-16"),
   });
-  // R10 — reconcile Cash (counted 4,200 → adjustment −350): Stage 4.
+  // R10 — reconcile Cash: recorded 4,550 as of Sep 20, counted 4,200, so the
+  // service posts a −350 adjustment and the checkpoint. Recorded here, before
+  // R11, so the recording sequence matches the documented ledger order.
+  const reconciliation = unwrap(
+    "R10",
+    await verifyAccountBalance(ctx, {
+      accountId: accounts.cash,
+      asOf: d("2026-09-20"),
+      countedAmount: taka(4_200),
+    }),
+  );
+  rows.R10 = reconciliation.adjustmentId!;
+  checkpoints.R10 = reconciliation.checkpointId;
+
   await record("R11", expense("2026-09-21", 30_000, accounts.savings, "Health"));
 
-  return { handle, ctx, accounts, category, rows };
+  return { handle, ctx, accounts, category, rows, checkpoints };
 }

@@ -1,7 +1,7 @@
 import { and, asc, count, eq, or, sql } from "drizzle-orm";
 
 import type { AppDatabase } from "@/db/client";
-import { accounts, categories, owners, transactions } from "@/db/schema";
+import { accounts, categories, owners, reconciliationCheckpoints, transactions } from "@/db/schema";
 import { accountEntries } from "@/db/views";
 import type { CalendarDate } from "@/domain/calendar-date";
 import type { AccountType } from "@/domain/ledger/accounts";
@@ -184,9 +184,15 @@ function balanceMinor(tx: SyncDb, ownerId: string, accountId: string): number {
   return row?.total ?? 0;
 }
 
-/** Rows that reference an account, including soft-deleted ones (they still hold the reference). */
+/**
+ * Everything that refers to an account and would block deleting it: ledger rows
+ * (including soft-deleted ones) and reconciliation checkpoints. Checkpoints
+ * count because verifying an account that already matched records a checkpoint
+ * and no transaction — without them such an account would pass this check and
+ * then fail at the foreign key.
+ */
 function accountReferences(tx: SyncDb, ownerId: string, accountId: string): number {
-  const row = tx
+  const rows = tx
     .select({ n: count() })
     .from(transactions)
     .where(
@@ -196,7 +202,17 @@ function accountReferences(tx: SyncDb, ownerId: string, accountId: string): numb
       ),
     )
     .get();
-  return row?.n ?? 0;
+  const checkpoints = tx
+    .select({ n: count() })
+    .from(reconciliationCheckpoints)
+    .where(
+      and(
+        eq(reconciliationCheckpoints.ownerId, ownerId),
+        eq(reconciliationCheckpoints.accountId, accountId),
+      ),
+    )
+    .get();
+  return (rows?.n ?? 0) + (checkpoints?.n ?? 0);
 }
 
 export function archiveAccount(db: AppDatabase, ctx: WriteContext, id: string): void {
@@ -232,7 +248,7 @@ export function deleteAccount(db: AppDatabase, ctx: WriteContext, id: string): v
     if (accountReferences(tx, ctx.ownerId, id) > 0) {
       throw new LedgerRuleError(
         "account_in_use",
-        "This account has transactions, so it can only be archived.",
+        "This account has recorded history, so it can only be archived.",
       );
     }
     tx.delete(accounts)
@@ -263,6 +279,16 @@ export function accountReferenceCounts(db: AppDatabase, ownerId: string): Map<st
       .from(transactions)
       .where(eq(transactions.ownerId, ownerId))
       .groupBy(transactions.counterAccountId)
+      .all(),
+  );
+  // A verified balance that needed no adjustment leaves a checkpoint and no
+  // transaction, so checkpoints are references in their own right.
+  tally(
+    db
+      .select({ accountId: reconciliationCheckpoints.accountId, n: count() })
+      .from(reconciliationCheckpoints)
+      .where(eq(reconciliationCheckpoints.ownerId, ownerId))
+      .groupBy(reconciliationCheckpoints.accountId)
       .all(),
   );
   return counts;

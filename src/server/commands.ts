@@ -6,15 +6,17 @@ import {
   categoryNameSchema,
   fieldForRule,
   openingBalanceInputSchema,
-  signedOpeningBalance,
+  signedBalance,
   toTransactionEntry,
   transactionInputSchema,
+  verifyBalanceInputSchema,
 } from "@/domain/ledger/input";
 import type { Money } from "@/domain/money";
 import type { ServiceContext } from "@/server/context";
 import type { ServiceResult } from "@/server/errors";
 import { getActivityItem } from "@/server/services/activity-service";
 import * as ledger from "@/server/services/ledger-service";
+import * as reconciliation from "@/server/services/reconciliation-service";
 import * as setup from "@/server/services/setup-service";
 
 /**
@@ -158,7 +160,7 @@ export async function editOpeningBalance(
   return fromService(
     await ledger.updateTransaction(ctx, id, {
       type: "opening_balance",
-      balance: signedOpeningBalance(row.account.type, parsed.data.startingAmount),
+      balance: signedBalance(row.account.type, parsed.data.startingAmount),
       accountId: row.account.id,
       occurredOn: row.occurredOn,
     }),
@@ -197,6 +199,36 @@ export async function restoreEntry(
 }
 
 // ---------------------------------------------------------------------------
+// Reconciliation
+// ---------------------------------------------------------------------------
+
+export interface VerifiedBalance {
+  /** The balance the ledger held as of that date, before verifying. */
+  readonly recorded: Money;
+  /** The balance stated by the person, signed by the account's type. */
+  readonly stated: Money;
+  /** stated − recorded; zero when the ledger already agreed. */
+  readonly difference: Money;
+  /** True when a correcting adjustment was posted. */
+  readonly adjusted: boolean;
+}
+
+/** Records what an account actually held, correcting the ledger if it disagreed. */
+export async function verifyBalance(
+  ctx: ServiceContext,
+  raw: unknown,
+): Promise<CommandResult<VerifiedBalance>> {
+  const parsed = verifyBalanceInputSchema.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  const result = await reconciliation.verifyAccountBalance(ctx, parsed.data);
+  if (!result.ok) {
+    return rejected(result.error, { amount: "countedAmount", occurredOn: "asOf" });
+  }
+  const { recorded, stated, difference, adjustmentId } = result.value;
+  return done({ recorded, stated, difference, adjusted: adjustmentId !== null });
+}
+
+// ---------------------------------------------------------------------------
 // Accounts
 // ---------------------------------------------------------------------------
 
@@ -212,7 +244,7 @@ export async function openAccount(
       name,
       type,
       openedOn,
-      openingBalance: signedOpeningBalance(type, startingAmount),
+      openingBalance: signedBalance(type, startingAmount),
     }),
     { occurredOn: "openedOn", amount: "startingAmount" },
   );

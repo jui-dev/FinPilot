@@ -1,10 +1,7 @@
-import type { RunResult } from "better-sqlite3";
 import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
-import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 
-import type { AppDatabase } from "@/db/client";
-import * as schema from "@/db/schema";
-import { accounts, categories, owners, transactions } from "@/db/schema";
+import type { AppDatabase, SyncDb } from "@/db/client";
+import { accounts, categories, owners, reconciliationCheckpoints, transactions } from "@/db/schema";
 import { activeTransactions } from "@/db/views";
 import type { CalendarDate } from "@/domain/calendar-date";
 import {
@@ -33,9 +30,9 @@ import { LedgerRuleError } from "@/server/errors";
  * read only for the rows a script is about to modify (e.g. restoring a
  * soft-deleted row, which the views by definition hide).
  */
-export type SyncDb = BaseSQLiteDatabase<"sync", RunResult, typeof schema>;
+export type { SyncDb };
 
-const IMMEDIATE = { behavior: "immediate" } as const;
+export const IMMEDIATE = { behavior: "immediate" } as const;
 
 // ---------------------------------------------------------------------------
 // Facts
@@ -200,6 +197,34 @@ function storedRow(tx: SyncDb, ownerId: string, id: string) {
     .get();
 }
 
+/**
+ * Which of these transactions a reconciliation checkpoint owns.
+ *
+ * It lives here, not in the reconciliation repository, because that module
+ * already depends on this one for `insertDraft`; the reverse import would make
+ * a cycle. Soft delete means the foreign key cannot protect the checkpoint —
+ * the row would simply become invisible — so the guard is explicit.
+ */
+function checkpointOwnedAdjustments(
+  tx: SyncDb,
+  ownerId: string,
+  transactionIds: readonly string[],
+): string[] {
+  if (transactionIds.length === 0) return [];
+  return tx
+    .select({ id: reconciliationCheckpoints.adjustmentId })
+    .from(reconciliationCheckpoints)
+    .where(
+      and(
+        eq(reconciliationCheckpoints.ownerId, ownerId),
+        inArray(reconciliationCheckpoints.adjustmentId, [...transactionIds]),
+      ),
+    )
+    .all()
+    .map((r) => r.id)
+    .filter((id): id is string => id !== null);
+}
+
 function activeRefundsOf(tx: SyncDb, ownerId: string, expenseIds: readonly string[]): string[] {
   if (expenseIds.length === 0) return [];
   return tx
@@ -299,6 +324,15 @@ export function deleteTransaction(db: AppDatabase, ctx: WriteContext, id: string
     }
     const rows = eventRows(tx, ctx.ownerId, existing).filter((r) => r.deletedAt === null);
     const ids = rows.map((r) => r.id);
+
+    const adjustmentIds = rows.filter((r) => r.type === "adjustment").map((r) => r.id);
+    if (checkpointOwnedAdjustments(tx, ctx.ownerId, adjustmentIds).length > 0) {
+      throw new LedgerRuleError(
+        "adjustment_in_checkpoint",
+        "This adjustment is part of a verified balance, so it cannot be deleted on its own.",
+      );
+    }
+
     const expenseIds = rows.filter((r) => r.type === "expense").map((r) => r.id);
     const blocking = activeRefundsOf(tx, ctx.ownerId, expenseIds).filter((r) => !ids.includes(r));
     if (blocking.length > 0) {
@@ -328,12 +362,15 @@ export function restoreTransaction(db: AppDatabase, ctx: WriteContext, id: strin
     }
     const rows = eventRows(tx, ctx.ownerId, existing).filter((r) => r.deletedAt !== null);
     for (const row of rows) {
-      const draft = toDraft({
-        ...row,
-        amountMinor: money(row.amountMinor),
-        occurredOn: row.occurredOn as CalendarDate,
-      });
-      if (draft) validatedRow(tx, ctx, draft);
+      validatedRow(
+        tx,
+        ctx,
+        toDraft({
+          ...row,
+          amountMinor: money(row.amountMinor),
+          occurredOn: row.occurredOn as CalendarDate,
+        }),
+      );
       if (row.type === "opening_balance") {
         const other = tx
           .select({ id: activeTransactions.id })

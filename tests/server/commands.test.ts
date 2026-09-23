@@ -12,6 +12,7 @@ import {
   removeEntry,
   restoreAccount,
   restoreEntry,
+  verifyBalance,
 } from "@/server/commands";
 import { getAccountBalances, getTransactions } from "@/server/services/ledger-service";
 import { getAccounts } from "@/server/services/setup-service";
@@ -246,5 +247,66 @@ describe("accounts", () => {
     expect((await getAccounts(ctx)).some((a) => a.id === empty)).toBe(false);
 
     expect(await deleteAccount(ctx, cash)).toMatchObject({ ok: false });
+  });
+});
+
+describe("verifyBalance", () => {
+  it("records what was counted and reports the correction", async () => {
+    const { ctx, cash } = await ledger();
+    const result = ok(
+      await verifyBalance(ctx, {
+        accountId: cash,
+        asOf: "2026-09-20",
+        countedAmount: "2,650",
+      }),
+    );
+    expect(result).toEqual({
+      recorded: taka(3_000),
+      stated: taka(2_650),
+      difference: taka(-350),
+      adjusted: true,
+    });
+    expect((await getAccountBalances(ctx)).find((b) => b.accountId === cash)?.balance).toBe(
+      taka(2_650),
+    );
+  });
+
+  it("reports agreement without adjusting", async () => {
+    const { ctx, cash } = await ledger();
+    const result = ok(
+      await verifyBalance(ctx, { accountId: cash, asOf: "2026-09-20", countedAmount: "3000" }),
+    );
+    expect(result).toMatchObject({ difference: 0, adjusted: false });
+  });
+
+  it("accepts an emptied account", async () => {
+    const { ctx, cash } = await ledger();
+    const result = ok(
+      await verifyBalance(ctx, { accountId: cash, asOf: "2026-09-20", countedAmount: "0" }),
+    );
+    expect(result).toMatchObject({ stated: 0, difference: taka(-3_000), adjusted: true });
+  });
+
+  it("puts a bad amount and a bad date on the field to fix", async () => {
+    const { ctx, cash } = await ledger();
+    expect(
+      await verifyBalance(ctx, { accountId: cash, asOf: "2026-09-20", countedAmount: "-5" }),
+    ).toMatchObject({ ok: false, fieldErrors: { countedAmount: expect.any(String) } });
+
+    expect(
+      await verifyBalance(ctx, { accountId: cash, asOf: "nonsense", countedAmount: "100" }),
+    ).toMatchObject({ ok: false, fieldErrors: { asOf: expect.any(String) } });
+
+    // A rule rejection (not a schema one) is mapped onto the same field.
+    expect(
+      await verifyBalance(ctx, { accountId: cash, asOf: "2026-09-23", countedAmount: "100" }),
+    ).toMatchObject({ ok: false, fieldErrors: { asOf: expect.any(String) } });
+  });
+
+  it("rejects an unknown account", async () => {
+    const { ctx } = await ledger();
+    expect(
+      await verifyBalance(ctx, { accountId: "nope", asOf: "2026-09-20", countedAmount: "100" }),
+    ).toMatchObject({ ok: false });
   });
 });

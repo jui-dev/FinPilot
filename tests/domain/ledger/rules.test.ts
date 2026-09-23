@@ -174,4 +174,39 @@ describe("checkLedgerRules", () => {
       expect(code({ ...opening, balance: money(0) })).toBe("invalid_amount");
     });
   });
+
+  describe("adjustments", () => {
+    // Reconciliation posts a signed correction, so unlike every other recorded
+    // type a negative amount is valid and only zero is meaningless.
+    const adjustment: TransactionDraft = {
+      type: "adjustment",
+      difference: fromMajor(-350),
+      accountId: "bank",
+      occurredOn: d("2026-09-20"),
+    };
+    const noCategory: LedgerFacts = { ...facts, category: undefined };
+
+    it("accepts a negative correction", () => {
+      expect(code(adjustment, noCategory)).toBeNull();
+    });
+
+    it("accepts a positive correction", () => {
+      expect(code({ ...adjustment, difference: fromMajor(350) }, noCategory)).toBeNull();
+    });
+
+    it("rejects a zero correction", () => {
+      expect(code({ ...adjustment, difference: money(0) }, noCategory)).toBe("invalid_amount");
+    });
+
+    it("obeys the same date and account rules as everything else", () => {
+      expect(code({ ...adjustment, occurredOn: d("2026-09-23") }, noCategory)).toBe("future_date");
+      expect(code({ ...adjustment, occurredOn: d("2026-07-31") }, noCategory)).toBe(
+        "before_opened_on",
+      );
+      expect(code(adjustment, { ...noCategory, account: { ...bank, archived: true } })).toBe(
+        "account_archived",
+      );
+      expect(code(adjustment, { ...noCategory, account: undefined })).toBe("account_not_found");
+    });
+  });
 });

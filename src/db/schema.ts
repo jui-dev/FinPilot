@@ -227,3 +227,58 @@ export const transactions = sqliteTable(
     ),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// reconciliation_checkpoints — "on date D this account really held X"
+// (docs/domain-model.md §2, §6)
+// ---------------------------------------------------------------------------
+
+export const reconciliationCheckpoints = sqliteTable(
+  "reconciliation_checkpoints",
+  {
+    id: text("id").primaryKey(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => owners.id, { onDelete: "restrict" }),
+    accountId: text("account_id").notNull(),
+    /** The calendar date the balance was verified for. */
+    asOf: text("as_of").notNull(),
+    /** The balance the person stated, signed like every other balance (zero is valid). */
+    statedBalanceMinor: integer("stated_balance_minor").notNull(),
+    /** The correcting adjustment, or NULL when the ledger already agreed. */
+    adjustmentId: text("adjustment_id"),
+    ...timestamps,
+  },
+  (t) => [
+    foreignKey({
+      name: "fk_reconciliation_checkpoints_account",
+      columns: [t.ownerId, t.accountId],
+      foreignColumns: [accounts.ownerId, accounts.id],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "fk_reconciliation_checkpoints_adjustment",
+      columns: [t.ownerId, t.adjustmentId],
+      foreignColumns: [transactions.ownerId, transactions.id],
+    }).onDelete("restrict"),
+
+    uniqueIndex("ux_reconciliation_checkpoints_owner_id").on(t.ownerId, t.id),
+    // A checkpoint is a historical observation, not "the" verification of a
+    // date: an account may legitimately be verified more than once on the same
+    // day, so there is deliberately NO unique index on (owner, account, as_of).
+    index("ix_reconciliation_checkpoints_account_as_of").on(t.ownerId, t.accountId, t.asOf),
+    // Answers "is this adjustment owned by a checkpoint?" when deleting.
+    index("ix_reconciliation_checkpoints_adjustment")
+      .on(t.ownerId, t.adjustmentId)
+      .where(sql`${t.adjustmentId} IS NOT NULL`),
+
+    // SQLite-only shape checks (PostgreSQL: DATE, bigint).
+    check(
+      "ck_reconciliation_checkpoints_as_of",
+      sql`date(${t.asOf}) IS NOT NULL AND ${t.asOf} = date(${t.asOf})`,
+    ),
+    check(
+      "ck_reconciliation_checkpoints_stated_integer",
+      sql`typeof(${t.statedBalanceMinor}) = 'integer'`,
+    ),
+  ],
+);

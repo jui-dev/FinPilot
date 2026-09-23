@@ -184,7 +184,8 @@
 |---|---|
 | F1 | none. Every assertion exists as `it.todo`. |
 | F2 — Ledger persistence | A-01, A-02, A-03, A-04, A-05, A-06, A-07, A-08, M3 ledger values (M3-1 and M3-3: Bank, Visa and spending; M3-2) |
-| 4 — Reconciliation | A-10, A-11, A-12, A-13, A-14, M2-1, M2-2 (excluding Available), **M3-1 and M3-3 net worth** (218,163 and 230,163 include the row-10 adjustment) |
+| 4a — Reconciliation write path | A-10, A-11, A-12, A-14, M2-2 (excluding Available), **M3-1 and M3-3 net worth** (218,163 and 230,163 include the row-10 adjustment) |
+| 4b — Verification status | A-13, M2-1 |
 | 5 — Monthly analysis | A-20, A-21, A-22, A-23 |
 | 6 — Commitments | A-30, A-31, A-32, M1-1, M1-2 |
 | 7 — Budgets | A-40, M1-4 |
@@ -200,3 +201,4 @@
 | 2026-09-22 | **August prologue added.** Opening balances moved to Aug 1 with the P1–P7 activity. The Laptop earmark on Savings is dated Aug 10. Streaming starts Oct 3. Housing budget effective August. | The original scenario had an August earmark on an account opened Sep 1 (the write-time invariant would reject it). The month-over-month assertion needed August transactions dated before the opening balances. Streaming active on Sep 3 would have been overdue on Sep 22, making Available 87,263. **Every September number is unchanged.** |
 | 2026-09-22 | **D4 (F2):** the net-worth values of M3-1 and M3-3 move from F2 to Stage 4. No expected number changed. | Both figures include row 10's −350 cash adjustment, which exists only once the Stage 4 reconcile service does. |
 | 2026-09-22 | Added A-14 (net worth reconciles with flows), A-23 (materiality), A-30/A-32 (occurrence set, idempotency), A-51 (rollback), M1-2/M1-4, and the Available values in M2/M3 | These make explicit what the approved scenario implied, and give the rollback rule from the tech stack decision its test |
+| 2026-09-23 | **Stage 4 split into 4a (reconciliation write path) and 4b (verification status)** in §8. No expected value changed; only the stage that turns each assertion green. A-13 and M2-1 move to 4b. | A checkpoint's status is derived from the ledger *after* the fact, so it is a separate boundary from posting the adjustment. Recorded here because §8 otherwise implies every Stage 4 assertion goes green together. |

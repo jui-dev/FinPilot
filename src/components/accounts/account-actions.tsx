@@ -9,24 +9,36 @@ import {
   restoreAccountAction,
 } from "@/app/_server/actions";
 
+import type { CalendarDate } from "@/domain/calendar-date";
+import type { AccountType } from "@/domain/ledger/accounts";
+import type { Money } from "@/domain/money";
+
 import { Button } from "../ui/button";
 import { Modal } from "../ui/overlay";
 import { useToast } from "../ui/toast";
+import { VerifyBalanceButton } from "./verify-balance-panel";
 
 /**
- * Only the actions the ledger allows are offered: archiving needs a zero
- * balance, deleting needs an account nothing ever referenced. Archiving is
- * reversible, so it is confirmed by an Undo message rather than a dialog.
+ * Only the actions the ledger allows are offered: verifying needs an account
+ * that is still in use, archiving needs a zero balance, deleting needs an
+ * account nothing ever referenced. Archiving is reversible, so it is confirmed
+ * by an Undo message rather than a dialog.
  */
 export function AccountActions({
   id,
   name,
+  type,
+  balance,
+  today,
   canArchive,
   canDelete,
   archived,
 }: {
   readonly id: string;
   readonly name: string;
+  readonly type: AccountType;
+  readonly balance: Money;
+  readonly today: CalendarDate;
   readonly canArchive: boolean;
   readonly canDelete: boolean;
   readonly archived: boolean;
@@ -82,6 +94,9 @@ export function AccountActions({
 
   return (
     <div className="flex items-center gap-0.5">
+      {!archived && (
+        <VerifyBalanceButton id={id} name={name} type={type} balance={balance} today={today} />
+      )}
       {archived ? (
         <Button
           variant="ghost"

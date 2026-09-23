@@ -180,7 +180,9 @@ const title = (row: ActivityRow): string =>
     ? `Transfer to ${row.counterAccount?.name ?? "account"}`
     : row.type === "opening_balance"
       ? "Opening balance"
-      : (row.category?.name ?? "Transaction"));
+      : row.type === "adjustment"
+        ? "Balance adjustment"
+        : (row.category?.name ?? "Transaction"));
 
 function EditForm({
   item,

@@ -319,3 +319,69 @@ describe("account_entries view", () => {
     ]);
   });
 });
+
+describe("reconciliation_checkpoints", () => {
+  const checkpoint = (values: Partial<Record<string, unknown>> = {}) => {
+    const row = {
+      id: `cp-${seq++}`,
+      owner_id: "o1",
+      account_id: "o1-cash",
+      as_of: "2026-09-20",
+      stated_balance_minor: 420_000,
+      adjustment_id: null,
+      ...values,
+    };
+    return exec(
+      "INSERT INTO reconciliation_checkpoints (id, owner_id, account_id, as_of, stated_balance_minor, adjustment_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      row.id,
+      row.owner_id,
+      row.account_id,
+      row.as_of,
+      row.stated_balance_minor,
+      row.adjustment_id,
+      NOW,
+      NOW,
+    );
+  };
+
+  it("accepts a checkpoint with no adjustment, and a stated balance of zero", () => {
+    expect(() => checkpoint()).not.toThrow();
+    expect(() => checkpoint({ stated_balance_minor: 0 })).not.toThrow();
+  });
+
+  it("accepts more than one checkpoint for the same account and date", () => {
+    // Deliberate: a checkpoint is a historical observation, not an upsert key.
+    checkpoint();
+    expect(() => checkpoint()).not.toThrow();
+  });
+
+  it("rejects a malformed as_of date", () => {
+    expect(() => checkpoint({ as_of: "2026-9-20" })).toThrow(/CHECK constraint failed/);
+    expect(() => checkpoint({ as_of: "not-a-date" })).toThrow(/CHECK constraint failed/);
+  });
+
+  it("rejects a non-integer stated balance", () => {
+    expect(() => checkpoint({ stated_balance_minor: 4_200.5 })).toThrow(
+      /ck_reconciliation_checkpoints_stated_integer/,
+    );
+    expect(() => checkpoint({ stated_balance_minor: "abc" })).toThrow(
+      /ck_reconciliation_checkpoints_stated_integer/,
+    );
+  });
+
+  it("rejects an account belonging to another owner", () => {
+    expect(() => checkpoint({ account_id: "o2-cash" })).toThrow(/FOREIGN KEY constraint failed/);
+  });
+
+  it("rejects an adjustment belonging to another owner", () => {
+    const foreign = insert({ owner_id: "o2", account_id: "o2-cash", category_id: "o2-shopping" });
+    expect(() => checkpoint({ adjustment_id: foreign })).toThrow(/FOREIGN KEY constraint failed/);
+  });
+
+  it("refuses to delete an account that a checkpoint refers to", () => {
+    checkpoint();
+    expect(() => exec("DELETE FROM accounts WHERE id = 'o1-cash'")).toThrow(
+      /FOREIGN KEY constraint failed/,
+    );
+  });
+});

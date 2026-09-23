@@ -57,6 +57,12 @@ export async function restoreEntryAction(id: unknown): Promise<CommandResult<str
   return run((ctx) => commands.restoreEntry(ctx, idOf(id)));
 }
 
+export async function verifyBalanceAction(
+  input: unknown,
+): Promise<CommandResult<commands.VerifiedBalance>> {
+  return run((ctx) => commands.verifyBalance(ctx, input));
+}
+
 export async function openAccountAction(input: unknown): Promise<CommandResult<string>> {
   return run((ctx) => commands.openAccount(ctx, input));
 }

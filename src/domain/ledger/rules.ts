@@ -83,8 +83,16 @@ export function checkLedgerRules(
   draft: TransactionDraft,
   facts: LedgerFacts,
 ): LedgerRuleViolation | null {
-  const magnitude = draft.type === "opening_balance" ? draft.balance : draft.amount;
-  if (draft.type === "opening_balance" ? magnitude === 0 : magnitude <= 0) {
+  // Opening balances and adjustments carry a signed value that may not be zero;
+  // every other type carries a positive magnitude the person typed.
+  const signed = draft.type === "opening_balance" || draft.type === "adjustment";
+  const value =
+    draft.type === "opening_balance"
+      ? draft.balance
+      : draft.type === "adjustment"
+        ? draft.difference
+        : draft.amount;
+  if (signed ? value === 0 : value <= 0) {
     return violation("invalid_amount", "The amount must be greater than zero.");
   }
   if (draft.occurredOn > facts.today) {

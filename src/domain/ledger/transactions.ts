@@ -112,6 +112,16 @@ export type TransactionDraft =
       /** Signed starting balance: negative for money owed on a credit card. */
       readonly balance: Money;
       readonly accountId: string;
+    })
+  | (DraftCommon & {
+      readonly type: "adjustment";
+      /**
+       * The signed correction a reconciliation posts (stated − recorded). It is
+       * named `difference`, not `amount`, because it is signed by nature rather
+       * than a magnitude the person typed.
+       */
+      readonly difference: Money;
+      readonly accountId: string;
     });
 
 /** Converts a draft to its stored row. `categoryId` for refunds must be resolved first. */
@@ -144,6 +154,8 @@ export function toLedgerRow(
       );
     case "opening_balance":
       return row("opening_balance", draft.balance, draft.accountId, null, null, null);
+    case "adjustment":
+      return row("adjustment", draft.difference, draft.accountId, null, null, null);
   }
 }
 
@@ -161,7 +173,7 @@ function row(
 /** The draft that would reproduce a stored row (used to re-validate on restore). */
 export function toDraft(
   stored: LedgerRow & { occurredOn: CalendarDate; description: string | null; note: string | null },
-): TransactionDraft | null {
+): TransactionDraft {
   const common = {
     occurredOn: stored.occurredOn,
     description: stored.description,
@@ -205,6 +217,11 @@ export function toDraft(
         accountId: stored.accountId,
       };
     case "adjustment":
-      return null; // created only by reconciliation (Stage 4)
+      return {
+        ...common,
+        type: "adjustment",
+        difference: stored.amountMinor,
+        accountId: stored.accountId,
+      };
   }
 }
