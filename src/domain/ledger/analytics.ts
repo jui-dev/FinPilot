@@ -39,3 +39,13 @@ export function formatPercent(ratio: Ratio, decimals = 1): string {
   const fraction = decimals > 0 ? `.${digits.slice(-decimals)}` : "";
   return `${negative ? "−" : ""}${whole}${fraction}%`;
 }
+
+/**
+ * A share as a whole percentage. A positive share too small to round to 1%
+ * reads "<1%", never "0%"; only a share that really is zero reads "0%".
+ */
+export function formatShare(ratio: Ratio): string {
+  const text = formatPercent(ratio, 0);
+  const positive = ratio.numerator !== 0 && ratio.numerator > 0 === ratio.denominator > 0;
+  return text === "0%" && positive ? "<1%" : text;
+}

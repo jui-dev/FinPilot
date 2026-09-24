@@ -1,6 +1,6 @@
 /**
  * Top-level destinations. Each appears in navigation only once its stage
- * exists (docs/roadmap.md): Plan, Cash flow and the Overview arrive later.
+ * exists (docs/roadmap.md): Plan and the Overview arrive later.
  *
  * HOME_PATH is where "/" and the logo lead. It is Activity only until the
  * Overview exists; Stage 11 sets it to "/" and gives "/" its own page. Nothing
@@ -16,6 +16,7 @@ export interface NavItem {
 export const PRIMARY_NAV: readonly NavItem[] = [
   { href: "/activity", label: "Activity" },
   { href: "/accounts", label: "Accounts" },
+  { href: "/cash-flow", label: "Cash flow" },
 ];
 
 export const SETTINGS_PATH = "/settings";

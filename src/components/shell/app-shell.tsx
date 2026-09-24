@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Receipt, Settings, Wallet } from "lucide-react";
+import { ArrowDownUp, Plus, Receipt, Settings, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -15,7 +15,14 @@ import { Tag } from "../ui/panel";
 import { ToastProvider } from "../ui/toast";
 import { HOME_PATH, isActive, PRIMARY_NAV, SETTINGS_PATH } from "./navigation";
 
-const TAB_ICONS = { "/activity": Receipt, "/accounts": Wallet } as const;
+const TAB_ICONS = {
+  "/activity": Receipt,
+  "/accounts": Wallet,
+  "/cash-flow": ArrowDownUp,
+} as const;
+
+/** Tabs before the centred + on phones; the rest follow it. */
+const TABS_BEFORE_ADD = Math.ceil(PRIMARY_NAV.length / 2);
 
 /**
  * The application frame: top navigation on desktop, a bottom tab bar with a
@@ -115,9 +122,10 @@ export function AppShell({
 
         <nav
           aria-label="Main"
-          className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
+          className="fixed inset-x-0 bottom-0 z-30 grid border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
+          style={{ gridTemplateColumns: `repeat(${PRIMARY_NAV.length + 1}, minmax(0, 1fr))` }}
         >
-          {PRIMARY_NAV.slice(0, 1).map((item) => (
+          {PRIMARY_NAV.slice(0, TABS_BEFORE_ADD).map((item) => (
             <TabLink key={item.href} href={item.href} label={item.label} pathname={pathname} />
           ))}
           <button
@@ -130,7 +138,7 @@ export function AppShell({
               <Plus className="size-6" strokeWidth={2.25} />
             </span>
           </button>
-          {PRIMARY_NAV.slice(1).map((item) => (
+          {PRIMARY_NAV.slice(TABS_BEFORE_ADD).map((item) => (
             <TabLink key={item.href} href={item.href} label={item.label} pathname={pathname} />
           ))}
         </nav>
