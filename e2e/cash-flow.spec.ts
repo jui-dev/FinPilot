@@ -1,7 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
 /**
- * Cash flow (Stage 5a): the current month to date and complete past months.
+ * Cash flow (Stages 5a and 5b): the current month to date and complete past
+ * months, and how spending changed against the comparison period.
  * Assertions are relative (before vs after an entry), so they depend on no
  * particular demo numbers.
  */
@@ -21,11 +22,8 @@ async function figure(page: Page, term: string): Promise<number> {
   return match[1] ? -value : value;
 }
 
-test("an expense shows up in this month's spending and what was left over", async ({ page }) => {
-  const spending = await figure(page, "Spending");
-  const leftOver = await figure(page, "Left over");
-  await expect(page.getByText(/so far$/)).toBeVisible();
-
+/** Records a Food & Dining expense from Cash, dated today, through Quick Add. */
+async function addCashExpense(page: Page, amount: string, description: string) {
   await page.goto("/activity");
   const add = page.getByRole("button", { name: /^Add/ }).first();
   await expect(async () => {
@@ -33,13 +31,37 @@ test("an expense shows up in this month's spending and what was left over", asyn
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 1_000 });
   }).toPass({ timeout: 20_000 });
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Amount in taka").fill("123");
+  await dialog.getByLabel("Amount in taka").fill(amount);
   await dialog.getByRole("radio", { name: "Expense" }).click();
   await dialog.getByRole("button", { name: "Food & Dining" }).click();
   await dialog.getByRole("button", { name: "Cash", exact: true }).click();
-  await dialog.getByLabel("Description").fill("Cash flow check");
+  await dialog.getByLabel("Description").fill(description);
   await dialog.getByRole("button", { name: /Save expense/ }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
+}
+
+/** The "What changed" panel. */
+const whatChanged = (page: Page) => page.getByRole("region", { name: "What changed" });
+
+/** The change in spending the headline states, signed, in taka. */
+async function spendingChange(page: Page): Promise<number> {
+  await page.goto("/cash-flow");
+  const text = await whatChanged(page)
+    .getByText(/^Spending/)
+    .innerText();
+  if (/unchanged/.test(text)) return 0;
+  const match = /৳\s*([\d,]+)\s*(higher|lower)/.exec(text);
+  if (!match) throw new Error(`No change stated: ${text}`);
+  const value = Number(match[1]!.replace(/,/g, ""));
+  return match[2] === "lower" ? -value : value;
+}
+
+test("an expense shows up in this month's spending and what was left over", async ({ page }) => {
+  const spending = await figure(page, "Spending");
+  const leftOver = await figure(page, "Left over");
+  await expect(page.getByText(/so far$/)).toBeVisible();
+
+  await addCashExpense(page, "123", "Cash flow check");
 
   expect(await figure(page, "Spending")).toBe(spending + 123);
   expect(await figure(page, "Left over")).toBe(leftOver - 123);
@@ -70,4 +92,31 @@ test("moves to a complete past month and back", async ({ page }) => {
 test("a month that cannot be selected shows the current month", async ({ page }) => {
   await page.goto("/cash-flow?month=2999-01");
   await expect(page.getByText(/so far$/)).toBeVisible();
+});
+
+test("explains the change against the same days of the previous month", async ({ page }) => {
+  const before = await spendingChange(page);
+  await expect(whatChanged(page).getByText(/^vs \d+(–\d+)? [A-Z][a-z]{2}/)).toBeVisible();
+
+  await addCashExpense(page, "600", "Month-over-month check");
+  expect(await spendingChange(page)).toBe(before + 600);
+});
+
+test("a complete month compares with the whole previous month; the first has none", async ({
+  page,
+}) => {
+  await page.goto("/cash-flow");
+  await page.getByRole("link", { name: /^Previous month/ }).click();
+  await expect(page.getByText("Full month")).toBeVisible();
+
+  // Every complete month with an earlier one names it; walk back to the first.
+  const previous = page.getByRole("link", { name: /^Previous month/ });
+  const heading = page.locator("#cash-flow-period");
+  for (let i = 0; i < 36 && (await previous.count()) > 0; i++) {
+    await expect(whatChanged(page).getByText(/^vs [A-Z][a-z]+ \d{4}$/)).toBeVisible();
+    const label = await heading.innerText();
+    await previous.click();
+    await expect(heading).not.toHaveText(label);
+  }
+  await expect(whatChanged(page).getByText("No earlier month to compare with")).toBeVisible();
 });

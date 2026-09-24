@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 
 import { likeForLikeWindows, type CalendarDate } from "@/domain/calendar-date";
-import { formatPercent } from "@/domain/ledger/analytics";
+import { formatPercent, formatShare } from "@/domain/ledger/analytics";
 import { fromMajor, subtract, sum, type Money } from "@/domain/money";
 import {
   getAccountBalances,
@@ -14,6 +14,7 @@ import {
   updateTransaction,
 } from "@/server/services/ledger-service";
 
+import { getMonthlyCashFlow } from "@/server/services/analysis-service";
 import { getAccountVerifications } from "@/server/services/reconciliation-service";
 
 import { ACCEPTANCE_CATALOGUE } from "./catalogue";
@@ -115,6 +116,16 @@ async function spendingByName(s: Scenario, range = SEP_1_22): Promise<Record<str
   return Object.fromEntries([...byId].map(([id, amount]) => [names.get(id) ?? id, amount]));
 }
 
+/** The month-over-month explanation shown for September to date (Sep 1–22 vs Aug 1–22). */
+async function monthOverMonth(s: Scenario) {
+  const { change } = await getMonthlyCashFlow(s.ctx);
+  expect(change?.comparison).toEqual({ month: "2026-08", kind: "same_days", range: AUG_1_22 });
+  const explanation = change!.explanation;
+  const lines = [...explanation.increases, ...explanation.offsets, ...explanation.unchanged];
+  const byName = Object.fromEntries(lines.map((l) => [l.name, l]));
+  return { explanation, lines, byName };
+}
+
 // ---------------------------------------------------------------------------
 // Implemented assertions, keyed "ID" or "ID (part)"
 // ---------------------------------------------------------------------------
@@ -211,6 +222,54 @@ const implemented: Record<string, () => Promise<void>> = {
     // The naive figures are exactly "correct + card payment" and "income + refund".
     expect(spending + taka(12_000)).toBe(taka(78_487));
     expect(income + taka(1_200)).toBe(taka(96_200));
+  },
+
+  "A-20": async () => {
+    const { lines } = await monthOverMonth(await base());
+    expect(Object.fromEntries(lines.map((l) => [l.name, l.change]))).toEqual({
+      Health: taka(30_000),
+      Shopping: taka(-2_000),
+      Groceries: taka(-800),
+      "Food & Dining": taka(-750),
+      Housing: taka(0),
+      "Fees & Charges": taka(0),
+    });
+  },
+
+  "A-21": async () => {
+    const { explanation } = await monthOverMonth(await base());
+    expect(explanation).toMatchObject({
+      currentTotal: taka(66_487),
+      previousTotal: taka(40_037),
+      net: taka(26_450),
+      grossIncreases: taka(30_000),
+      grossDecreases: taka(3_550),
+    });
+  },
+
+  "A-22": async () => {
+    const { explanation } = await monthOverMonth(await base());
+    expect(explanation.increases.map((l) => [l.name, l.shareOfIncreases])).toEqual([
+      ["Health", { numerator: taka(30_000), denominator: taka(30_000) }],
+    ]);
+    expect(formatShare(explanation.increases[0]!.shareOfIncreases!)).toBe("100%");
+    expect(explanation.offsets.map((l) => [l.name, l.change, l.shareOfIncreases])).toEqual([
+      ["Shopping", taka(-2_000), null],
+      ["Groceries", taka(-800), null],
+      ["Food & Dining", taka(-750), null],
+    ]);
+    // Over the net change Health would be 113%: why gross increases is the denominator.
+    expect(formatShare({ numerator: taka(30_000), denominator: explanation.net })).toBe("113%");
+  },
+
+  "A-23": async () => {
+    const { byName, explanation } = await monthOverMonth(await base());
+    for (const name of ["Health", "Shopping", "Groceries", "Food & Dining"]) {
+      expect(byName[name]!.material, name).toBe(true);
+    }
+    expect(byName.Housing!.material).toBe(false);
+    expect(byName["Fees & Charges"]!.material).toBe(false);
+    expect(explanation.smallerChanges).toEqual({ count: 0, net: taka(0) });
   },
 
   "M3-1 (ledger)": async () => {

@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, Minus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -12,8 +12,13 @@ import { EmptyState, PageHeader, Panel } from "@/components/ui/panel";
 import { addDays, dayOfMonth, type YearMonth } from "@/domain/calendar-date";
 import { formatPercent, formatShare } from "@/domain/ledger/analytics";
 import type { CashFlowPeriod, CompositionLine } from "@/domain/ledger/cash-flow";
-import { negate } from "@/domain/money";
-import { getMonthlyCashFlow } from "@/server/services/analysis-service";
+import type {
+  CategoryChange,
+  ComparisonPeriod,
+  SpendingChange,
+} from "@/domain/ledger/month-over-month";
+import { abs, negate } from "@/domain/money";
+import { getMonthlyCashFlow, type MonthOverMonth } from "@/server/services/analysis-service";
 
 export const metadata: Metadata = { title: "Cash flow" };
 
@@ -33,6 +38,14 @@ function periodNote(period: CashFlowPeriod): string {
     : `${first}–${shortDate(last)}, so far`;
 }
 
+/** "vs 1–22 Aug" for the same days of the previous month; "vs August 2026" for a whole month. */
+function comparisonNote(comparison: ComparisonPeriod): string {
+  if (comparison.kind === "complete") return `vs ${monthLabel(comparison.month)}`;
+  const last = addDays(comparison.range.end, -1);
+  const first = dayOfMonth(comparison.range.start);
+  return first === dayOfMonth(last) ? `vs ${shortDate(last)}` : `vs ${first}–${shortDate(last)}`;
+}
+
 export default async function CashFlowPage({
   searchParams,
 }: {
@@ -44,7 +57,7 @@ export default async function CashFlowPage({
   const params = await searchParams;
   const requested = typeof params.month === "string" ? params.month : undefined;
 
-  const { period, months, summary, composition } = await getMonthlyCashFlow(ctx, requested);
+  const { period, months, summary, composition, change } = await getMonthlyCashFlow(ctx, requested);
   const index = months.indexOf(period.month);
   const current = months[0]!;
   const previous = months[index + 1];
@@ -125,7 +138,127 @@ export default async function CashFlowPage({
           </>
         )}
       </Panel>
+
+      <WhatChanged change={change} />
     </div>
+  );
+}
+
+/**
+ * How spending changed against the comparison period, and which categories
+ * account for it (Stage 5b). Every figure and every materiality decision
+ * comes from the domain; this only lays them out. Spending is never red or
+ * green (docs/design-direction.md §2).
+ */
+function WhatChanged({ change }: { readonly change: MonthOverMonth | null }) {
+  const explanation = change?.explanation;
+  const quiet =
+    explanation !== undefined &&
+    explanation.increases.length === 0 &&
+    explanation.offsets.length === 0 &&
+    explanation.unchanged.length === 0;
+  return (
+    <Panel className="overflow-hidden" labelledBy="cash-flow-change">
+      <div className="flex items-baseline justify-between gap-3 border-b border-line px-4 py-3 md:px-5">
+        <h2 id="cash-flow-change" className="text-[13px] font-semibold">
+          What changed
+        </h2>
+        {change && <p className="text-[12.5px] text-ink-2">{comparisonNote(change.comparison)}</p>}
+      </div>
+      {!explanation ? (
+        <EmptyState title="No earlier month to compare with" />
+      ) : quiet ? (
+        <EmptyState title="Nothing was spent in either period" />
+      ) : (
+        <ChangeDetails explanation={explanation} />
+      )}
+    </Panel>
+  );
+}
+
+function ChangeDetails({ explanation }: { readonly explanation: SpendingChange }) {
+  const { net, previousTotal, currentTotal, smallerChanges } = explanation;
+  const higher = explanation.increases.filter((l) => l.material);
+  const lower = explanation.offsets.filter((l) => l.material);
+  const Icon = net > 0 ? ArrowUpRight : net < 0 ? ArrowDownRight : Minus;
+  return (
+    <>
+      <div className="flex items-start gap-3 px-4 py-4 md:px-5">
+        <Icon aria-hidden className="mt-1 size-5 shrink-0 text-ink-2" />
+        <div>
+          <p className="text-[18px] leading-tight font-semibold">
+            {net === 0 ? (
+              "Spending unchanged"
+            ) : (
+              <>
+                Spending <Money amount={abs(net)} sign="none" /> {net > 0 ? "higher" : "lower"}
+              </>
+            )}
+          </p>
+          <p className="mt-0.5 text-[12.5px] text-ink-2">
+            <Money amount={previousTotal} /> → <Money amount={currentTotal} />
+          </p>
+        </div>
+      </div>
+
+      {higher.length > 0 && (
+        <>
+          <h3 className="border-y border-line bg-surface-subtle px-4 py-2 text-[12.5px] font-semibold text-ink-2 md:px-5">
+            Higher
+          </h3>
+          <ul aria-label="Categories that were higher">
+            {higher.map((line) => (
+              <ChangeRow key={line.categoryId} line={line} />
+            ))}
+          </ul>
+        </>
+      )}
+      {lower.length > 0 && (
+        <>
+          <h3 className="border-y border-line bg-surface-subtle px-4 py-2 text-[12.5px] font-semibold text-ink-2 md:px-5">
+            Lower
+          </h3>
+          <ul aria-label="Categories that were lower">
+            {lower.map((line) => (
+              <ChangeRow key={line.categoryId} line={line} />
+            ))}
+          </ul>
+        </>
+      )}
+      {smallerChanges.count > 0 && (
+        <p className="flex items-baseline gap-3 border-t border-line px-4 py-3 md:px-5">
+          <span className="min-w-0 flex-1 text-ink-2">
+            {smallerChanges.count === 1
+              ? "1 smaller change"
+              : `${smallerChanges.count} smaller changes`}
+          </span>
+          <span className="w-28 text-right text-[15px] font-medium">
+            <Money amount={smallerChanges.net} sign="always" />
+          </span>
+        </p>
+      )}
+    </>
+  );
+}
+
+function ChangeRow({ line }: { readonly line: CategoryChange }) {
+  return (
+    <li className="flex items-baseline gap-3 border-b border-line px-4 py-3 last:border-b-0 md:px-5">
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-medium">{line.name}</span>
+        <span className="block text-[12.5px] text-ink-2">
+          <Money amount={line.previous} /> → <Money amount={line.current} />
+        </span>
+      </span>
+      {line.shareOfIncreases && (
+        <span className="text-[13px] text-ink-2 tabular-nums">
+          {formatShare(line.shareOfIncreases)} of the increase
+        </span>
+      )}
+      <span className="w-28 text-right text-[15px] font-medium">
+        <Money amount={line.change} sign="always" />
+      </span>
+    </li>
   );
 }
 

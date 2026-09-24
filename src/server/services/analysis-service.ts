@@ -6,8 +6,16 @@ import {
   summarizeCashFlow,
   type CashFlowPeriod,
   type CashFlowSummary,
+  type CategorySpending,
   type SpendingComposition,
 } from "@/domain/ledger/cash-flow";
+import {
+  comparisonPeriod,
+  explainSpendingChange,
+  type ComparisonPeriod,
+  type SpendingChange,
+} from "@/domain/ledger/month-over-month";
+import type { Money } from "@/domain/money";
 import type { ServiceContext } from "@/server/context";
 import { getIncome, getSpendingByCategory } from "@/server/services/ledger-service";
 import { getAccounts, getCategories } from "@/server/services/setup-service";
@@ -24,13 +32,21 @@ export interface MonthlyCashFlow {
   readonly months: readonly YearMonth[];
   readonly summary: CashFlowSummary;
   readonly composition: SpendingComposition;
+  /** How spending changed against the comparison period; null when there is none. */
+  readonly change: MonthOverMonth | null;
+}
+
+export interface MonthOverMonth {
+  readonly comparison: ComparisonPeriod;
+  readonly explanation: SpendingChange;
 }
 
 /**
- * Income, spending, what was left over, and where the spending went, for one
- * month. `requestedMonth` is untrusted input ("YYYY-MM" from the URL): anything
- * that is not a selectable month — malformed, in the future, or before the
- * first account — falls back to the current month.
+ * Income, spending, what was left over, where the spending went, and how it
+ * changed against the comparison period, for one month. `requestedMonth` is
+ * untrusted input ("YYYY-MM" from the URL): anything that is not a selectable
+ * month — malformed, in the future, or before the first account — falls back
+ * to the current month.
  */
 export async function getMonthlyCashFlow(
   ctx: ServiceContext,
@@ -46,18 +62,35 @@ export async function getMonthlyCashFlow(
   const month = months.find((m) => m === requestedMonth) ?? yearMonthOf(today);
   const period = cashFlowPeriod(month, today);
 
-  const [income, spendingByCategory, categories] = await Promise.all([
+  const comparison = comparisonPeriod(period, months);
+
+  const [income, spendingByCategory, previousByCategory, categories] = await Promise.all([
     getIncome(ctx, period.range),
     getSpendingByCategory(ctx, period.range),
+    comparison ? getSpendingByCategory(ctx, comparison.range) : null,
     getCategories(ctx),
   ]);
   const names = new Map(categories.map((c) => [c.id, c.name]));
-  const composition = spendingComposition(
-    [...spendingByCategory].map(([categoryId, amount]) => ({
+  const lines = (byCategory: Map<string, Money>): CategorySpending[] =>
+    [...byCategory].map(([categoryId, amount]) => ({
       categoryId,
       name: names.get(categoryId) ?? categoryId,
       amount,
-    })),
-  );
-  return { period, months, summary: summarizeCashFlow(income, composition.total), composition };
+    }));
+  const current = lines(spendingByCategory);
+  const composition = spendingComposition(current);
+  const change =
+    comparison && previousByCategory
+      ? {
+          comparison,
+          explanation: explainSpendingChange(current, lines(previousByCategory)),
+        }
+      : null;
+  return {
+    period,
+    months,
+    summary: summarizeCashFlow(income, composition.total),
+    composition,
+    change,
+  };
 }

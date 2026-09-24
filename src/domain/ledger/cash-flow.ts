@@ -121,7 +121,7 @@ export interface SpendingComposition {
 }
 
 /** Code-point order of the lower-cased name: independent of the machine's locale. */
-const byName = (a: CategorySpending, b: CategorySpending): number => {
+export const byName = (a: { readonly name: string }, b: { readonly name: string }): number => {
   const x = a.name.toLowerCase();
   const y = b.name.toLowerCase();
   if (x !== y) return x < y ? -1 : 1;

@@ -103,7 +103,7 @@ export const ACCEPTANCE_CATALOGUE: readonly AcceptanceStage[] = [
     ],
   },
   {
-    stage: "5 — Monthly analysis",
+    stage: "5b — Month-over-month explanation",
     assertions: [
       {
         id: "A-20",

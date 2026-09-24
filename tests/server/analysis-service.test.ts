@@ -71,6 +71,27 @@ describe("getMonthlyCashFlow on the acceptance scenario", () => {
       "Fees & Charges",
     ]);
   });
+
+  it("explains September to date against Aug 1–22, and has nothing before August", async () => {
+    const s = await buildSeptember2026();
+    handle = s.handle;
+
+    const { change } = await getMonthlyCashFlow(s.ctx);
+    expect(change!.comparison).toEqual({
+      month: "2026-08",
+      kind: "same_days",
+      range: { start: "2026-08-01", end: "2026-08-23" },
+    });
+    expect(change!.explanation).toMatchObject({
+      currentTotal: taka(66_487),
+      previousTotal: taka(40_037),
+      net: taka(26_450),
+      grossIncreases: taka(30_000),
+    });
+
+    // August is the first month with accounts: there is no earlier month.
+    expect((await getMonthlyCashFlow(s.ctx, "2026-08")).change).toBeNull();
+  });
 });
 
 /**
@@ -259,6 +280,62 @@ describe("getMonthlyCashFlow", () => {
     expect(september.summary.spending).toBe(taka(22_837));
   });
 
+  it("compares the month to date with the same days of the previous month", async () => {
+    const { ctx, bank, bkash, expense, category } = await ledger();
+    await expense("18000", bank, "Housing", "2026-08-03");
+    await expense("900", bkash, "Groceries", "2026-08-10");
+    // After Aug 22: outside the like-for-like window.
+    await expense("2000", bank, "Transport", "2026-08-28");
+    // Deleted: never part of either period.
+    const [deleted] = await expense("5000", bank, "Health", "2026-08-05");
+    ok(await removeEntry(ctx, deleted!));
+    // Archived categories keep their history and their name.
+    ok(await archiveCategory(ctx, category("Groceries")));
+
+    const { change } = await getMonthlyCashFlow(ctx);
+    expect(change!.comparison.range).toEqual({ start: "2026-08-01", end: "2026-08-23" });
+    const e = change!.explanation;
+    // 21,837 this month (see above) against 18,000 + 900.
+    expect(e).toMatchObject({
+      currentTotal: taka(21_837),
+      previousTotal: taka(18_900),
+      net: taka(2_937),
+      grossIncreases: taka(3_837),
+      grossDecreases: taka(900),
+      // The fee: +37 is below ৳500.
+      smallerChanges: { count: 1, net: taka(37) },
+    });
+    expect(e.increases.map((l) => [l.name, l.change, l.material])).toEqual([
+      ["Housing", taka(2_000), true],
+      ["Shopping", taka(1_800), true],
+      ["Fees & Charges", taka(37), false],
+    ]);
+    expect(e.offsets.map((l) => [l.name, l.change, l.material])).toEqual([
+      ["Groceries", taka(-900), true],
+    ]);
+  });
+
+  it("compares a complete month with the whole previous month, back to the first month", async () => {
+    const { ctx, bank, expense } = await ledger();
+    await expense("18000", bank, "Housing", "2026-08-03");
+    await expense("2000", bank, "Transport", "2026-08-28");
+    await expense("600", bank, "Transport", "2026-07-20");
+
+    const august = (await getMonthlyCashFlow(ctx, "2026-08")).change!;
+    expect(august.comparison).toEqual({
+      month: "2026-07",
+      kind: "complete",
+      range: { start: "2026-07-01", end: "2026-08-01" },
+    });
+    expect(august.explanation).toMatchObject({
+      currentTotal: taka(20_000),
+      previousTotal: taka(600),
+      net: taka(19_400),
+    });
+    // July holds the first account: nothing earlier to compare with.
+    expect((await getMonthlyCashFlow(ctx, "2026-07")).change).toBeNull();
+  });
+
   it("never sees another owner's ledger", async () => {
     const { ctx } = await ledger();
     const otherId = ok(
@@ -285,6 +362,7 @@ describe("getMonthlyCashFlow", () => {
     const mine = await getMonthlyCashFlow(ctx);
     expect(mine.summary.spending).toBe(taka(21_837));
     expect(mine.months.at(-1)).toBe("2026-07");
+    expect(mine.change!.explanation.currentTotal).toBe(taka(21_837));
     expect((await getMonthlyCashFlow(other)).summary.spending).toBe(taka(9_999));
   });
 });
