@@ -52,7 +52,13 @@ test("moves to a complete past month and back", async ({ page }) => {
   await page.goto("/cash-flow");
   await expect(page.getByRole("link", { name: /^Next month/ })).toHaveCount(0);
 
-  await page.getByRole("link", { name: /^Previous month/ }).click();
+  // The chevron keeps its 16px size: conflicting padding once squeezed it to 8px.
+  const previous = page.getByRole("link", { name: /^Previous month/ });
+  const chevron = await previous.locator("svg").boundingBox();
+  expect(chevron?.width).toBeGreaterThanOrEqual(16);
+  expect(chevron?.height).toBeGreaterThanOrEqual(16);
+
+  await previous.click();
   await expect(page).toHaveURL(/\/cash-flow\?month=\d{4}-\d{2}$/);
   await expect(page.getByText("Full month")).toBeVisible();
 

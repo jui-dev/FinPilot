@@ -180,7 +180,7 @@ function MonthLink({
 }) {
   const Icon = direction === "previous" ? ChevronLeft : ChevronRight;
   const name = direction === "previous" ? "Previous month" : "Next month";
-  const className = cn(buttonClass("ghost", "sm"), "size-8 px-0");
+  const className = buttonClass("ghost", "icon");
   if (!month) {
     return (
       <span aria-disabled="true" aria-label={name} className={cn(className, "opacity-45")}>

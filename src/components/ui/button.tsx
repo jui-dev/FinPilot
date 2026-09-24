@@ -4,7 +4,7 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { cn } from "./cn";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "link";
-type Size = "sm" | "md";
+type Size = "sm" | "md" | "icon";
 
 const base =
   "inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold transition-colors " +
@@ -22,6 +22,8 @@ const variants: Record<Variant, string> = {
 const sizes: Record<Size, string> = {
   sm: "h-8 rounded-control px-3 text-[13px]",
   md: "h-10 rounded-control px-4 text-sm",
+  /** Icon-only: a 32px square with no horizontal padding, so a 16px icon keeps its size. */
+  icon: "size-8 rounded-control",
 };
 
 /** Class names for a button-styled element (e.g. a Link). */
