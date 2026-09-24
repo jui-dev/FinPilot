@@ -22,7 +22,7 @@
 - **A real database is used from the first ledger stage onward.** Acceptance and property tests run against migrated in-memory SQLite, with no mocks.
 - **The clock is injected.** The acceptance suite runs with today = 2026-09-22 (Asia/Dhaka).
 - **Constraint tests insert invalid rows directly**, proving the database's CHECKs reject them even when the domain layer is bypassed.
-- **Every visible stage extends the demo seed**, so each new feature can be shown.
+- **Demo data is not extended stage by stage.** Features are proven by the frozen acceptance scenario and by focused test fixtures; `npm run db:reset` is technical reset infrastructure. The portfolio demo dataset is designed once, in Stage 12, when the features, reports and Overview are mature enough to know what it must demonstrate.
 - **Definition of done for every stage** (no exceptions):
   - typecheck, lint (including the `src/domain` boundary), unit, property and acceptance (non-todo) tests, and any existing E2E tests all pass
   - one reviewed commit or a small series
@@ -41,7 +41,10 @@
 | 3 | Accounts, transactions, Quick Add UI | visible | A — `v0.1-ledger` |
 | 4a | Reconciliation write path (Verify balance) | visible | A — `v0.1-ledger` |
 | 4b | Verification status | visible | A — `v0.1-ledger` |
-| 5 | Monthly analysis | visible | B — `v0.2-understand` → **review** |
+| 5a | Monthly cash flow foundation | visible | B — `v0.2-understand` |
+| 5b | Month-over-month explanation | visible | B — `v0.2-understand` |
+| 5c | Evidence drill-down | visible | B — `v0.2-understand` → **review** |
+| 5d | Charts / visual analytics | visible | deferred; placement decided at the Milestone B review |
 | 6 | Commitments | visible | C — `v0.3-plan` |
 | 7 | Budgets | visible | C — `v0.3-plan` |
 | 8 | Goals and earmarks | visible | C — `v0.3-plan` |
@@ -161,21 +164,38 @@
 ### Milestone B — "Understand" — tag `v0.2-understand`
 
 #### 5 — Monthly analysis
-- **Builds:**
-  - Month view: cash flow (income, spending, net, savings rate) and a category bridge.
-  - Composition bars.
-  - **Month-over-month contribution:** like-for-like windows, the gross-increase denominator, materiality, offsets.
-  - The first visx charts (bridge, diverging bars, composition), with the per-chart Recharts fallback.
-  - Evidence drill-down to filtered transactions.
+Built in its conceptual order: what happened → where it went → what changed → which transactions explain it → how to show it.
+
 - **Why here:** it needs only the ledger, and it's the first differentiating feature.
 - **Domain concepts:** like-for-like windows, attribution, materiality.
+- **What you can see at the end:** "where did my money go, and why did it change?"
+- **Deferred:** signals (the numbers exist; the ranked messages come in Stage 10).
+
+##### 5a — Monthly cash flow foundation
+- **Builds:**
+  - The Cash flow page for the current month-to-date or a complete past month, with contiguous month navigation from the first account's month.
+  - Income, spending, left over (income − spending) and savings rate.
+  - Spending composition by category.
+- **Tests that must pass:**
+  - Domain unit and property tests.
+  - Service integration tests (September month-to-date and complete August from the scenario fixture).
+  - **Acceptance:** none new (A-03…A-05 are already green).
+- **Commit:** `feat(analytics): monthly cash flow and spending composition`
+
+##### 5b — Month-over-month explanation
+- **Builds:** like-for-like windows, category contribution over the gross-increase denominator, offsets, materiality.
 - **Tests that must pass:**
   - Unit tests for the attribution maths, including the 113% net-vs-gross case.
   - **Acceptance:** A-20…A-23.
-- **What you can see at the end:** "where did my money go, and why did it change?"
-- **Deferred:** signals (the numbers exist; the ranked messages come in Stage 10).
-- **Commit:** `feat(analytics): cash flow, composition and month-over-month attribution`
-- **→ Checkpoint review** of the product feel and the charts.
+
+##### 5c — Evidence drill-down
+- **Builds:** a date-range filter for Activity in URL params, and links from cash-flow and contribution figures to the filtered transactions.
+
+##### 5d — Charts / visual analytics
+- **Builds:** the visx charts (bridge, diverging bars, composition), with the per-chart Recharts fallback.
+- **Deferred from the current implementation sequence.** Whether charts come before the `v0.2-understand` tag or move to the visual-refinement phase is decided at the Milestone B review after 5c.
+
+- **→ Checkpoint review** after 5c: the product feel, and where charts belong.
 
 ### Milestone C — "Plan" — tag `v0.3-plan`
 
@@ -287,7 +307,10 @@
 | F2 | A-01…A-08, M3 ledger values |
 | 4a | A-10, A-11, A-12, A-14, M2-2 ledger values, M3 net worth |
 | 4b | A-13, M2-1 |
-| 5 | A-20…A-23 |
+| 5a | none (A-03…A-05 already green) |
+| 5b | A-20…A-23 |
+| 5c | none |
+| 5d | none |
 | 6 | A-30…A-32, M1-1, M1-2 |
 | 7 | A-40, M1-4 |
 | 8 | A-50, A-51 |
