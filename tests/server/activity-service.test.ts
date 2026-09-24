@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { DatabaseHandle } from "@/db/client";
-import { yearMonth } from "@/domain/calendar-date";
+import { inclusiveRange, yearMonth } from "@/domain/calendar-date";
 import {
   getActivity,
   getActivityItem,
@@ -133,6 +133,42 @@ describe("the Activity list", () => {
 
     const refunds = await getActivity(ctx, { type: "refund" });
     expect(refunds.items.map((i) => i.primary.description)).toEqual(["Jacket refund"]);
+  });
+
+  it("filters by a date range that includes both boundary days", async () => {
+    const { ctx } = await ledger();
+    const names = async (from: string, to: string) =>
+      (await getActivity(ctx, { range: inclusiveRange(from, to)! })).items.map(
+        (i) => i.primary.description,
+      );
+    expect(await names("2026-09-05", "2026-09-14")).toEqual(["Cash-out", "Jacket", "Shwapno"]);
+    expect(await names("2026-09-08", "2026-09-08")).toEqual(["Jacket"]);
+    expect(await names("2026-09-06", "2026-09-07")).toEqual([]);
+  });
+
+  it("uses a range instead of the month when both are given", async () => {
+    const { ctx } = await ledger();
+    const { items } = await getActivity(ctx, {
+      month: yearMonth(2026, 8),
+      range: inclusiveRange("2026-09-16", "2026-09-16")!,
+    });
+    expect(items.map((i) => i.primary.description)).toEqual(["Jacket refund"]);
+  });
+
+  it("totals a category over a range as spending net of refunds", async () => {
+    const { ctx, category } = await ledger();
+    const shopping = await getActivity(ctx, {
+      categoryId: category("Shopping"),
+      range: inclusiveRange("2026-09-01", "2026-09-30")!,
+    });
+    expect(shopping.items.map((i) => i.primary.description)).toEqual(["Jacket refund", "Jacket"]);
+    expect(shopping.summary.spending).toBe(taka(1_800));
+    // Refunds alone make net spending negative.
+    const refundOnly = await getActivity(ctx, {
+      categoryId: category("Shopping"),
+      range: inclusiveRange("2026-09-10", "2026-09-30")!,
+    });
+    expect(refundOnly.summary.spending).toBe(taka(-1_200));
   });
 
   it("searches descriptions, categories and account names case-insensitively, and typed amounts", async () => {

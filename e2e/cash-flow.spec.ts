@@ -1,8 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 
 /**
- * Cash flow (Stages 5a and 5b): the current month to date and complete past
- * months, and how spending changed against the comparison period.
+ * Cash flow (Stages 5a–5c): the current month to date and complete past
+ * months, how spending changed against the comparison period, and the
+ * transactions behind each category figure.
  * Assertions are relative (before vs after an entry), so they depend on no
  * particular demo numbers.
  */
@@ -24,6 +25,17 @@ async function figure(page: Page, term: string): Promise<number> {
 
 /** Records a Food & Dining expense from Cash, dated today, through Quick Add. */
 async function addCashExpense(page: Page, amount: string, description: string) {
+  await addExpense(page, amount, description, "Food & Dining", "Cash");
+}
+
+/** Records an expense dated today through Quick Add. */
+async function addExpense(
+  page: Page,
+  amount: string,
+  description: string,
+  category: string,
+  account: string,
+) {
   await page.goto("/activity");
   const add = page.getByRole("button", { name: /^Add/ }).first();
   await expect(async () => {
@@ -33,11 +45,34 @@ async function addCashExpense(page: Page, amount: string, description: string) {
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Amount in taka").fill(amount);
   await dialog.getByRole("radio", { name: "Expense" }).click();
-  await dialog.getByRole("button", { name: "Food & Dining" }).click();
-  await dialog.getByRole("button", { name: "Cash", exact: true }).click();
+  const categoryButton = dialog.getByRole("button", { name: category, exact: true });
+  if (!(await categoryButton.isVisible())) {
+    await dialog.getByRole("button", { name: /^\+\d+ more$/ }).click();
+  }
+  await categoryButton.click();
+  await dialog.getByRole("button", { name: account, exact: true }).click();
   await dialog.getByLabel("Description").fill(description);
   await dialog.getByRole("button", { name: /Save expense/ }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
+}
+
+/** A signed taka amount in some text ("৳1,234", "−৳500"). */
+function amountIn(text: string): number {
+  const match = /(−?)\s*৳\s*([\d,]+)/.exec(text);
+  if (!match) throw new Error(`No amount in: ${text}`);
+  const value = Number(match[2]!.replace(/,/g, ""));
+  return match[1] ? -value : value;
+}
+
+/** Activity's "Spent" total for the rows shown, signed, in taka. */
+async function activitySpent(page: Page): Promise<number> {
+  return amountIn(await page.getByText(/^Spent/).innerText());
+}
+
+/** The inclusive range an Activity URL carries. */
+function rangeOf(url: string): { from: string; to: string } {
+  const params = new URL(url).searchParams;
+  return { from: params.get("from") ?? "", to: params.get("to") ?? "" };
 }
 
 /** The "What changed" panel. */
@@ -119,4 +154,107 @@ test("a complete month compares with the whole previous month; the first has non
     await expect(heading).not.toHaveText(label);
   }
   await expect(whatChanged(page).getByText("No earlier month to compare with")).toBeVisible();
+});
+
+test("a category's spending opens the transactions behind it", async ({ page }) => {
+  await addCashExpense(page, "321", "Evidence of where it went");
+  await page.goto("/cash-flow");
+  const row = page
+    .getByRole("list", { name: "Spending by category" })
+    .getByRole("listitem")
+    .filter({ has: page.getByRole("link", { name: "Food & Dining", exact: true }) });
+  const figure = amountIn(await row.innerText());
+
+  await row.getByRole("link", { name: "Food & Dining", exact: true }).click();
+  await expect(page).toHaveURL(
+    /\/activity\?category=[^&]+&from=\d{4}-\d{2}-01&to=\d{4}-\d{2}-\d{2}$/,
+  );
+  expect(page.url()).not.toContain("month=");
+  await expect(page.getByRole("link", { name: /Evidence of where it went/ })).toBeVisible();
+  expect(await activitySpent(page)).toBe(figure);
+
+  const period = page.getByLabel("Period");
+  await expect(period).toHaveValue("range");
+  await expect(period.locator("option:checked")).toHaveText(/^(1–)?\d+ [A-Z][a-z]{2} \d{4}$/);
+});
+
+test("both sides of a change open their own period's transactions", async ({ page }) => {
+  await addExpense(page, "5000", "Evidence of a change", "Health", "Bank");
+  await page.goto("/cash-flow");
+  const row = whatChanged(page)
+    .getByRole("list", { name: "Categories that were higher" })
+    .getByRole("listitem")
+    .filter({ hasText: "Health" });
+  const [previous, current] = [
+    row.getByRole("link", { name: /^Health, / }).first(),
+    row.getByRole("link", { name: /^Health, / }).last(),
+  ];
+  const previousFigure = amountIn(await previous.innerText());
+  const currentFigure = amountIn(await current.innerText());
+
+  await current.click();
+  await expect(page).toHaveURL(/\/activity\?category=/);
+  const currentRange = rangeOf(page.url());
+  expect(currentRange.from).toMatch(/-01$/);
+  await expect(page.getByRole("link", { name: /Evidence of a change/ })).toBeVisible();
+  expect(await activitySpent(page)).toBe(currentFigure);
+
+  await page.goBack();
+  await previous.click();
+  await expect(page).toHaveURL(/\/activity\?category=/);
+  const previousRange = rangeOf(page.url());
+  // The comparison window: from the 1st of the previous month, ending before this period.
+  expect(previousRange.from).toMatch(/-01$/);
+  expect(previousRange.to < currentRange.from).toBe(true);
+  await expect(page.getByText(/in this view/)).toBeVisible();
+  await expect(page.getByRole("link", { name: /Evidence of a change/ })).toHaveCount(0);
+  expect(await activitySpent(page)).toBe(previousFigure);
+});
+
+test("Activity keeps a date range through a transaction, and a month replaces it", async ({
+  page,
+}) => {
+  await addCashExpense(page, "222", "Evidence kept in range");
+  await page.goto("/cash-flow");
+  await page
+    .getByRole("list", { name: "Spending by category" })
+    .getByRole("link", { name: "Food & Dining", exact: true })
+    .click();
+  await expect(page).toHaveURL(/from=/);
+  const { from, to } = rangeOf(page.url());
+
+  await page
+    .getByRole("link", { name: /Evidence kept in range/ })
+    .first()
+    .click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`from=${from}&to=${to}&tx=`));
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await expect(page).toHaveURL(new RegExp(`from=${from}&to=${to}$`));
+
+  const month = from.slice(0, 7);
+  await page.getByLabel("Period").selectOption(month);
+  await expect(page).toHaveURL(new RegExp(`month=${month}$`));
+  expect(page.url()).not.toContain("from=");
+  await expect(page.getByLabel("Period")).toHaveValue(month);
+
+  // Reload keeps whatever the URL says.
+  await page.reload();
+  await expect(page.getByLabel("Period")).toHaveValue(month);
+});
+
+test("an invalid date range falls back to the month, then to all time", async ({ page }) => {
+  await page.goto("/activity");
+  const month = await page.getByLabel("Period").locator("option").nth(1).getAttribute("value");
+
+  await page.goto(`/activity?from=2026-02-30&to=2026-03-01&month=${month}`);
+  await expect(page.getByLabel("Period")).toHaveValue(month!);
+
+  await page.goto("/activity?from=2026-09-22&to=2026-09-01");
+  await expect(page.getByLabel("Period")).toHaveValue("");
+  await expect(page.getByText(/in this view/)).toHaveCount(0);
+
+  await page.goto("/activity?from=2026-09-01");
+  await expect(page.getByLabel("Period")).toHaveValue("");
 });

@@ -6,7 +6,7 @@ import { ActivityList } from "@/components/activity/activity-list";
 import { TransactionPanel } from "@/components/activity/transaction-panel";
 import { Money } from "@/components/ui/money";
 import { EmptyState, PageHeader, Panel } from "@/components/ui/panel";
-import type { YearMonth } from "@/domain/calendar-date";
+import { inclusiveRange, type YearMonth } from "@/domain/calendar-date";
 import {
   ACTIVITY_TYPE_FILTERS,
   getActivity,
@@ -48,9 +48,14 @@ export default async function ActivityPage({
   const type = (ACTIVITY_TYPE_FILTERS as readonly string[]).includes(text(params.type))
     ? (text(params.type) as ActivityTypeFilter)
     : "";
-  const month = (months as readonly string[]).includes(text(params.month))
-    ? text(params.month)
-    : "";
+  // The period is either a range (from/to, both inclusive) or a month. A valid
+  // range wins; an invalid or incomplete one falls back to the month, then to
+  // all time.
+  const range = inclusiveRange(params.from, params.to);
+  const from = range ? text(params.from) : "";
+  const to = range ? text(params.to) : "";
+  const month =
+    !range && (months as readonly string[]).includes(text(params.month)) ? text(params.month) : "";
 
   const [activity, selected] = await Promise.all([
     getActivity(ctx, {
@@ -59,14 +64,15 @@ export default async function ActivityPage({
       categoryId: category || undefined,
       type: type || undefined,
       month: (month as YearMonth) || undefined,
+      range: range ?? undefined,
     }),
     params.tx ? getActivityItem(ctx, text(params.tx)) : Promise.resolve(null),
   ]);
 
-  const filtering = Boolean(q || account || category || type || month);
+  const filtering = Boolean(q || account || category || type || month || range);
   const hrefFor = (id: string) => {
     const next = new URLSearchParams();
-    for (const [key, value] of Object.entries({ q, account, category, type, month })) {
+    for (const [key, value] of Object.entries({ q, account, category, type, month, from, to })) {
       if (value) next.set(key, value);
     }
     next.set("tx", id);
@@ -90,7 +96,7 @@ export default async function ActivityPage({
             .map((c) => ({ id: c.id, name: c.name, kind: c.kind })),
           months,
         }}
-        values={{ q, account, category, type, month }}
+        values={{ q, account, category, type, month, from, to }}
       />
 
       <Panel className="overflow-hidden">
@@ -104,7 +110,7 @@ export default async function ActivityPage({
               Spent{" "}
               <Money
                 amount={activity.summary.spending}
-                sign="none"
+                sign="negative"
                 className="font-semibold text-ink"
               />
             </span>

@@ -1,4 +1,10 @@
-import { addDays, monthRange, type CalendarDate, type YearMonth } from "@/domain/calendar-date";
+import {
+  addDays,
+  monthRange,
+  type CalendarDate,
+  type DateRange,
+  type YearMonth,
+} from "@/domain/calendar-date";
 import type { AccountType } from "@/domain/ledger/accounts";
 import type { TransactionType } from "@/domain/ledger/transactions";
 import { add, money, negate, parseMoney, ZERO, type Money } from "@/domain/money";
@@ -53,6 +59,8 @@ export interface ActivityFilters {
   readonly categoryId?: string;
   readonly type?: ActivityTypeFilter;
   readonly month?: YearMonth;
+  /** Half-open; takes precedence over `month`. */
+  readonly range?: DateRange;
 }
 
 export interface Activity {
@@ -157,7 +165,7 @@ export async function getActivity(
       accountId: filters.accountId,
       categoryId: filters.categoryId,
       types: filters.type ? [filters.type] : undefined,
-      range: filters.month ? monthRange(filters.month) : undefined,
+      range: filters.range ?? (filters.month ? monthRange(filters.month) : undefined),
     })
     .map(toRow);
   const items = toItems(ctx, rows);

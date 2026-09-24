@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { DatabaseHandle } from "@/db/client";
+import { yearMonth, type DateRange } from "@/domain/calendar-date";
 import { fixedClock } from "@/domain/clock";
 import { formatPercent } from "@/domain/ledger/analytics";
-import { ZERO } from "@/domain/money";
+import { ZERO, type Money } from "@/domain/money";
 import {
   archiveCategory,
   recordEntry,
@@ -12,7 +13,8 @@ import {
   verifyBalance,
 } from "@/server/commands";
 import type { ServiceContext } from "@/server/context";
-import { getMonthlyCashFlow } from "@/server/services/analysis-service";
+import { getActivity } from "@/server/services/activity-service";
+import { getMonthlyCashFlow, type MonthlyCashFlow } from "@/server/services/analysis-service";
 import { getTotalSpending } from "@/server/services/ledger-service";
 import { createAccount, createOwner, getCategories } from "@/server/services/setup-service";
 
@@ -364,5 +366,111 @@ describe("getMonthlyCashFlow", () => {
     expect(mine.months.at(-1)).toBe("2026-07");
     expect(mine.change!.explanation.currentTotal).toBe(taka(21_837));
     expect((await getMonthlyCashFlow(other)).summary.spending).toBe(taka(9_999));
+  });
+});
+
+/**
+ * Stage 5c's evidence invariant: every figure that links to Activity (one
+ * category over one period) is exactly what Activity totals for that category
+ * and range. Checks every composition line and both sides of every change
+ * line; returns how many links were checked.
+ */
+async function expectEvidenceReconciles(ctx: ServiceContext, flow: MonthlyCashFlow) {
+  const links: { name: string; range: DateRange; categoryId: string; figure: Money }[] = [];
+  const { composition, change, period } = flow;
+  for (const line of [...composition.spent, ...composition.refundedMoreThanSpent]) {
+    links.push({ ...line, range: period.range, figure: line.amount });
+  }
+  if (change) {
+    const e = change.explanation;
+    for (const line of [...e.increases, ...e.offsets, ...e.unchanged]) {
+      links.push({ ...line, range: change.comparison.range, figure: line.previous });
+      links.push({ ...line, range: period.range, figure: line.current });
+    }
+  }
+  for (const link of links) {
+    const evidence = await getActivity(ctx, { categoryId: link.categoryId, range: link.range });
+    expect({ name: link.name, range: link.range, spent: evidence.summary.spending }).toEqual({
+      name: link.name,
+      range: link.range,
+      spent: link.figure,
+    });
+  }
+  return links.length;
+}
+
+describe("evidence behind the figures (Stage 5c)", () => {
+  it("every linked figure in the scenario equals the Activity total behind it", async () => {
+    const s = await buildSeptember2026();
+    handle = s.handle;
+
+    const september = await getMonthlyCashFlow(s.ctx);
+    // 6 composition lines; 6 change lines (Utilities is in neither window), 2 links each.
+    expect(await expectEvidenceReconciles(s.ctx, september)).toBe(6 + 6 * 2);
+    expect(await expectEvidenceReconciles(s.ctx, await getMonthlyCashFlow(s.ctx, "2026-08"))).toBe(
+      6,
+    );
+  });
+
+  it("names the rows behind the scenario's changes, in each period's own window", async () => {
+    const s = await buildSeptember2026();
+    handle = s.handle;
+    const { period, change } = await getMonthlyCashFlow(s.ctx);
+    const current = period.range;
+    const previous = change!.comparison.range;
+    const evidence = (name: string, range: DateRange) =>
+      getActivity(s.ctx, { categoryId: s.category(name), range });
+
+    // An expense and its refund: 3,000 − 1,200.
+    const shopping = await evidence("Shopping", current);
+    expect(shopping.items.map((i) => i.primary.id)).toEqual([s.rows.R9, s.rows.R4]);
+    expect(shopping.summary.spending).toBe(taka(1_800));
+    expect((await evidence("Shopping", previous)).summary.spending).toBe(taka(3_800));
+
+    // Health: nothing in Aug 1–22 is evidence too.
+    expect((await evidence("Health", previous)).items).toEqual([]);
+    expect((await evidence("Health", current)).items.map((i) => i.primary.id)).toEqual([
+      s.rows.R11,
+    ]);
+
+    // The fee travels with its cash-out; only the fee is spending.
+    const fees = await evidence("Fees & Charges", current);
+    expect(fees.items.map((i) => [i.primary.id, i.fee?.id])).toEqual([
+      [s.rows.R7, s.rows["R7 fee"]],
+    ]);
+    expect(fees.summary.spending).toBe(taka(37));
+
+    // Aug 1–22, not the whole of August: Utilities on Aug 25 is outside it.
+    expect((await evidence("Utilities", previous)).items).toEqual([]);
+    const wholeAugust = await getActivity(s.ctx, {
+      categoryId: s.category("Utilities"),
+      month: yearMonth(2026, 8),
+    });
+    expect(wholeAugust.summary.spending).toBe(taka(1_500));
+  });
+
+  it("keeps a refund-heavy category's negative figure in its evidence", async () => {
+    const { ctx, visa, expense } = await ledger();
+    const [checkup] = await expense("2500", visa, "Health", "2026-08-20");
+    ok(
+      await refundExpense(ctx, checkup!, {
+        amount: "2500",
+        accountId: visa,
+        occurredOn: "2026-09-19",
+      }),
+    );
+
+    const september = await getMonthlyCashFlow(ctx);
+    const health = september.change!.explanation.offsets.find((l) => l.name === "Health")!;
+    expect([health.previous, health.current, health.material]).toEqual([
+      taka(2_500),
+      taka(-2_500),
+      true,
+    ]);
+    expect(await expectEvidenceReconciles(ctx, september)).toBeGreaterThan(0);
+    // August is complete and compares with the whole of July.
+    expect(await expectEvidenceReconciles(ctx, await getMonthlyCashFlow(ctx, "2026-08"))).toBe(
+      1 + 1 * 2,
+    );
   });
 });

@@ -4,10 +4,11 @@ import { LoaderCircle, Search, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
+import { inclusiveRange } from "@/domain/calendar-date";
 import type { CategoryKind } from "@/domain/ledger/transactions";
 import { ACTIVITY_TYPE_FILTERS } from "@/server/services/activity-service";
 
-import { monthLabel } from "../format";
+import { monthLabel, rangeLabel } from "../format";
 import { Button } from "../ui/button";
 import { cn } from "../ui/cn";
 import { controlClass } from "../ui/field";
@@ -24,6 +25,9 @@ export interface FilterValues {
   readonly category: string;
   readonly type: string;
   readonly month: string;
+  /** An inclusive date range (from a Cash flow link); replaces `month` when set. */
+  readonly from: string;
+  readonly to: string;
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -32,6 +36,9 @@ const TYPE_LABELS: Record<string, string> = {
   transfer: "Transfers",
   refund: "Refunds",
 };
+
+/** The Period select's value while a date range is active. */
+const RANGE = "range";
 
 /** Filters live in the URL, so any view can be linked to, shared and reloaded. */
 export function ActivityFilters({
@@ -46,8 +53,9 @@ export function ActivityFilters({
   const [pending, startTransition] = useTransition();
   const [text, setText] = useState(values.q);
   const searchRef = useRef<HTMLInputElement>(null);
+  const range = inclusiveRange(values.from, values.to);
   const active = Boolean(
-    values.q || values.account || values.category || values.type || values.month,
+    values.q || values.account || values.category || values.type || values.month || range,
   );
 
   const apply = (changes: Partial<FilterValues>) => {
@@ -92,7 +100,14 @@ export function ActivityFilters({
       <span className="sr-only">{label}</span>
       <select
         value={value}
-        onChange={(event) => apply({ [name]: event.target.value })}
+        onChange={(event) =>
+          // A month (or all time) replaces any date range.
+          apply(
+            name === "month"
+              ? { month: event.target.value, from: "", to: "" }
+              : { [name]: event.target.value },
+          )
+        }
         className={cn(
           controlClass,
           "h-9 w-full min-w-0 appearance-none bg-[right_0.6rem_center] bg-no-repeat pr-8 text-[13px]",
@@ -137,8 +152,9 @@ export function ActivityFilters({
         {select(
           "month",
           "Period",
-          values.month,
+          range ? RANGE : values.month,
           <>
+            {range && <option value={RANGE}>{rangeLabel(range)}</option>}
             <option value="">All time</option>
             {options.months.map((month) => (
               <option key={month} value={month}>
@@ -191,7 +207,9 @@ export function ActivityFilters({
             variant="ghost"
             size="sm"
             icon={<X className="size-3.5" />}
-            onClick={() => apply({ q: "", account: "", category: "", type: "", month: "" })}
+            onClick={() =>
+              apply({ q: "", account: "", category: "", type: "", month: "", from: "", to: "" })
+            }
             className="col-span-2"
           >
             Clear

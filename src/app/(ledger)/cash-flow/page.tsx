@@ -4,12 +4,13 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { getRequestContext } from "@/app/_server/context";
-import { monthLabel, shortDate } from "@/components/format";
+import { activityHref } from "@/components/activity/links";
+import { monthLabel, rangeLabel, shortDate } from "@/components/format";
 import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
 import { Money } from "@/components/ui/money";
 import { EmptyState, PageHeader, Panel } from "@/components/ui/panel";
-import { addDays, dayOfMonth, type YearMonth } from "@/domain/calendar-date";
+import { addDays, dayOfMonth, type DateRange, type YearMonth } from "@/domain/calendar-date";
 import { formatPercent, formatShare } from "@/domain/ledger/analytics";
 import type { CashFlowPeriod, CompositionLine } from "@/domain/ledger/cash-flow";
 import type {
@@ -27,6 +28,9 @@ type SearchParams = Record<string, string | string[] | undefined>;
 /** The current month lives at the bare path; earlier months carry ?month=YYYY-MM. */
 const hrefFor = (month: YearMonth, current: YearMonth) =>
   month === current ? "/cash-flow" : `/cash-flow?month=${month}`;
+
+/** An amount that opens the transactions behind it (Stage 5c). */
+const amountLinkClass = "underline decoration-line-strong underline-offset-4 hover:decoration-ink";
 
 /** "1–24 Sep, so far" for the running month; "Full month" for a finished one. */
 function periodNote(period: CashFlowPeriod): string {
@@ -119,7 +123,7 @@ export default async function CashFlowPage({
             {composition.spent.length > 0 && (
               <ul aria-label="Spending by category">
                 {composition.spent.map((line) => (
-                  <CategoryRow key={line.categoryId} line={line} />
+                  <CategoryRow key={line.categoryId} line={line} range={period.range} />
                 ))}
               </ul>
             )}
@@ -130,7 +134,7 @@ export default async function CashFlowPage({
                 </h3>
                 <ul aria-label="Refunded more than spent">
                   {composition.refundedMoreThanSpent.map((line) => (
-                    <CategoryRow key={line.categoryId} line={line} />
+                    <CategoryRow key={line.categoryId} line={line} range={period.range} />
                   ))}
                 </ul>
               </>
@@ -139,7 +143,7 @@ export default async function CashFlowPage({
         )}
       </Panel>
 
-      <WhatChanged change={change} />
+      <WhatChanged change={change} range={period.range} />
     </div>
   );
 }
@@ -150,7 +154,14 @@ export default async function CashFlowPage({
  * comes from the domain; this only lays them out. Spending is never red or
  * green (docs/design-direction.md §2).
  */
-function WhatChanged({ change }: { readonly change: MonthOverMonth | null }) {
+function WhatChanged({
+  change,
+  range,
+}: {
+  readonly change: MonthOverMonth | null;
+  /** The current period's range; the comparison range comes with `change`. */
+  readonly range: DateRange;
+}) {
   const explanation = change?.explanation;
   const quiet =
     explanation !== undefined &&
@@ -170,13 +181,27 @@ function WhatChanged({ change }: { readonly change: MonthOverMonth | null }) {
       ) : quiet ? (
         <EmptyState title="Nothing was spent in either period" />
       ) : (
-        <ChangeDetails explanation={explanation} />
+        <ChangeDetails
+          explanation={explanation}
+          ranges={{ previous: change.comparison.range, current: range }}
+        />
       )}
     </Panel>
   );
 }
 
-function ChangeDetails({ explanation }: { readonly explanation: SpendingChange }) {
+interface ChangeRanges {
+  readonly previous: DateRange;
+  readonly current: DateRange;
+}
+
+function ChangeDetails({
+  explanation,
+  ranges,
+}: {
+  readonly explanation: SpendingChange;
+  readonly ranges: ChangeRanges;
+}) {
   const { net, previousTotal, currentTotal, smallerChanges } = explanation;
   const higher = explanation.increases.filter((l) => l.material);
   const lower = explanation.offsets.filter((l) => l.material);
@@ -208,7 +233,7 @@ function ChangeDetails({ explanation }: { readonly explanation: SpendingChange }
           </h3>
           <ul aria-label="Categories that were higher">
             {higher.map((line) => (
-              <ChangeRow key={line.categoryId} line={line} />
+              <ChangeRow key={line.categoryId} line={line} ranges={ranges} />
             ))}
           </ul>
         </>
@@ -220,7 +245,7 @@ function ChangeDetails({ explanation }: { readonly explanation: SpendingChange }
           </h3>
           <ul aria-label="Categories that were lower">
             {lower.map((line) => (
-              <ChangeRow key={line.categoryId} line={line} />
+              <ChangeRow key={line.categoryId} line={line} ranges={ranges} />
             ))}
           </ul>
         </>
@@ -241,13 +266,31 @@ function ChangeDetails({ explanation }: { readonly explanation: SpendingChange }
   );
 }
 
-function ChangeRow({ line }: { readonly line: CategoryChange }) {
+/**
+ * Each side of "previous → current" opens the category's transactions in its
+ * own period, so the evidence for both halves of the change is one click away.
+ */
+function ChangeRow({
+  line,
+  ranges,
+}: {
+  readonly line: CategoryChange;
+  readonly ranges: ChangeRanges;
+}) {
+  const evidence = (amount: CategoryChange["previous"], range: DateRange) => (
+    <Link href={activityHref({ categoryId: line.categoryId, range })} className={amountLinkClass}>
+      <span className="sr-only">
+        {line.name}, {rangeLabel(range)}:{" "}
+      </span>
+      <Money amount={amount} />
+    </Link>
+  );
   return (
     <li className="flex items-baseline gap-3 border-b border-line px-4 py-3 last:border-b-0 md:px-5">
       <span className="min-w-0 flex-1">
         <span className="block truncate font-medium">{line.name}</span>
         <span className="block text-[12.5px] text-ink-2">
-          <Money amount={line.previous} /> → <Money amount={line.current} />
+          {evidence(line.previous, ranges.previous)} → {evidence(line.current, ranges.current)}
         </span>
       </span>
       {line.shareOfIncreases && (
@@ -280,11 +323,24 @@ function Figure({
   );
 }
 
-function CategoryRow({ line }: { readonly line: CompositionLine }) {
+function CategoryRow({
+  line,
+  range,
+}: {
+  readonly line: CompositionLine;
+  readonly range: DateRange;
+}) {
   const refunded = line.amount < 0;
   return (
     <li className="flex items-baseline gap-3 border-b border-line px-4 py-3 last:border-b-0 md:px-5">
-      <span className="min-w-0 flex-1 truncate font-medium">{line.name}</span>
+      <span className="min-w-0 flex-1 truncate">
+        <Link
+          href={activityHref({ categoryId: line.categoryId, range })}
+          className="font-medium hover:underline hover:underline-offset-4"
+        >
+          {line.name}
+        </Link>
+      </span>
       {line.share && (
         <span className="text-[13px] text-ink-2 tabular-nums">{formatShare(line.share)}</span>
       )}

@@ -12,6 +12,7 @@ import {
   daysInYearMonth,
   elapsedDaysInMonth,
   fromEpochDay,
+  inclusiveRange,
   likeForLikeWindows,
   monthRange,
   parseCalendarDate,
@@ -154,6 +155,32 @@ describe("Months", () => {
         expect(rangeLength(range)).toBe(daysInYearMonth(month));
       }),
     );
+  });
+});
+
+describe("Inclusive ranges from untrusted text", () => {
+  it("turns inclusive from/to into a half-open range", () => {
+    expect(inclusiveRange("2026-08-01", "2026-08-22")).toEqual({
+      start: "2026-08-01",
+      end: "2026-08-23",
+    });
+    expect(inclusiveRange("2026-09-22", "2026-09-22")).toEqual({
+      start: "2026-09-22",
+      end: "2026-09-23",
+    });
+    expect(inclusiveRange("2026-08-30", "2026-09-30")?.end).toBe("2026-10-01");
+    expect(inclusiveRange("2025-12-01", "2025-12-31")?.end).toBe("2026-01-01");
+  });
+
+  it("rejects missing, malformed, unreal and reversed ranges", () => {
+    expect(inclusiveRange("2026-08-01", undefined)).toBeNull();
+    expect(inclusiveRange(undefined, "2026-08-22")).toBeNull();
+    expect(inclusiveRange(["2026-08-01"], "2026-08-22")).toBeNull();
+    expect(inclusiveRange("", "")).toBeNull();
+    expect(inclusiveRange("2026-8-1", "2026-08-22")).toBeNull();
+    expect(inclusiveRange("2026-02-30", "2026-03-01")).toBeNull();
+    expect(inclusiveRange("2026-08-01", "yesterday")).toBeNull();
+    expect(inclusiveRange("2026-08-23", "2026-08-22")).toBeNull();
   });
 });
 

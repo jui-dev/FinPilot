@@ -176,6 +176,19 @@ export const rangeContains = (range: DateRange, date: CalendarDate): boolean =>
 
 export const rangeLength = (range: DateRange): number => daysBetween(range.start, range.end);
 
+/**
+ * The half-open range covering `from` through `to`, both inclusive, from
+ * untrusted text (URL params). Null unless both are real ISO dates and
+ * `from` ≤ `to`: no open-ended ranges.
+ */
+export function inclusiveRange(from: unknown, to: unknown): DateRange | null {
+  if (typeof from !== "string" || typeof to !== "string") return null;
+  const start = parseCalendarDate(from);
+  const last = parseCalendarDate(to);
+  if (!start.ok || !last.ok || start.value > last.value) return null;
+  return { start: start.value, end: addDays(last.value, 1) };
+}
+
 /** Days of the month elapsed so far, counting `today` (day 22 → 22). */
 export const elapsedDaysInMonth = (today: CalendarDate): number => dayOfMonth(today);
 

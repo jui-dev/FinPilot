@@ -3,6 +3,7 @@ import {
   toEpochDay,
   toParts,
   type CalendarDate,
+  type DateRange,
   type YearMonth,
 } from "@/domain/calendar-date";
 
@@ -55,4 +56,14 @@ export function dayLabel(date: CalendarDate, today: CalendarDate): string {
 export function monthLabel(value: YearMonth | string): string {
   const [year, month] = value.split("-").map(Number);
   return `${MONTHS_LONG[(month ?? 1) - 1]} ${year}`;
+}
+
+/** "1–22 Aug 2026", "30 Aug – 5 Sep 2026", "1 Dec 2025 – 3 Jan 2026": a half-open range, shown inclusively. */
+export function rangeLabel(range: DateRange): string {
+  const first = toParts(range.start);
+  const last = toParts(addDays(range.end, -1));
+  const end = `${last.day} ${MONTHS[last.month - 1]} ${last.year}`;
+  if (first.year !== last.year) return `${shortDate(range.start)} – ${end}`;
+  if (first.month !== last.month) return `${first.day} ${MONTHS[first.month - 1]} – ${end}`;
+  return first.day === last.day ? end : `${first.day}–${end}`;
 }
