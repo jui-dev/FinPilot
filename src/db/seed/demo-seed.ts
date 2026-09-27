@@ -23,8 +23,9 @@ import { createOwner, getCategories } from "@/server/services/setup-service";
  * demo never looks stale. Deterministic for a given `today` (seeded PRNG).
  *
  * Every row goes through the same commands as the UI, so the seed can never
- * contain a ledger the rules would reject. The final seed generator (9–12
- * months, planted anomalies for every signal rule) is Stage 12.
+ * contain a ledger the rules would reject. V1 demo situations (one planted
+ * for every V1 signal family) come in Stage 10; the extended 9–12 month
+ * history comes in Stage 11.
  */
 
 export const DEMO_TIME_ZONE = "Asia/Dhaka";

@@ -1,9 +1,10 @@
 /**
  * Top-level destinations. Each appears in navigation only once its stage
- * exists (docs/roadmap.md): Plan and the Overview arrive later.
+ * exists (docs/roadmap.md): the forward-looking area (working name "Plan")
+ * and the Overview arrive later.
  *
  * HOME_PATH is where "/" and the logo lead. It is Activity only until the
- * Overview exists; Stage 11 sets it to "/" and gives "/" its own page. Nothing
+ * Overview exists; Stage 10 sets it to "/" and gives "/" its own page. Nothing
  * else treats Activity as the home concept.
  */
 export const HOME_PATH = "/activity";

@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("smoke", () => {
-  it("sends / to the current home destination (the Overview takes over in Stage 11)", () => {
+  it("sends / to the current home destination (the Overview takes over in Stage 10)", () => {
     Root();
     expect(redirects).toEqual([HOME_PATH]);
   });

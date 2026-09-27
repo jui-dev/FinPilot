@@ -140,7 +140,7 @@ export const ACCEPTANCE_CATALOGUE: readonly AcceptanceStage[] = [
     ],
   },
   {
-    stage: "7 — Budgets",
+    stage: "13 — Monthly Plan",
     assertions: [
       {
         id: "A-40",
@@ -155,7 +155,7 @@ export const ACCEPTANCE_CATALOGUE: readonly AcceptanceStage[] = [
     ],
   },
   {
-    stage: "8 — Goals and earmarks",
+    stage: "7 — Protected money",
     assertions: [
       {
         id: "A-50",
@@ -168,7 +168,7 @@ export const ACCEPTANCE_CATALOGUE: readonly AcceptanceStage[] = [
     ],
   },
   {
-    stage: "9 — Available",
+    stage: "8 — Available",
     assertions: [
       { id: "A-60", title: "bridge 146,163 → −6,000 → −32,200 → −20,000 = Available 87,963" },
       {
@@ -185,9 +185,9 @@ export const ACCEPTANCE_CATALOGUE: readonly AcceptanceStage[] = [
     ],
   },
   {
-    stage: "10 — Signals",
+    stage: "9 — Signals",
     assertions: [
-      { id: "A-70", title: "goal under-covered: Laptop short 10,000 on Savings" },
+      { id: "A-70", title: "protected money under-covered: Laptop short 10,000 on Savings" },
       { id: "A-71", title: "commitment due soon: Internet Sep 25, in 3 days, 1,500" },
       {
         id: "A-72",
