@@ -164,11 +164,15 @@ function TabLink({
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex flex-col items-center gap-0.5 py-2 text-micro font-medium transition-colors",
+        "relative flex flex-col items-center gap-0.5 py-2 text-micro font-medium transition-colors",
         active ? "text-ink" : "text-ink-2",
       )}
     >
-      <Icon className="size-[19px]" strokeWidth={active ? 2 : 1.75} />
+      {/* The active destination: a navy mark and icon, as well as darker text. */}
+      {active && (
+        <span aria-hidden className="absolute inset-x-5 top-0 h-0.5 rounded-b-full bg-navy" />
+      )}
+      <Icon className={cn("size-[19px]", active && "text-navy")} strokeWidth={active ? 2 : 1.75} />
       {label}
     </Link>
   );

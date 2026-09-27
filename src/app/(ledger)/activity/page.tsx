@@ -10,7 +10,7 @@ import { monthLabel, rangeLabel } from "@/components/format";
 import { linkClass } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
 import { Money } from "@/components/ui/money";
-import { EmptyState, PageHeader, Panel } from "@/components/ui/panel";
+import { EmptyState, PageHeader, Panel, PanelHeader } from "@/components/ui/panel";
 import { inclusiveRange, yearMonthOf, type YearMonth } from "@/domain/calendar-date";
 import {
   ACTIVITY_TYPE_FILTERS,
@@ -82,13 +82,13 @@ export default async function ActivityPage({
   // lands on a different month than it names.
   const rangeMonth = range && !account ? cashFlowMonthOf(range) : null;
   const cashFlowMonth = rangeMonth && months.includes(rangeMonth) ? rangeMonth : null;
-  const scope = range
-    ? [
-        accounts.find((a) => a.id === account)?.name,
-        categories.find((c) => c.id === category)?.name,
-        rangeLabel(range),
-      ].filter(Boolean)
-    : [];
+  // What the list and its totals cover: the evidence a Cash flow figure or a
+  // verification links to lands here, so the scope is the list's heading.
+  const scope = [
+    accounts.find((a) => a.id === account)?.name,
+    categories.find((c) => c.id === category)?.name,
+    range ? rangeLabel(range) : month ? monthLabel(month) : "all time",
+  ].filter(Boolean);
   const hrefFor = (id: string) => {
     const next = new URLSearchParams();
     for (const [key, value] of Object.entries({ q, account, category, type, month, from, to })) {
@@ -118,38 +118,25 @@ export default async function ActivityPage({
         values={{ q, account, category, type, month, from, to }}
       />
 
-      {range && (
-        <p className="-mb-2 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-1 text-meta text-ink-2">
-          <span>
-            Showing <span className="font-medium text-ink">{scope.join(" · ")}</span>
-          </span>
-          {cashFlowMonth && (
-            <Link
-              href={cashFlowHref(cashFlowMonth, yearMonthOf(today))}
-              className={cn("font-medium text-ink", linkClass)}
-            >
-              Open {monthLabel(cashFlowMonth)} in Cash flow
-            </Link>
-          )}
-        </p>
-      )}
-
       {/* overflow-clip, not overflow-hidden: a hidden overflow makes the panel the
           scroll container of the sticky day headers, so they neither stick nor sit
           in place. */}
-      <Panel className="overflow-clip">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-4 py-3 text-meta text-ink-2 md:px-5">
-          <span>
-            {activity.items.length} {activity.items.length === 1 ? "entry" : "entries"}
-            {filtering ? " in this view" : ""}
-          </span>
-          <span className="flex flex-wrap items-baseline gap-x-5">
+      <Panel className="overflow-clip" labelledBy="activity-scope">
+        <PanelHeader
+          id="activity-scope"
+          title={
+            <>
+              Showing <span>{scope.join(" · ")}</span>
+            </>
+          }
+        >
+          <p className="flex flex-wrap items-baseline gap-x-5 text-meta text-ink-2">
             <span>
               Spent{" "}
               <Money
                 amount={activity.summary.spending}
                 sign="negative"
-                className="font-semibold text-ink"
+                className="text-heading font-semibold text-ink"
               />
             </span>
             <span>
@@ -157,11 +144,26 @@ export default async function ActivityPage({
               <Money
                 amount={activity.summary.income}
                 sign="none"
-                className="font-semibold text-ink"
+                className="text-heading font-semibold text-ink"
               />
             </span>
-          </span>
-        </div>
+          </p>
+          <p className="basis-full text-meta text-ink-2">
+            {activity.items.length} {activity.items.length === 1 ? "entry" : "entries"}
+            {filtering ? " in this view" : ""}
+            {cashFlowMonth && (
+              <>
+                {" · "}
+                <Link
+                  href={cashFlowHref(cashFlowMonth, yearMonthOf(today))}
+                  className={cn("font-medium whitespace-nowrap text-ink", linkClass)}
+                >
+                  Open {monthLabel(cashFlowMonth)} in Cash flow
+                </Link>
+              </>
+            )}
+          </p>
+        </PanelHeader>
 
         {activity.items.length === 0 ? (
           <EmptyState title={filtering ? "Nothing matches these filters" : "No transactions yet"}>

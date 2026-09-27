@@ -47,6 +47,9 @@ const GROUPS: ReadonlyArray<{ title: string; types: readonly AccountType[]; note
   { title: "Credit cards", types: ["credit_card"], note: "What you owe." },
 ];
 
+/** A verification status spans the row under the details (from the name column to the end). */
+const STATUS_PLACEMENT = "col-[2/-1] mt-1";
+
 export default async function AccountsPage() {
   const request = await getRequestContext();
   if (!request.ok) return null;
@@ -85,6 +88,29 @@ export default async function AccountsPage() {
       />
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+        {/* First in the page: on one column the answer leads; lg:order puts it on the right. */}
+        <Panel className="h-fit p-5 lg:order-2" labelledBy="accounts-net-worth">
+          <h2 id="accounts-net-worth" className="text-meta font-semibold text-ink-2">
+            Net worth
+          </h2>
+          <p className="mt-1 text-display font-semibold">
+            <Money amount={position.netWorth} />
+          </p>
+          <dl className="mt-5 flex flex-col gap-2.5 text-body">
+            <div className="flex items-baseline justify-between gap-3">
+              <dt className="text-ink-2">Own</dt>
+              <dd className="font-medium">
+                <Money amount={position.assets} sign="none" />
+              </dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-3 border-t border-line pt-2.5">
+              <dt className="text-ink-2">Owe</dt>
+              <dd className="font-medium">
+                <Money amount={position.liabilities} sign="none" />
+              </dd>
+            </div>
+          </dl>
+        </Panel>
         <div className="flex flex-col gap-5 lg:order-1">
           {GROUPS.map((group) => {
             const groupAccounts = active.filter((a) => group.types.includes(a.type));
@@ -120,27 +146,6 @@ export default async function AccountsPage() {
             </Panel>
           )}
         </div>
-
-        <Panel className="h-fit p-5 lg:order-2">
-          <h2 className="text-meta font-semibold text-ink-2">Net worth</h2>
-          <p className="mt-1 text-display font-semibold">
-            <Money amount={position.netWorth} />
-          </p>
-          <dl className="mt-5 flex flex-col gap-2.5 text-body">
-            <div className="flex items-baseline justify-between gap-3">
-              <dt className="text-ink-2">Own</dt>
-              <dd className="font-medium">
-                <Money amount={position.assets} sign="none" />
-              </dd>
-            </div>
-            <div className="flex items-baseline justify-between gap-3 border-t border-line pt-2.5">
-              <dt className="text-ink-2">Owe</dt>
-              <dd className="font-medium">
-                <Money amount={position.liabilities} sign="none" />
-              </dd>
-            </div>
-          </dl>
-        </Panel>
       </div>
     </div>
   );
@@ -165,7 +170,7 @@ function VerificationStatus({
   const day = shortDate(view.asOf, today);
   if (view.status === "verified") {
     return (
-      <div className="mt-1.5 pl-12 md:pl-[52px]">
+      <div className={STATUS_PLACEMENT}>
         <Tag tone="positive" icon={<CheckCircle2 aria-hidden className="size-3.5" />}>
           Verified {day}
         </Tag>
@@ -188,7 +193,7 @@ function VerificationStatus({
         })
       : null;
   return (
-    <div className="mt-1.5 flex flex-col items-start gap-1 pl-12 md:pl-[52px]">
+    <div className={cn(STATUS_PLACEMENT, "flex flex-col items-start gap-1")}>
       <Tag tone="warning" icon={<CircleAlert aria-hidden className="size-3.5" />}>
         Changed since {day} · <Money amount={view.off} sign="none" /> off
       </Tag>
@@ -218,41 +223,48 @@ function AccountRow({
   const shown = owed ? (negate(account.balance) as MoneyValue) : account.balance;
   return (
     <li className="border-b border-line px-4 py-3 last:border-b-0 md:px-5">
-      <div className="flex items-center gap-3 md:gap-4">
-        <Glyph icon={accountIcon(account.type)} />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <Link
-              href={`/activity?account=${account.id}`}
-              className="truncate font-medium hover:underline hover:underline-offset-4"
-            >
-              {account.name}
-            </Link>
-            {account.archived && <Tag>Archived</Tag>}
-          </div>
-          <p className="mt-0.5 truncate text-meta text-ink-2">
+      {/*
+       * Phones: the name and balance share the first line; the details and the
+       * actions share the second, and the actions wrap below the details when
+       * both do not fit (never beside the balance, never overflowing).
+       * md and up: the second-line wrapper dissolves (display: contents), so the
+       * actions sit between the name and the balance as one row.
+       */}
+      <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 md:grid-cols-[2.25rem_minmax(0,1fr)_auto_auto] md:gap-x-4">
+        <Glyph icon={accountIcon(account.type)} className="col-[1] row-[1/3]" />
+        <div className="col-[2] row-[1] flex min-w-0 items-center gap-2">
+          <Link
+            href={`/activity?account=${account.id}`}
+            className="truncate font-medium hover:underline hover:underline-offset-4"
+          >
+            {account.name}
+          </Link>
+          {account.archived && <Tag>Archived</Tag>}
+        </div>
+        <span className="col-[3] row-[1] text-right text-body font-semibold whitespace-nowrap md:col-[4] md:row-[1/3]">
+          <Money amount={shown} sign={owed ? "none" : "negative"} />
+          {owed && <span className="ml-1 text-meta font-normal text-ink-2">owed</span>}
+        </span>
+        <div className="col-[2/-1] row-[2] flex flex-wrap items-center gap-x-3 gap-y-1 md:contents">
+          <p className="max-w-full min-w-0 truncate text-meta text-ink-2 md:col-[2] md:row-[2]">
             {ACCOUNT_TYPE_LABEL[account.type]} · since {shortDate(account.openedOn, today)}
           </p>
+          <div className="ml-auto md:col-[3] md:row-[1/3] md:ml-0">
+            <AccountActions
+              id={account.id}
+              name={account.name}
+              type={account.type}
+              balance={account.balance}
+              today={today}
+              archived={account.archived}
+              canArchive={!account.archived && account.balance === 0}
+              canDelete={account.references === 0}
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <AccountActions
-            id={account.id}
-            name={account.name}
-            type={account.type}
-            balance={account.balance}
-            today={today}
-            archived={account.archived}
-            canArchive={!account.archived && account.balance === 0}
-            canDelete={account.references === 0}
-          />
-          <span className="text-right text-body font-semibold whitespace-nowrap">
-            <Money amount={shown} sign={owed ? "none" : "negative"} />
-            {owed && <span className="ml-1 text-meta font-normal text-ink-2">owed</span>}
-          </span>
-        </div>
+        {/* Under the details, across the row: the status never squeezes beside the actions. */}
+        <VerificationStatus account={account} today={today} />
       </div>
-      {/* Under the name, across the row: the status never squeezes beside the actions. */}
-      <VerificationStatus account={account} today={today} />
     </li>
   );
 }

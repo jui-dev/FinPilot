@@ -16,7 +16,7 @@ import type { Money } from "@/domain/money";
 import { Button } from "../ui/button";
 import { Modal } from "../ui/overlay";
 import { useToast } from "../ui/toast";
-import { VerifyBalanceButton } from "./verify-balance-panel";
+import { ROW_ACTION, VerifyBalanceButton } from "./verify-balance-panel";
 
 /**
  * Only the actions the ledger allows are offered: verifying needs an account
@@ -101,6 +101,7 @@ export function AccountActions({
         <Button
           variant="ghost"
           size="sm"
+          className={ROW_ACTION}
           pending={pending}
           icon={<ArchiveRestore className="size-4" />}
           onClick={() => void restore()}
@@ -112,6 +113,7 @@ export function AccountActions({
           <Button
             variant="ghost"
             size="sm"
+            className={ROW_ACTION}
             pending={pending}
             icon={<Archive className="size-4" />}
             onClick={() => void archive()}
@@ -126,6 +128,7 @@ export function AccountActions({
           <Button
             variant="danger"
             size="sm"
+            className={ROW_ACTION}
             icon={<Trash2 className="size-4" />}
             onClick={() => setConfirming(true)}
             title="Delete this account"

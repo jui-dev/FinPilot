@@ -304,19 +304,19 @@ function ChangeRow({
     </Link>
   );
   return (
-    <li className="flex items-baseline gap-3 border-b border-line px-4 py-3 last:border-b-0 md:px-5">
-      <span className="min-w-0 flex-1">
-        <span className="block truncate font-medium">{line.name}</span>
-        <span className="block text-meta text-ink-2">
-          {evidence(line.previous, ranges.previous)} → {evidence(line.current, ranges.current)}
-        </span>
+    // Phones: the share moves under the amount, so the name and the evidence
+    // pair keep the width they need; md and up: share, then amount, on one line.
+    <li className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-0.5 border-b border-line px-4 py-3 last:border-b-0 md:grid-cols-[minmax(0,1fr)_auto_auto] md:px-5">
+      <span className="col-start-1 row-start-1 truncate font-medium">{line.name}</span>
+      <span className="col-start-1 row-start-2 text-meta text-ink-2">
+        {evidence(line.previous, ranges.previous)} → {evidence(line.current, ranges.current)}
       </span>
       {line.shareOfIncreases && (
-        <span className="text-meta text-ink-2 tabular-nums">
+        <span className="col-start-2 row-start-2 text-right text-meta text-ink-2 tabular-nums md:row-start-1">
           {formatShare(line.shareOfIncreases)} of the increase
         </span>
       )}
-      <span className="w-28 text-right text-body font-semibold">
+      <span className="col-start-2 row-start-1 w-28 justify-self-end text-right text-body font-semibold md:col-start-3">
         <Money amount={line.change} sign="always" />
       </span>
     </li>

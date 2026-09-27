@@ -16,6 +16,9 @@ import { MoneyInput } from "../ui/money-input";
 import { SidePanel } from "../ui/overlay";
 import { useToast } from "../ui/toast";
 
+/** Account row actions keep a 40px touch height on phones; 32px from md up. */
+export const ROW_ACTION = "max-md:h-10";
+
 /**
  * "What is actually there?" — the person counts the account, and the ledger is
  * corrected to agree as of today. When it already agrees, the verification is
@@ -75,6 +78,7 @@ export function VerifyBalanceButton({
       <Button
         variant="ghost"
         size="sm"
+        className={ROW_ACTION}
         icon={<CheckCircle2 className="size-4" />}
         onClick={() => {
           setCountedAmount("");

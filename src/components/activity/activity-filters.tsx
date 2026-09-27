@@ -112,7 +112,7 @@ export function ActivityFilters({
         }
         controlSize="sm"
         selected={Boolean(value)}
-        className="min-w-0"
+        className="min-w-0 max-md:h-10"
       >
         {children}
       </Select>
@@ -120,7 +120,9 @@ export function ActivityFilters({
   );
 
   return (
-    <div className="flex flex-col gap-3 rounded-panel border border-line bg-surface p-3 shadow-panel md:flex-row md:items-center">
+    // Phones: search, then the filters two by two. Tablets: search on its own
+    // line, the four filters in one row. Desktop: everything in one row.
+    <div className="flex flex-col gap-3 rounded-panel border border-line bg-surface p-3 shadow-panel lg:flex-row lg:items-center">
       <div className="relative min-w-0 flex-1">
         <Search
           aria-hidden
@@ -134,7 +136,7 @@ export function ActivityFilters({
           onChange={(event) => setText(event.target.value)}
           placeholder="Search description, category, account or amount"
           aria-label="Search transactions"
-          className={cn(controlClass({ size: "sm" }), "pr-9 pl-9")}
+          className={cn(controlClass({ size: "sm" }), "pr-9 pl-9 max-md:h-10")}
         />
         {pending && (
           <LoaderCircle
@@ -144,7 +146,7 @@ export function ActivityFilters({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 md:flex md:items-center">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-[repeat(4,minmax(0,1fr))_auto] lg:flex lg:items-center">
         {select(
           "month",
           "Period",
@@ -206,7 +208,7 @@ export function ActivityFilters({
             onClick={() =>
               apply({ q: "", account: "", category: "", type: "", month: "", from: "", to: "" })
             }
-            className="col-span-2"
+            className="col-span-2 md:col-span-1"
           >
             Clear
           </Button>

@@ -34,9 +34,9 @@ export function ActivityList({
     <div>
       {[...days].map(([day, dayItems]) => (
         <section key={day}>
-          <h2 className="sticky top-14 z-10 flex items-baseline justify-between gap-3 border-b border-line bg-surface/95 px-4 py-2 text-meta font-semibold text-ink-2 backdrop-blur md:px-5">
+          <h3 className="sticky top-14 z-10 flex items-baseline justify-between gap-3 border-b border-line bg-surface/95 px-4 py-2 text-meta font-semibold text-ink-2 backdrop-blur md:px-5">
             {dayLabel(day, today)}
-          </h2>
+          </h3>
           <ul>
             {dayItems.map((item) => (
               <ActivityRow
