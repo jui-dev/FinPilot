@@ -1,163 +1,169 @@
 # FinPilot — Design Direction
 
-**Status:** Approved at the design gate on 2026-09-22. **The visual system (§2–§7) was replaced on 2026-09-27** by the navy and cream direction, frozen against the real product in the visual-system boundary; the wine palette is retired. The decisions in §8 stay open until they are resolved.
-**Change policy:** Update this file when implementation shows that a rule doesn't work. Record each change in §9 with its reason. This file is a north star, not a pixel spec: stages build real UI against it; there are no standalone mocks.
+**Status:** Describes the visual system as implemented on 2026-09-27 (Cash flow, Activity and Accounts, built against the reference palette). Where this file and the committed UI disagree, the UI is the truth and this file is corrected. The open decisions in §9 stay open until they are resolved.
+**Change policy:** Update this file when implementation shows that a rule doesn't work. Record each change in §10 with its reason. This file is a north star, not a pixel spec: stages build real UI against it; there are no standalone mocks. The tokens themselves live in [globals.css](../src/app/globals.css).
 **Related:** [product-baseline.md §11](product-baseline.md) · [domain-model.md §14](domain-model.md) · [roadmap.md](roadmap.md)
 
 ---
 
-## 1. Character
+## 1. Character and principles
 
-**A premium financial workspace.** It pairs the credibility of financial software with the polish of consumer fintech. Its seriousness comes from hierarchy, restraint and precise numbers, not from dullness.
+**A calm, light financial workspace.** It pairs the credibility of financial software with the polish of consumer fintech. Its seriousness comes from hierarchy, restraint and precise numbers, not from dullness or a dark, bank-like dashboard.
 
-- **Numbers first.** Condition is read from figures, status and charts. Copy is a short label or a single sentence, never a paragraph.
-- **One panel per financial question.** Panels are conceptual units, not a grid of KPI cards. No chart may repeat what another already says ([product-baseline.md §6](product-baseline.md)).
-- **The domain stays rigorous and the UI stays simple.** [domain-model.md §14](domain-model.md) is binding.
+**Principles:**
+1. **Outcome before detail.** A page leads with its answer; the figures it comes from follow.
+2. **Evidence behind important figures.** A figure that summarises transactions opens the rows behind it.
+3. **One visualisation, one analytical question.** No chart repeats what another already says ([product-baseline.md §6](product-baseline.md)).
+4. **Colour carries stable semantics** (§2). It is never assigned to fill space.
+5. **Financial direction is not an error state.** Spending more is not "wrong"; red is kept for what is.
+6. **Responsive layouts recompose rather than shrink** (§8).
+7. **Dense ledger information stays scannable:** aligned columns, fixed-width amounts, day grouping.
+8. **No duplicate features, metrics or charts** answering the same question.
+9. **Polish never obscures ledger correctness.** The domain stays rigorous and the UI stays simple ([domain-model.md §14](domain-model.md) is binding).
+10. **Shared visual language, not identical layouts.** Each screen is composed around its own question (§6).
+
+- **Numbers first.** Copy is a short label or a single sentence, never a paragraph.
 - **Not:** a newspaper, an ERP, a trading terminal, an admin template, a stock shadcn look, a lifestyle or motivational site, or a playful budgeting app.
-- **Banned:**
-  - greetings or quotes that take space from the first screen
-  - photos and illustrations (mountains, lifestyle imagery)
-  - merchant logos (FinPilot has no merchant entity)
-  - glassmorphism, neon, decorative gradients
+- **Banned:** greetings or quotes that take space from the first screen; photos and illustrations; merchant logos (FinPilot has no merchant entity); glassmorphism, neon, decorative gradients; decorative charts.
 
 ## 2. Colour: semantic tokens
 
-Colour always carries identity, interaction or financial meaning. A colour is never assigned to fill space. These tokens are the whole palette: the default Tailwind palette is removed ([globals.css](../src/app/globals.css)), so a component cannot drift off it.
+These tokens are the whole palette: the default Tailwind palette is removed ([globals.css](../src/app/globals.css)), so a component cannot drift off it.
 
-| Token | Hex | Means | Allowed | Never |
+| Token | Hex | Means | Used for | Never |
 |---|---|---|---|---|
-| `canvas` | `#F5F1EA` | the foundation (warm cream) | app background | panels |
-| `surface` / `surface-subtle` / `surface-hover` | `#FFFFFF` / `#FAF7F2` / `#F1ECE3` | panels and overlays / bands and wells / hover and neutral glyphs | | |
-| `line` | `#E7E1D6` | dividers, panel edges | | control edges |
-| `line-strong` | `#9C9485` | control edges (3.0:1 on white) | inputs, selects, secondary buttons, unselected chips | dividers |
+| `canvas` | `#F8F7F3` | the foundation | app background | panels |
+| `surface` / `surface-subtle` / `surface-hover` | `#FFFFFF` / `#FAF7F2` / `#F1ECE3` | cards and overlays / bands and wells / hover | | |
+| `line` / `line-strong` | `#E7E1D6` / `#9C9485` | dividers and panel edges / control edges (3.0:1 on white) | | a divider in `line-strong` |
 | `ink` / `ink-2` | `#172033` / `#4F5869` | text and figures / labels and metadata | | |
 | `ink-3` | `#8B919C` | quiet marks | icons, placeholders | **any text a person must read** |
-| `navy` / `navy-hover` | `#1D3050` / `#15243D` | FinPilot | logo, primary button, the active destination (nav underline, phone tab mark), the phone **+** | status, categories, amounts, page backgrounds |
-| `ocean` | `#355F7D` | you can act here / this is selected | focus, the selected state, evidence-link underlines, info tag text | financial direction, large fills |
-| `mist` | `#E5EEF4` | a quiet selected or analytical surface | selected backgrounds, the composition-bar track, info tags, the transfer glyph | text |
-| `tide` | `#5B84A3` | proportion | the composition-bar fill | anything else |
-| `coral` | `#DF7A62` | a rare brand accent | the logo stripe | spending, financial direction, status, warnings, errors, destructive actions, controls, amounts, text |
+| `navy` / `navy-hover` | `#1F385A` / `#182D49` | identity and the strongest emphasis | logo, page and panel titles, key figures, the primary button, the active destination; **higher** in a change explanation | status |
+| `ocean` | `#46678D` | interaction and analysis | focus, the selected state, evidence links, info text; ranked bars; **lower** in a change explanation | status |
+| `mist` | `#D8F3F5` | a quiet highlighted surface | the hero of a page (Left over, Net worth), selected backgrounds, info tags, icon wells | text |
+| `tide` | `#96BED4` | supporting marks | lighter segments of the composition strip | text or anything that must be read (2.0:1 on white) |
+| `coral` | `#F06A4E` | the brand and the one global action | the logo stripe, **+ Add** and the phone **+** (ink label, 5.3:1) | spending, higher spending, any financial direction, totals, status, warnings, errors, text |
 | `positive` / `-soft` | `#2B6F4F` / `#E4F1EA` | money arrived / verified | "+" on income and refunds, the Verified tag | "spending went down" |
-| `warning` / `-soft` | `#9A5B0B` / `#FBF0DC` | needs a look | a changed checkpoint (later: due soon) | spending increases |
+| `warning` / `-soft` | `#9A5B0B` / `#FBF0DC` | needs a look | a changed checkpoint | spending increases |
 | `negative` / `-soft` | `#B42318` / `#FBE9E6` | wrong or destructive | errors, Delete, a failed toast, the destructive confirmation | spending, "higher" |
 
 **Rules:**
-- **Navy is identity, never status.** A "Due" badge is warning (amber), not navy.
-- **Navy anchors the product; it is not its background.** The header stays white.
-- **One selected state:** mist background, ocean text, ocean edge, for chips, segmented controls and active filters. It never marks a financial direction or status.
-- **Coral is not red.** Coral and `negative` are only 2.2:1 apart, so they are kept apart by role: coral never appears on text, controls or status, and red always comes with a word and an icon.
-- **Spending is never red and never green.** Red means a plan is broken or data is wrong. A spending increase is shown with a neutral arrow and the word "higher".
+- **Coral is a brand and action accent, never a meaning.** It is not spending, higher spending, a negative direction, a warning or an error. Coral and `negative` are only 2.2:1 apart, so they are kept apart by role, and red always comes with a word and an icon.
+- **Analytical direction uses the blue family:** navy for higher, ocean for lower. Direction is always carried by the word, the sign and the arrow; colour only repeats it.
+- **Error and destructive semantics stay separate** from direction: `negative` means a plan is broken, data is wrong or something is being deleted.
+- **Spending is never red and never green.**
+- **Navy is identity and emphasis, never status.** The header stays white; navy is not a page background.
+- **One selected state:** `mist` background, `ocean` text, `ocean` edge, for chips, segmented controls and active filters.
 - **Status is always icon + word + colour,** never colour alone.
-- **Contrast (measured):** text pairs ≥ 4.5:1 (ink 16.3 on white; ink-2 7.2 on white and 6.4 on canvas; ocean on mist 5.8; Verified 5.2; Changed 4.8; negative 6.6); control edges, focus and the navy tab mark ≥ 3:1.
-- **Not decided yet:** the colour of commitments ("spoken for", Stage 6) and of goal reserves (Stage 8). A pale cyan is held in reserve for the first of them that needs its own hue; until then expectations use the soft-tint-and-outline treatment (§5).
+- **Contrast (measured):** ink 16.3 and ink-2 7.2 on white; ink-2 6.7 on canvas and 6.2 on mist; navy 11.9 on white and 10.2 on mist; ocean 5.9 on white and 5.0 on mist; ink on coral 5.3. Control edges, focus and the navy tab mark are ≥ 3:1.
+- **Not decided yet:** the colours of commitments (Stage 6) and goal reserves (Stage 8). No hue is reserved for them.
 
 ## 3. Typography and numbers
 
-- **Face:** **Hanken Grotesk**, weights 400/500/600/700, loaded through `next/font` (self-hosted, no runtime CDN). **Noto Sans Bengali** covers the ৳ glyph. No serif.
-- **Scale:** seven steps and no others. The stock and arbitrary sizes are removed from the theme; weight is chosen separately (400/500/600).
+- **Faces:** **Hanken Grotesk** (400/500/600/700) for the whole interface, with **Noto Sans Bengali** for the ৳ glyph, both through `next/font`. **Source Serif 4** sets the FinPilot wordmark and nothing else.
+- **Scale:** seven steps and no others; the stock and arbitrary sizes are removed from the theme. Weight is chosen separately.
 
   | Step | Size / line height | Used for |
   |---|---|---|
-  | `display` | 32 (28 on phones) / 1.1 | the one hero figure: Net worth, the Quick Add amount, later Available |
+  | `display` | 32 (28 on phones) / 1.1 | the one hero figure: Left over, Net worth, the Quick Add amount |
   | `title` | 28 (24 on phones) / 1.15 | page titles |
-  | `figure` | 20 / 1.2 | headline figures and the change headline |
-  | `heading` | 16 / 1.35 | panel titles, overlay titles, the month, empty-state titles, Activity's scope and totals |
+  | `figure` | 20 (18 on phones) / 1.2 | headline figures and the change headline |
+  | `heading` | 16 / 1.35 | panel titles, overlay titles, the month, empty-state titles, Activity's scope |
   | `body` | 14 / 1.45 | copy, row names, **list amounts at 600** |
   | `meta` | 13 / 1.4 | labels, metadata, notes, day headers, hints, compact controls |
-  | `micro` | 12 / 1.25 | tags, tab labels, key hints |
+  | `micro` | 12 / 1.25 | tags, tab labels, column headers, key hints |
 
   Relative sizes are allowed only for a glyph inside a figure (the smaller ৳).
-- **Figures** use tabular lining numerals; both chosen faces already use equal-width digits.
+- **Figures** use tabular lining numerals.
 - **Money formatting:**
-  - South Asian grouping (৳2,30,163).
-  - Whole taka on screen, always via the domain `Money` formatter.
-  - A true minus sign (U+2212).
-  - The currency symbol is smaller and in `ink-2`.
+  - South Asian grouping (৳2,30,163), whole taka, always via the domain `Money` formatter.
+  - A true minus sign (U+2212); the currency symbol is smaller and in `ink-2`.
   - Debt is written in words ("৳6,000 owed"). Signs appear only in flows and changes.
-- **Amounts in lists:** right-aligned, `body` at 600. Money coming in shows a green "+"; everything else is `ink`.
+- **Amounts in lists:** right-aligned in a fixed-width column, `body` at 600. Money coming in shows a green "+"; everything else is `ink`.
 
-## 4. Space, surfaces, shape
+## 4. Workspace, surfaces, shape
 
-- **Grid:** 4px base.
-  - Panel padding: 20px.
-  - Gaps: 16px (dense) / 20px (default).
-  - List rows: 44px desktop / 52px touch.
-  - Page width: max 1120px.
-- **Density:** compact but comfortable. Density comes from layout, never from type below 12px.
-- **Panels:** white, 1px `line`, **radius 12px**, shadow at most `0 1px 2px rgb(23 32 51 / .04)`. Inside a panel, use rules and whitespace, never nested cards.
-  - A panel's title row is `PanelHeader` (the question, a short note); a labelled group of rows inside it is `PanelBand`.
-  - A panel that holds sticky rows clips its overflow (`overflow-clip`), never hides it: a hidden overflow makes the panel their scroll container.
+- **Workspace:** one width shared by the navigation and every page: at most **1360px**, with 16 / 24 / 32px gutters on phones / tablets / desktops (1296px of content on a desktop).
+- **Grid:** 4px base. Card padding 20px; gaps 16px (dense) / 20px (default). Density comes from layout, never from type below 12px.
+- **Cards:** white, 1px `line`, radius 12px, a soft `shadow-card`. The core pages compose their own cards around their question; secondary pages (Settings) use the shared `Panel` with `PanelHeader` and `PanelBand`. Inside a card, use rules and whitespace, never nested cards.
+- **A card that holds sticky rows clips its overflow** (`overflow-clip`), never hides it: a hidden overflow makes the card their scroll container.
 - **Controls:** radius 8px. Chips and badges are pills.
-- **Overlays** (dialog, sheet, popover): one soft shadow `0 12px 32px rgb(23 32 51 / .14)` over a scrim of `ink` at 30%.
-- **Icons:** lucide, 1.75 stroke, 16–20px.
-  - Category icons come from a fixed map for the seeded categories.
-  - **User-created categories get a generic tag icon.** Correctness never depends on hand-assigning icons or colours.
+- **Overlays** (dialog, sheet, side panel): one soft shadow over a scrim of `ink` at 30%.
+- **Icons:** lucide, 1.75 stroke, 16–20px. Seeded categories and account types have fixed icons; **user-created categories get a generic tag icon**, so correctness never depends on hand-assigning icons or colours.
 
-## 5. Charts
+## 5. Visualisation
 
-- **Each chart answers one named question.** The question is its title or its headline.
-- **Forms:**
-  - cumulative comparison line: this period against the same days of the previous one
-  - ranked horizontal bars
-  - diverging contribution bars
-  - single composition strip
-  - bullet bars for budgets
-  - coverage bars for goals
-  - segmented bar for Available
-  - short timeline or list for commitments
-- **Marks:**
-  - 2px lines; bars 8–12px with 2px rounded ends.
-  - One highlighted series; comparison series in `chart-reference`.
-  - Direct labels, with a legend only when there are two or more series.
-  - A baseline plus at most two faint guides.
-  - Event annotations are drawn on the chart.
-  - Tooltips on hover and focus; every mark drills into filtered Activity.
-- **Fact vs expectation:**
-  - **Filled** = has happened (balances, spending, debt).
-  - **Soft tint + outline** = spoken for or expected (commitments, goal reserves); their hues are decided in Stages 6 and 8 (§2).
-  - **Empty with a red outline** = missing (shortfall, over-committed).
-  - Expected amounts always carry a date or a purpose in their label.
-- **Categories:** colour never identifies a category; the text label does.
-  - Charts show the top 5 by amount plus "Other".
-  - Ranked bars use one hue.
-  - Composition is shown as one-hue share bars (`tide` on a `mist` track) beside the exact share and amount, never instead of them. "Where it went" is the first: a 4px bar under each category, drawn to the domain's Ratio; a share shown as "<1%" keeps a 2px sliver, a true zero draws nothing, and the bars are hidden from assistive technology.
-  - This keeps user-created categories correct with no manual colour assignment.
-- **Charts are hand-built (CSS or SVG), with no chart library** ([tech-stack.md](tech-stack.md)). Only derived values are rendered; no chart ever contains illustrative data.
+- **Each visualisation answers one named question**, stated by its title or headline. Only derived values are drawn; no chart ever contains illustrative data.
+- **Bars sit beside the exact figure, never instead of it,** and are hidden from assistive technology. The figure and the row carry the meaning; the row, not the mark, opens the evidence.
+- **Colour never identifies or ranks a category;** the text label does. This keeps user-created categories correct with no manual colour assignment.
+- **Built today (Cash flow):**
+  - **Composition strip:** the month's spending as one bar, largest category first. Its tones (navy, ocean, tide) only separate neighbouring segments.
+  - **Ranked bars:** one per category, in one blue, drawn against the largest; every spent category is listed.
+  - **Change magnitude bars:** one per material driver in What changed, navy for higher and ocean for lower, drawn against the largest change.
+- **Fact vs expectation** (for Stages 6–9): **filled** = has happened; **soft tint + outline** = spoken for or expected; **empty with a red outline** = missing (shortfall, over-committed). Expected amounts always carry a date or a purpose.
+- **Hand-built in CSS (SVG where a shape needs it), with no chart library** ([tech-stack.md](tech-stack.md)). A new chart is added only when its concept exists and its question isn't already answered.
 
-## 6. Interaction states
+## 6. Screens
+
+Each core page answers one question. Keeping them distinct is what prevents features and charts from being duplicated across pages.
+
+### Cash flow: "What happened to my money this month?"
+
+Outcome-first, read in one order:
+1. **The month:** navigation and its period ("1–27 Sep 2026, so far" or "Full month").
+2. **The outcome:** **Left over** as the hero, with the **savings rate**; **Income** and **Spending** beside it, each opening the transactions behind it.
+3. **Where it went** — *composition:* where did the spending go?
+4. **What changed** — *explanation:* why is this month different from the comparison period? The direction and size first, both totals, then the drivers, each opening both sides as evidence.
+
+Where it went and What changed are different analytical jobs, not interchangeable widgets.
+
+### Activity: "What exactly happened in the ledger?"
+
+The evidence workspace, not a dashboard. One card holds:
+1. **Filters:** search, Period, Account, Category, Type, Clear. They live in the URL, so any view can be linked to and reloaded.
+2. **Scope:** what the filters select, the number of entries, Spent and Income for the view, and a link to Cash flow when the view has a month's shape.
+3. **Rows,** grouped by day under sticky day headers: **Description · Category · Account · Amount** on desktop. A row opens its transaction in a side panel, marked as current while open.
+
+It has no metric cards.
+
+### Accounts: "What do I have, what do I owe, and can I trust those balances?"
+
+1. **Position:** **Net worth** as the hero, with **Own** and **Owe**.
+2. **One ledger of accounts,** grouped by purpose (Everyday money, Savings, Credit cards, then Archived), not separate cards. Each row reads: account, balance, verification, **Verify**, management.
+3. **Verification is a first-class trust state:** *Not verified yet* (neutral), *Verified* (positive), *Changed since* a checkpoint (warning), with evidence written neutrally: what the ledger records for that day, what was verified, and a link to the entries through that day. It never claims which entry changed.
+4. **Verify** sits beside the state it resolves; **Archive / Restore / Delete** are management actions at the row's end, shown only when allowed.
+
+## 7. Interaction states
 
 | State | Treatment |
 |---|---|
 | Hover | `surface-hover` background; control edges darken to `ink-2` |
 | Focus | 2px `ocean` outline, 2px offset; inputs and selects: an `ocean` edge and 1px ring. Always visible on keyboard focus. |
-| Active nav | `ink` text + 2px `navy` underline; on phones, a `navy` mark and icon on the tab |
+| Active nav | `navy` text + 2px `navy` underline; on phones, a `navy` mark and icon on the tab |
 | Selected (chip, segment, active filter) | `mist` background, `ocean` text, `ocean` edge |
-| Primary / secondary / ghost button | `navy` fill / white with a `line-strong` edge / text only |
-| Destructive | inline: `negative` text; the confirming button of a destructive dialog: a filled `negative` button, never navy |
-| Evidence link | an `ocean` underline (50%, full on hover) on an amount or phrase that opens the rows behind it |
+| Buttons | primary: `navy` fill · the global Add: `coral` fill, `ink` label · secondary: white with a `line-strong` edge · ghost: text only |
+| Destructive | inline: `negative` text; the confirming button of a destructive dialog: a filled `negative` button, never the brand colour |
+| Evidence link | an `ocean` underline (50%, full on hover) on an amount or phrase that opens the rows behind it; a whole row when the row is the evidence |
 | Disabled | 45% opacity, no pointer |
-| Pending (server action) | the button keeps its width and shows a spinner; no layout shift |
+| Pending | the control keeps its size and shows a spinner; no layout shift |
 | Success | a toast stating the effect, with **Undo** where the action is reversible ("Saved −৳450 · Cash") |
 | Error | an inline message under the field in plain language; no apology |
 | Empty | one sentence on what would appear, plus one action. No illustration. |
 
-- **Quick Add is the primary global action** (`N` / **+ Add**): a dialog on desktop and a bottom sheet on mobile.
-- **Motion:** at most 150–250ms, and only for meaning (the new number after a save, a sheet opening). `prefers-reduced-motion` is respected.
+- **Quick Add is the one global action** (`N` / **+ Add**): a dialog on desktop and a bottom sheet on mobile.
+- **Motion:** at most 150–250ms, and only for meaning. `prefers-reduced-motion` is respected.
 
-## 7. Responsive
+## 8. Responsive
 
-- **Checked at 390, 820 and 1280px** for every change to Accounts, Activity, Cash flow and their overlays.
-- **Desktop (≥1024px):** top navigation, side panels for editing; Accounts puts Net worth in a right-hand column.
-- **Tablet (768–1023px):** top navigation; panels stack in one column; Activity's search takes its own line.
-- **Mobile (<768px):**
-  - Bottom tab bar with a centred **+**.
-  - Quick Add as a bottom sheet with the keypad first.
-  - Lists become two-line rows; charts stay horizontal-first.
-  - A row's actions share its second line and wrap below its details when both do not fit; they keep their words ("Verify") and a 40px touch height.
-- **Mobile first screen:** on data pages, the first viewport must state the page's primary answer (on Accounts, Net worth leads).
-- **No horizontal page scroll at 390px.** Only tables may scroll, inside their own container.
+- **Recompose, don't shrink.** Each core page changes its information hierarchy across phone, tablet and desktop rather than squeezing desktop columns:
+  - **Cash flow:** on phones the month leads, then Left over with Income and Spending side by side under it; on wider screens they sit beside the outcome, and Where it went and What changed sit side by side on desktop.
+  - **Activity:** phones show two-line rows (description and details, amount); tablets add a Category column and move the account under the description; desktops show all four columns.
+  - **Accounts:** Net worth leads at every width, Own and Owe beside or under it; on desktop the ledger aligns balances, verifications and Verify in shared columns; on phones a row's actions wrap onto its own lines, keep their words and a 40px touch height.
+- **Navigation:** top navigation from 768px; below it, a bottom tab bar with a centred coral **+**.
+- **Editing:** side panels on desktop; Quick Add as a bottom sheet with the keypad first on phones.
+- **The first viewport states the page's primary answer** (Left over on Cash flow, Net worth on Accounts).
+- **No horizontal page scroll at 390px.** Checked at 390, 820 and 1280px for every change to the core pages and their overlays.
 
-## 8. Open decisions (raised by the reference images)
+## 9. Open decisions (raised by the reference images)
 
 | # | Topic | Conflict with a frozen decision | Default until resolved |
 |---|---|---|---|
@@ -168,9 +174,12 @@ Colour always carries identity, interaction or financial meaning. A colour is ne
 | D5 | "Subscriptions" as a category | Removed by the baseline; derived from commitments | Subscriptions appear only as commitments |
 | D6 | Receipt capture, AI search, "Insights" nav | AI, OCR and drafts are out of V1; the page is named "Cash flow" | Not shown |
 
-## 9. Change log
+## 10. Change log
+
+Earlier entries are history. Where an entry describes a visual system, the current one is §1–§8.
 
 | Date | Change | Reason |
 |---|---|---|
 | 2026-09-22 | Created at the design gate, from two mocks and three reference images | The design gate had to be approved before Stage 3 |
-| 2026-09-27 | **Visual system replaced (§2–§7):** navy and cream palette (wine, blush and sky retired; coral kept only as the logo accent); seven type steps; one selected state; ocean focus; a filled destructive confirmation; `PanelHeader` and `PanelBand`; composition bars in "Where it went"; page width 1120px; responsive checks at 390/820/1280 | Milestone B review: the navy direction was approved conceptually, then frozen against the real product in the visual-system boundary. The wine identity read as a neutral template with an accent; 13px panel titles left no tier between the page title and metadata; readable text used `ink-3` (about 3:1); control edges were 1.6:1. |
+| 2026-09-27 | *(Superseded by the next entry.)* Navy and cream palette (wine, blush and sky retired; coral kept only as the logo accent); seven type steps; one selected state; ocean focus; a filled destructive confirmation; `PanelHeader` and `PanelBand`; composition bars in "Where it went"; page width 1120px; responsive checks at 390/820/1280 | Milestone B review: the navy direction was approved conceptually, then frozen against the real product in the visual-system boundary. The wine identity read as a neutral template with an accent; 13px panel titles left no tier between the page title and metadata; readable text used `ink-3` (about 3:1); control edges were 1.6:1. |
+| 2026-09-27 | **Implemented visual system recorded (§1–§8):** the reference palette (navy `#1F385A`, ocean, light-cyan mist, tide, a warm off-white canvas); coral as the brand and global Add accent only; navy higher / ocean lower in What changed; a Source Serif 4 wordmark; a 1360px workspace; soft card surfaces; the Cash flow, Activity and Accounts compositions (§6); the Kept/Spent bar removed; principles and responsive recomposition made explicit | The palette and the three page redesigns were built against the approved reference after the navy/cream freeze, and the file had fallen behind the committed UI. Coral had briefly marked higher spending, which let an increase read like an error; direction moved to the blue family. The Kept/Spent bar redrew the savings rate printed beside it. |

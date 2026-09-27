@@ -210,11 +210,20 @@ Built in its conceptual order: what happened → where it went → what changed 
 
 ### Visual system / UI upgrade (between Milestones B and C)
 
-- **Builds:** the approved visual direction applied to the real product: deep navy for identity and primary actions, slate/ocean blue for secondary emphasis, soft blue / pale cyan for analytical and supporting surfaces, a warm cream foundation, and restrained coral for rare emphasis. Also semantic type tokens and shared panel primitives.
-- **Rules:** exact colour tokens are tested and then frozen inside this boundary, against the real product rather than in isolation, and recorded in [design-direction.md](design-direction.md) and [product-baseline.md §11](product-baseline.md). Coral is never the colour of spending, and error/destructive states stay distinguishable from it. Information architecture and domain semantics are preserved.
+- **Builds:** the approved visual direction applied to the real product: semantic colour and type tokens, shared primitives, and the three existing pages recomposed around their questions.
+- **Rules:** tokens are tested against the real product rather than in isolation, and recorded in [design-direction.md](design-direction.md) and [product-baseline.md §11](product-baseline.md). Coral is never the colour of spending or of any financial direction, and error/destructive states stay distinguishable from it. Information architecture and domain semantics are preserved.
 - **Why before Stage 6:** Stages 6–9 add new surfaces and the first charts; they should be built once, in their final colour roles.
-- **Done (2026-09-27, branch `visual-system`):** tokens frozen in [design-direction.md §2–§7](design-direction.md): the navy/cream palette (wine, blush and sky retired; coral only as the logo accent), seven type steps, one selected state, ocean focus, a filled destructive confirmation, `PanelHeader`/`PanelBand`, composition bars in "Where it went", Net worth first on one-column Accounts, a labelled Verify on phones, and Activity's evidence header. No domain, server, schema or acceptance change.
-- **Left for later:** the colour of commitments (Stage 6) and goal reserves (Stage 8). A copy review: a lone increase among the smaller changes reads "100% of the increase" even when spending fell overall; correct by the formula, but it reads oddly. The side panels (Verify, New account, transaction edit) return focus to the page, not to the button that opened them.
+- **Done (2026-09-27, branch `visual-system`):** recorded in [design-direction.md](design-direction.md) (§1–§8).
+  - **Foundation:** the reference palette (navy, ocean, light-cyan mist, a warm off-white canvas), coral as the brand and global Add accent only, seven type steps, a Source Serif 4 wordmark, a 1360px workspace and soft card surfaces. An earlier navy/cream freeze was superseded by it.
+  - **Cash flow** recomposed outcome-first: the month, Left over with the savings rate, Income and Spending as evidence, then Where it went (composition) and What changed (explanation). Higher and lower spending use the blue family; the Kept/Spent bar was removed as a duplicate of the savings rate.
+  - **Activity** as one evidence workspace: filters, scope, and day-grouped rows aligned as Description · Category · Account · Amount, recomposed for tablets and phones. Filter changes made in quick succession, or while a search is still settling, are no longer lost.
+  - **Accounts** led by Position (Net worth, Own, Owe), then one ledger grouped by purpose, with verification as a first-class state and Verify beside it.
+  - No domain, server, schema or acceptance change.
+- **Left for later:**
+  - The colours of commitments (Stage 6) and goal reserves (Stage 8); no hue is reserved yet.
+  - A copy review: a lone increase among the smaller changes reads "100% of the increase" even when spending fell overall; correct by the formula, but it reads oddly.
+  - The side panels (Verify, New account, transaction edit) return focus to the page, not to the button that opened them.
+  - Opening a transaction in Activity while a typed search is still settling can lose the opened transaction. Fixing it means row navigation must carry the newest filters, and a product decision on what happens when the newly filtered list no longer contains the open transaction.
 
 ### Milestone C — "Plan" — tag `v0.3-plan`
 
@@ -360,7 +369,7 @@ See [product-baseline.md §9](product-baseline.md).
 Agreed after Stage 5c. Scope and sequence changes only; no acceptance number changed.
 
 1. **Stage 5d is dropped** as a standalone stage, and visx is not installed. Charts must earn their place individually; budget and Available visuals wait until those concepts exist.
-2. **Visual direction approved conceptually** (navy / slate-ocean blue / soft blue and pale cyan / warm cream / restrained coral). Exact tokens are frozen inside the visual-system boundary.
+2. **Visual direction approved conceptually** (navy / slate-ocean blue / soft blue and pale cyan / warm cream / restrained coral). Exact tokens are frozen inside the visual-system boundary. *(Superseded: the palette actually implemented is recorded under "Visual system / UI upgrade" above.)*
 3. **Sequence:** 5e Evidence & trust close-out → tag `v0.2-understand` → visual system / UI upgrade → Stage 6.
 4. **Signals** narrowed to families 2, 4, 5 and 7 for V1.
 5. **Budgets** kept, narrowed; A-40 and M1-4 unchanged.
