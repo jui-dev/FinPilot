@@ -2,7 +2,7 @@
 
 Personal finance built on a derived ledger: where your money stands, why it changed, and how much of it is actually free.
 
-> **Status:** Milestone B — a manual ledger you can verify against reality (accounts, Activity with search and filters, keyboard-first Quick Add, balance verification that detects changed history), and a monthly Cash flow that explains what changed, with every figure leading back to the transactions behind it. Then a visual-system pass: the reference palette, and Cash flow, Activity and Accounts each recomposed around the question it answers (see [docs/design-direction.md](docs/design-direction.md)). Next: commitments, budgets, goals and Available. See [docs/roadmap.md](docs/roadmap.md).
+> **Status:** Milestone B — a manual ledger you can verify against reality (accounts, Activity with search and filters, keyboard-first Quick Add, balance verification that detects changed history), and a monthly Cash flow that explains what changed, with every figure leading back to the transactions behind it. Then a visual-system pass: the reference palette, and Cash flow, Activity and Accounts each recomposed around the question it answers (see [docs/design-direction.md](docs/design-direction.md)). Next: commitments, protected money, Available, signals and an Overview (the V1.0 candidate); after it, Trends and an optional Monthly Plan. See [docs/roadmap.md](docs/roadmap.md).
 
 ## Documentation
 

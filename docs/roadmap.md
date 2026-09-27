@@ -1,6 +1,6 @@
-# FinPilot — Implementation Roadmap (Portfolio V1)
+# FinPilot — Implementation Roadmap (Portfolio V1 and after)
 
-**Status:** Approved 2026-09-22
+**Status:** Approved 2026-09-22; stages 6–13 re-sequenced by the product-architecture decisions of 2026-09-27 (§8)
 **Change policy:** Stages may be split into smaller commits freely. Reordering stages or changing their scope requires agreement first.
 **Related:** [product-baseline.md](product-baseline.md) · [domain-model.md](domain-model.md) · [tech-stack.md](tech-stack.md) · [acceptance-scenarios.md](acceptance-scenarios.md)
 
@@ -9,7 +9,7 @@
 ## 1. Approved decisions that shape this roadmap
 
 1. **The design gate runs during F0–F2.** A dedicated UI/UX architecture and visual-design discussion happens while the foundation stages are built. The design direction **must be approved before Stage 3 begins**. No generic dashboard design is improvised during implementation.
-2. **Available stays at Stage 9.** It is FinPilot's headline concept, so it is introduced once, with its final V1 semantics, when all its inputs exist: eligible balances and liabilities, commitments and goal earmarks. No temporarily incomplete version ships earlier.
+2. **Available is introduced once, at Stage 8** (Stage 9 before the 2026-09-27 re-sequencing). It is FinPilot's headline concept, so it arrives with its final V1 semantics when all its inputs exist: eligible asset balances and every liability, commitments, and protected-money earmarks. No temporarily incomplete version ships earlier.
 3. **A checkpoint review after Milestone B** covers the product feel and the charts before more of them are built.
 4. **No stage starts without explicit approval**, starting with F0.
 
@@ -22,17 +22,17 @@
 - **A real database is used from the first ledger stage onward.** Acceptance and property tests run against migrated in-memory SQLite, with no mocks.
 - **The clock is injected.** The acceptance suite runs with today = 2026-09-22 (Asia/Dhaka).
 - **Constraint tests insert invalid rows directly**, proving the database's CHECKs reject them even when the domain layer is bypassed.
-- **Demo data is not extended stage by stage.** Features are proven by the frozen acceptance scenario and by focused test fixtures; `npm run db:reset` is technical reset infrastructure. The portfolio demo dataset is designed once, in Stage 12, when the features, reports and Overview are mature enough to know what it must demonstrate.
+- **Demo data is not extended stage by stage.** Features are proven by the frozen acceptance scenario and by focused test fixtures; `npm run db:reset` is technical reset infrastructure. The V1 demo is designed in Stage 10 (Overview + V1 readiness), when the V1 features and the Overview exist and it's known what they must demonstrate. Its history is extended once, in Stage 11, for Trends.
 - **Definition of done for every stage** (no exceptions):
   - typecheck, lint (including the `src/domain` boundary), unit, property and acceptance (non-todo) tests, and any existing E2E tests all pass
   - one reviewed commit or a small series
   - a git tag at each milestone
-- **Only three invisible foundation stages.** Every stage after that produces visible product.
+- **Foundations stay short, and every stage states what it primarily delivers:** a product capability, a product surface, infrastructure or readiness, or a data/history foundation. The foundation stages F0–F2 were kept to three. A stage is never padded with UI or functionality to make it look visible; a foundation stage's value may become visible through the stage that uses it. *(Until 2026-09-27 this rule read "only three invisible foundation stages; every stage after that produces visible product".)*
 - **§14 of the domain model is binding for every UI stage:** the domain is rigorous, the UI is simple.
 
 ## 3. Stage overview
 
-| Stage | Name | Kind | Milestone / tag |
+| Stage | Name | Kind / primarily delivers | Milestone / tag |
 |---|---|---|---|
 | F0 | Repository scaffold | foundation | — |
 | F1 | Domain primitives + acceptance skeleton | foundation | — |
@@ -47,13 +47,17 @@
 | 5e | Evidence & trust close-out | visible | B — `v0.2-understand` |
 | ~~5d~~ | ~~Charts / visual analytics~~ | — | **dropped** at the Milestone B review (§7) |
 | V | Visual system / UI upgrade | visible | between B and C — **done** |
-| 6 | Commitments | visible | C — `v0.3-plan` |
-| 7 | Budgets | visible | C — `v0.3-plan` |
-| 8 | Goals and earmarks | visible | C — `v0.3-plan` |
-| 9 | Available and position | visible | D — `v0.4-available` |
-| 10 | Signal engine | visible | D — `v0.4-available` |
-| 11 | Overview | visible | E — `v1.0` |
-| 12 | Demo data and polish | visible | E — `v1.0` |
+| — | **Product-architecture decisions** (documentation only) | decision | before Stage 6 — §8 |
+| 6 | Commitments | product capability | C — `v0.3-spoken-for` |
+| 7 | Protected money | product capability | C — `v0.3-spoken-for` |
+| 8 | Available | product capability and surface | D — `v0.4-available` |
+| 9 | Signals | product capability | D — `v0.4-available` |
+| 10 | Overview + V1 readiness | product surface; readiness | E — `v1.0` (the **V1.0 candidate**) |
+| 11 | Extended demo history | data/history foundation | after V1 — product depth |
+| 12 | Trends | product capability | after V1 — product depth |
+| 13 | Monthly Plan (optional; replaces Budgets) | product capability | after V1 — product depth |
+
+Stage numbers 7–12 meant different stages before 2026-09-27. §8.4 maps old to new; entries written before then keep their original numbers.
 
 ## 4. Stages
 
@@ -171,7 +175,7 @@ Built in its conceptual order: what happened → where it went → what changed 
 - **Why here:** it needs only the ledger, and it's the first differentiating feature.
 - **Domain concepts:** like-for-like windows, attribution, materiality.
 - **What you can see at the end:** "where did my money go, and why did it change?"
-- **Deferred:** signals (the numbers exist; the ranked messages come in Stage 10).
+- **Deferred:** signals (the numbers exist; the ranked messages come in Stage 9, numbered 10 when this stage was written).
 
 ##### 5a — Monthly cash flow foundation
 - **Builds:**
@@ -194,7 +198,7 @@ Built in its conceptual order: what happened → where it went → what changed 
 - **Builds:** a date-range filter for Activity in URL params, and links from cash-flow and contribution figures to the filtered transactions.
 
 ##### ~~5d — Charts / visual analytics~~ (dropped)
-- **Dropped at the Milestone B review (2026-09-27; §7).** There is no standalone chart stage. Each chart must earn its place and is built only when its concept exists: budget bullet bars in Stage 7, the Available bar in Stage 9. Inline composition bars for "Where it went" may be considered in the visual-system boundary. visx is not installed ([tech-stack.md](tech-stack.md)).
+- **Dropped at the Milestone B review (2026-09-27; §7).** There is no standalone chart stage. Each chart must earn its place and is built only when its concept exists: budget bullet bars in Stage 7, the Available bar in Stage 9 *(numbers as of that review; now Monthly Plan's actual-vs-intention visual in Stage 13 and the Available bar in Stage 8, §8)*. Inline composition bars for "Where it went" may be considered in the visual-system boundary. visx is not installed ([tech-stack.md](tech-stack.md)).
 
 - **→ Checkpoint review** after 5c: held 2026-09-27 (§7).
 
@@ -220,23 +224,30 @@ Built in its conceptual order: what happened → where it went → what changed 
   - **Accounts** led by Position (Net worth, Own, Owe), then one ledger grouped by purpose, with verification as a first-class state and Verify beside it.
   - No domain, server, schema or acceptance change.
 - **Left for later:**
-  - The colours of commitments (Stage 6) and goal reserves (Stage 8); no hue is reserved yet.
+  - The colours of commitments (Stage 6) and protected money (Stage 7; formerly "goal reserves", Stage 8); no hue is reserved yet.
   - A copy review: a lone increase among the smaller changes reads "100% of the increase" even when spending fell overall; correct by the formula, but it reads oddly.
   - The side panels (Verify, New account, transaction edit) return focus to the page, not to the button that opened them.
   - Opening a transaction in Activity while a typed search is still settling can lose the opened transaction. Fixing it means row navigation must carry the newest filters, and a product decision on what happens when the newly filtered list no longer contains the open transaction.
 
-### Milestone C — "Plan" — tag `v0.3-plan`
+### Milestone C — "Spoken for" — tag `v0.3-spoken-for`
+
+The two inputs to Available: money already obligated and money deliberately set aside. *(Before 2026-09-27 this milestone was "Plan", `v0.3-plan`, with Budgets and Goals; see §8.)*
 
 #### 6 — Commitments
+- **Question:** *What money am I already obligated to pay, and when?* ([domain-model.md §8](domain-model.md))
 - **Scope (Milestone B review):** only what the core product and Available need. Match suggestions and weekly schedules are deferred beyond V1.
 - **Builds:**
-  - Commitment rules (schedules, month-end clamping).
+  - Commitment rules (schedules, month-end clamping). Recurrence is infrastructure, not a feature; there is no Subscriptions feature.
   - Lazy, idempotent materialisation up to today + 60 days, and occurrence states.
-  - **Pay**, which creates a linked expense.
+  - **Pay**, which creates a linked expense. No transaction is ever created without that explicit action.
   - ~~Match suggestions, confirmed by the user.~~ Deferred beyond V1.
   - Unlinking when a transaction is deleted.
   - The Upcoming list.
-- **Why before budgets:** the budget projection needs to know which spending is fixed and which is variable.
+- **Requirements from the 2026-09-27 decisions:**
+  - Every occurrence↔transaction match is recorded: it is the foundation of Monthly Plan's fixed/variable split (Stage 13).
+  - `expected_account` stays **optional and descriptive**, with no funding semantics, because open decision **O-1** (§8.5) is resolved only before Stage 8.
+  - The commitment colour is decided here ([design-direction.md §2](design-direction.md)).
+- **Why first:** obligations are the first input to Available, and commitments are the richest new domain (materialisation, occurrences, Pay).
 - **Domain concepts:** occurrences, matching, overdue.
 - **Tests that must pass:**
   - **Property tests:** materialisation is idempotent; rule edits only regenerate future, untouched occurrences.
@@ -244,91 +255,138 @@ Built in its conceptual order: what happened → where it went → what changed 
   - **Playwright flow 3:** pay a commitment.
 - **What you can see at the end:** upcoming obligations, with a Pay action.
 - **Deferred:** expected income (V1.1).
-- **Commit:** `feat(commitments): recurring commitments, occurrences and matching`
+- **Commit:** `feat(commitments): recurring commitments, occurrences and Pay`
 
-#### 7 — Budgets
-- **Scope (Milestone B review):** kept in V1, narrowed to the distinction between what happened and what I intended to spend. No envelope system, no forecasting beyond the documented projection. A-40 and M1-4 are unchanged.
+#### 7 — Protected money
+- **Question:** *What money have I deliberately set aside, and is it still really there?* ([domain-model.md §9](domain-model.md)). It replaces the former Goals stage; there are no separate Goals and Reserves features.
 - **Builds:**
-  - Effective-dated, calendar-month limits.
-  - Usage net of refunds.
-  - The commitment-aware projection and statuses.
-  - The budget-health UI (bullet bars).
-- **Domain concepts:** effective dating, fixed vs variable spending, certain vs projected overrun.
-- **Tests that must pass:**
-  - Projection unit tests (Dining 8,455, no projection before day 5, `committed_over`).
-  - **Acceptance:** A-40, M1-4.
-- **What you can see at the end:** "am I staying within my plans?"
-- **Deferred:** rollover, custom periods.
-- **Commit:** `feat(budgets): monthly budgets with commitment-aware projection`
-
-#### 8 — Goals and earmarks
-- **Builds:**
-  - Goals and append-only earmark entries.
+  - Protected-money items with an **optional** target and target date, and append-only earmark entries.
   - Write-time invariants inside synchronous transaction scripts.
-  - Oldest-first backing, shortfall, and release on completion.
+  - Oldest-first backing and shortfall (Reserved / Covered / Short); progress only when a target exists; on-track only with a target and a date.
+  - **Reserve** and **Release** (full or partial, never a transaction). Archive only when nothing remains reserved. Target reached is derived and releases nothing.
   - The simple UI: "Reserve ৳X from …", with a shortfall line only when there is one.
-- **Domain concepts:** earmarks, backing, shortfall.
+- **Decided in the Stage 7 plan, not earlier:** the container's code name; how operation kinds are represented (the semantics in [domain-model.md §9.1](domain-model.md) are fixed; the storage is not); whether **Move** is in the minimum slice; the protected-money colour.
+- **Must not be precluded:** **Use** (through the normal ledger boundary) and **Move**, and a future explicit item↔commitment relationship.
+- **Domain concepts:** earmarks, backing, shortfall, target vs reservation, release.
 - **Tests that must pass:**
-  - **Property tests:** covered ≤ max(balance, 0); Σ covered per account ≤ balance.
+  - **Property tests:** covered ≤ max(balance, 0); Σ covered per account ≤ balance; reaching a target never changes what is reserved.
   - **Acceptance:** A-50, and A-51 (the rollback test).
-- **What you can see at the end:** goals backed by real money.
-- **Deferred:** user-set priority, goal↔commitment linking.
-- **Commit:** `feat(goals): goals with earmarks, backing and shortfall`
+- **What you can see at the end:** protected money backed by real money, with targets where they exist.
+- **Deferred:** **Use** until its reversal semantics are decided (§8.5); Move if it isn't in the minimum slice; user-set priority; the item↔commitment relationship.
+- **Commit:** `feat(protected-money): reservations over real money, backing and shortfall`
 
 ### Milestone D — "What is actually free" — tag `v0.4-available`
 
-#### 9 — Available and position
+#### 8 — Available
+- **Question:** *How much can I use now without touching money that is already spoken for?* ([domain-model.md §10](domain-model.md))
+- **Resolve first:** open decision **O-1** (commitments expected from an excluded account), before Available's semantics are frozen.
 - **Builds:**
-  - The Available service (the [domain-model.md §10](domain-model.md) formula) and the bridge chart.
-  - `included_in_available` defaults (a per-account toggle only if it's cheap).
+  - The Available service (the §10 formula) and its explainable bridge visual.
+  - The **liability invariant** at the domain/write boundary: a liability can't be excluded, which closes the known setup-path gap ([domain-model.md §5](domain-model.md)).
+  - The `included_in_available` preference for **asset** accounts.
   - The over-committed state and the "before new income" label.
+  - **The forward-looking product area**, first built here: it leads with Available, and its bridge terms open Commitments and Protected money. Its working name "Plan" is **provisional**. The final name, its navigation placement and the phone tab-bar capacity are decided in this stage's navigation work (§8.3, §8.5).
 - **Why here:** it's the first point where all its inputs exist (see §1, decision 2).
-- **Domain concepts:** Available and its bridge.
+- **Domain concepts:** Available and its bridge; account eligibility.
 - **Tests that must pass:**
-  - **Property test:** the bridge terms always add up to Available.
+  - **Property tests:** the bridge terms always add up to Available; every liability balance is counted whatever its flag.
+  - A domain test: `included_in_available = false` is rejected for a liability.
   - **Acceptance:** A-60, A-61, M1-3, and the Available values in M2/M3.
 - **What you can see at the end:** the headline number, fully explainable.
 - **Deferred:** runway / expected income (V1.1).
-- **Commit:** `feat(position): Available with explainable bridge`
+- **Commit:** `feat(available): Available with explainable bridge`
 
-#### 10 — Signal engine
-- **Scope (Milestone B review):** V1 has rule families 2 (month-over-month attribution), 4 (commitments due / overdue), 5 (goal under-covered) and 7 (reconciliation), which are the ones the acceptance scenario asserts. Families 1, 3, 6 and 8 are deferred beyond V1 unless a later review finds a compelling dependency.
+#### 9 — Signals
+- **Question:** *Of everything true right now, what deserves my attention?* Signals select and rank; the owning feature explains ([domain-model.md §11](domain-model.md)).
+- **Scope (Milestone B review):** V1 has rule families 2 (month-over-month attribution), 4 (commitments due / overdue), 5 (protected money under-covered) and 7 (reconciliation), the ones the acceptance scenario asserts. Families 1 and 3 arrive with Stages 13 and 12; 6 and 8 are deferred beyond V1 unless a later review finds a compelling dependency.
+- **Resolve first:** family 2's trigger rule. It must be stricter than, or otherwise meaningfully more selective than, What changed's listing rule, and it must keep A-72 present (§8.5).
 - **Builds:**
   - The context builder.
   - Four pure rule families (see Scope).
   - Keys, severity and ranking; templates.
-  - Evidence filters (drill-down).
+  - Evidence links to the owning feature: Accounts, Cash flow's What changed, Commitments, Available.
   - Per-period dismissals.
+- **Not built:** a Signals inbox, read/unread state, an Insights destination, charts, notifications, AI-written observations.
 - **Domain concepts:** signals, materiality, ranking, evidence.
 - **Tests that must pass:**
   - Per-rule unit tests with fixtures, including materiality edge cases.
   - **Acceptance:** A-70…A-73, M1-5, M2-3.
-- **What you can see at the end:** "what deserves my attention?", with drill-down on each signal.
+- **What you can see at the end:** "what deserves my attention?", with a link from each signal to its evidence. **Stage 9 decides how Attention is reachable when signals ship**; a direct or temporary surface is acceptable, and the final Overview or navigation is not designed early to give it a home (P-4, §8.5). Stage 10 may then compose Attention into the Overview. Signals own the selection and ranking of noteworthy conditions; the Overview may surface them but never owns their logic.
 - **Deferred:** persisted signal history, notifications.
 - **Commit:** `feat(signals): deterministic signal engine`
 
 ### Milestone E — "Portfolio-ready V1" — tag `v1.0`
 
-#### 11 — Overview
-- **Builds:** the overview zones (Position/Available → Attention → This month → Plans → Recent activity), composed purely from existing services.
-- **Why late:** an overview built last can't hold fake state.
+#### 10 — Overview + V1 readiness
+- **Question:** *What should I know right now, and what should I do next?* The Overview owns no financial truth; it composes existing answers.
+- **Builds — Overview:**
+  - Available, as the entry point to its bridge.
+  - Attention (signals).
+  - A concise current-month outcome from Cash flow, linking to it.
+  - Home moves to the Overview.
+  - **Not built:** Recent activity (Activity exists), copies of Cash flow's charts, a full commitment list, Overview-only metrics, and protected-money or commitment widgets when Attention already surfaces the shortfall or deadline.
+- **Builds — V1 readiness** (the responsibilities of the former Stage 12 that V1 needs):
+  - Demo seed situations that demonstrate the V1 product, including a **planted situation for every V1 signal family**, on the existing short history. Extended history is Stage 11.
+  - A responsive review (390 / 820 / 1280) and an accessibility review.
+  - **README:** architecture, decisions, how to run, and **portfolio screenshots** (required).
+  - A final V1 product and polish review.
+- **Why here:** an overview built after its inputs can't hold fake state, and it no longer waits for optional features.
 - **Tests that must pass:**
-  - **Playwright flow 4:** Quick Add → the overview updates (Available, budget, signals).
-  - **Acceptance: 100% green, with no `todo` remaining.**
-- **What you can see at the end:** the complete FinPilot overview.
-- **Commit:** `feat(overview): derived overview dashboard`
-
-#### 12 — Demo data and polish
-- **Builds:**
-  - **The final seed generator:** 9–12 months of history, dates relative to today, curated Bangladeshi merchants, and anomalies planted so every signal rule fires.
-  - **Polish:** a responsive pass, empty states, an accessibility pass, and a performance check at seed volume.
-  - **README:** architecture, decisions, how to run, and **screenshots** (required). A short recording or GIF is optional.
-- **Tests that must pass:** a seed smoke test (every rule fires on a fresh seed), plus the full suite.
-- **What you can see at the end:** clone → `npm install` → `npm run db:reset` → `npm run dev`.
+  - **Playwright flow 4:** Quick Add → the overview updates (Available, signals).
+  - A seed smoke test: every V1 signal family fires on a fresh seed.
+  - **V1 exit criterion:** every acceptance assertion is green **except A-40 and M1-4**, which are deliberately deferred with Monthly Plan to Stage 13.
+- **What you can see at the end:** the V1.0 candidate. Clone → `npm install` → `npm run db:reset` → `npm run dev`.
+- **Then:** tag `v1.0` after the V1 review.
 - **Deferred:** deployment and the public demo strategy, auth, V1.1 items.
 - **Commits:**
-  - `feat(demo): realistic seed generator`
+  - `feat(overview): overview composed from existing answers`
+  - `feat(demo): V1 demo situations`
   - `chore: V1 polish and README`
+
+### After the V1 candidate — product depth
+
+#### 11 — Extended demo history
+- **Primarily delivers:** a data/history foundation for longitudinal analysis. Its value becomes visible through Stage 12 (Trends); no UI or functionality is added to Stage 11 to make it look visible.
+- **Builds:** the seed extended to 9–12 months of history, with dates relative to today, curated Bangladeshi merchants, and the multi-month patterns that Trends and signal family 3 need to demonstrate. It stays deterministic.
+- **Why before Trends:** the current three months cannot show a longitudinal pattern.
+- **Tests that must pass:** the seed smoke test still passes; every V1 signal family still fires.
+- **Commit:** `feat(demo): extended history`
+
+#### 12 — Trends
+- **Question:** *Is this a pattern or a one-off?* The shape across **three or more complete periods**. Cash flow owns one period and its attribution against another; Trends is not Cash flow with a wider date selector.
+- **Rules:** a partial current month is never treated as a complete month. **One** longitudinal visual first: Income vs Spending across complete months. A category trend (for example a sparkline beside the figure) comes only if it proves useful. The rejected charts are listed in [design-direction.md §5](design-direction.md).
+- **Resolve first:** the definition of "typical" (window; mean or median) used by Trends and by family 3 (§8.5).
+- **Builds:** the Trends view, and signal family 3 (category spike vs typical).
+- **Commit:** `feat(trends): multi-month pattern`
+
+#### 13 — Monthly Plan
+- **Question:** *What do I intend to spend or set aside this month, and how did that go?* It is optional, it never feeds Available, and it never rewrites the ledger ([domain-model.md §7](domain-model.md)).
+- **Resolve first:** effective-dated or month-specific intentions (§8.5).
+- **Builds:**
+  - Category spending intentions and optional intended protected-money contributions.
+  - Commitments shown read-only.
+  - Actuals derived from the ledger and earmark entries.
+  - The commitment-aware projection and statuses.
+  - Variance and end-of-month reflection.
+  - An actual-vs-intention visual.
+  - Signal family 1.
+- **Not built:** envelope or zero-based budgeting, rollover, custom periods, and Budgets beside the plan.
+- **Tests that must pass:**
+  - Projection unit tests (Dining 8,455, no projection before day 5, `committed_over`).
+  - A test that every other feature returns identical results with and without a plan.
+  - **Acceptance:** A-40, M1-4 → **full suite green**.
+- **Commit:** `feat(plan): optional monthly plan with commitment-aware projection`
+
+### Portfolio differentiators (after the product-depth stages; each its own discussion)
+
+The candidate pipeline comes before every producer ([product-baseline.md §9](product-baseline.md)):
+
+1. **Transaction Candidate pipeline:** an ingestion endpoint, a candidate (draft) inbox, idempotency keys and user review. Nothing reaches the ledger without confirmation.
+2. **CSV producer:** the first idempotent-ingestion story.
+3. **Email / SMS producer via n8n.**
+4. **Receipt / screenshot capture.**
+
+**Much later:** AI narration of computed evidence, natural-language financial questions answered through deterministic tools, MCP, and richer forecasting.
 
 ## 5. Acceptance progress by stage
 
@@ -344,21 +402,22 @@ Built in its conceptual order: what happened → where it went → what changed 
 | 5e | none |
 | V | none |
 | 6 | A-30…A-32, M1-1, M1-2 |
-| 7 | A-40, M1-4 |
-| 8 | A-50, A-51 |
-| 9 | A-60, A-61, M1-3, Available values in M2/M3 |
-| 10 | A-70…A-73, M1-5, M2-3 |
-| 11 | full suite green |
+| 7 | A-50, A-51 |
+| 8 | A-60, A-61, M1-3, Available values in M2/M3 |
+| 9 | A-70…A-73, M1-5, M2-3 |
+| 10 | none new. **V1 exit:** all green except A-40 and M1-4 (deferred with Monthly Plan) |
+| 11 | none |
+| 12 | none |
+| 13 | A-40, M1-4 → full suite green |
 
 ## 6. After V1
 
-These come after Portfolio V1, each as a separate discussion:
+Stages 11–13 and the portfolio differentiators (§4) are planned product depth after the V1.0 candidate. These also come after Portfolio V1, each as a separate discussion:
 
 - the deployment and public demo strategy
-- V1.1 (runway, CSV import, splits, merchant memory, net worth over time, revision log)
+- V1.1 (runway, splits, merchant memory, revision log); CSV import is now the first producer of the candidate pipeline (§4), and net worth over time is rejected for now (§8)
 - auth and tenancy enforcement
 - PostgreSQL migration
-- ingestion and n8n
 - AI
 - MCP
 
@@ -366,7 +425,7 @@ See [product-baseline.md §9](product-baseline.md).
 
 ## 7. Milestone B review outcome (2026-09-27)
 
-Agreed after Stage 5c. Scope and sequence changes only; no acceptance number changed.
+Agreed after Stage 5c. Scope and sequence changes only; no acceptance number changed. *(History: the stage numbers below are the ones in use then, and item 5 (Budgets) is superseded by §8.)*
 
 1. **Stage 5d is dropped** as a standalone stage, and visx is not installed. Charts must earn their place individually; budget and Available visuals wait until those concepts exist.
 2. **Visual direction approved conceptually** (navy / slate-ocean blue / soft blue and pale cyan / warm cream / restrained coral). Exact tokens are frozen inside the visual-system boundary. *(Superseded: the palette actually implemented is recorded under "Visual system / UI upgrade" above.)*
@@ -376,3 +435,83 @@ Agreed after Stage 5c. Scope and sequence changes only; no acceptance number cha
 6. **Commitments:** match suggestions and weekly schedules deferred beyond V1.
 7. **Deployment** stays after V1; README screenshots are required in Stage 12.
 8. `v0.2-understand` is tagged only after 5e is implemented, validated, reviewed and committed.
+
+## 8. Product-architecture decisions (2026-09-27)
+
+A documentation-only boundary between the visual system and Stage 6. It reopened frozen decisions deliberately, under their change policies. **No acceptance value changed, and every assertion ID is kept.**
+
+### 8.1 Product model
+
+**Record** (*what actually happened?*) → **Verify** (*can I trust the record?*) → **Understand** (*what happened to my money, and how is it changing?*) → **Available** (*what can I actually use without consuming money already spoken for?*).
+
+- **Commitments** and **Protected money** are not steps after Understand. They are the **inputs** to Available.
+- **Notice** (signals) runs across every layer.
+- **Plan** (Monthly Plan) is **optional**: no other feature requires it.
+- The rules stand: the ledger always wins, planning never rewrites history, derived values stay derived, important figures carry evidence, and no feature, metric or chart is duplicated or added to make the product look larger.
+
+The product-responsibility matrix, which gives each feature one primary question, is in [product-baseline.md §2](product-baseline.md).
+
+### 8.2 Decisions
+
+1. **Commitments** own scheduled obligations. A commitment is not a transaction. Recurrence is infrastructure. There is no Subscriptions feature and no transaction without explicit action ([domain-model.md §8](domain-model.md)).
+2. **Protected money replaces Goals** as one concept with an optional target and target date. Target reached is derived and releases nothing; Release is deliberate and may be partial; archiving requires nothing reserved; Use and Move are defined semantically and implemented later. Account exclusion and protection stay distinct. `EarmarkEntry` keeps its name ([domain-model.md §9](domain-model.md)).
+3. **Available** remains the central derived decision metric, with its full formula. **Liability invariant:** every liability counts regardless of `included_in_available`. The known setup-path gap is closed in Stage 8. Available excludes expected income and Monthly Plan, is never stored and never clamped ([domain-model.md §5, §10](domain-model.md)).
+4. **Sinking funds:** Commitments and Protected money stay independent. The conservative double reservation is kept for V1, with no automatic matching; a future explicit relationship must stay possible.
+5. **Signals** select and rank; the owning feature explains. There is no inbox, no read state, no Insights destination and no duplicate charts. Family 2 must be meaningfully more selective than What changed ([domain-model.md §11](domain-model.md)).
+6. **Overview** moves before the optional features and is narrowed to Available, Attention and a concise current-month outcome ([product-baseline.md §6](product-baseline.md)).
+7. **Trends** moves after the V1 candidate, over complete periods only, with extended demo history before it.
+8. **Monthly Plan replaces Budgets:** optional, after V1, independent of Available, not envelope budgeting. It carries forward the commitment-aware projection with A-40 and M1-4 ([domain-model.md §7](domain-model.md)).
+9. **Charts:** one visualisation answers one analytical question. Future visuals are recorded only where their owning concept is decided ([design-direction.md §5](design-direction.md)).
+10. **Out of scope** unless deliberately reopened: [product-baseline.md §5](product-baseline.md).
+
+### 8.3 The forward-looking product area (provisional)
+
+Available, Commitments and Protected money naturally form one forward-looking decision area. The area **leads with Available**, and Available's bridge terms open the other two.
+
+- **"Plan" is a working name only.** It is not a frozen navigation label: a destination called "Plan" could suggest that Available depends on planning, or that planning is expected.
+- **Monthly Plan** is conceptually related but **does not feed Available**. It may or may not live in the same area.
+- The area's final name, its navigation placement and where Monthly Plan sits are decided when the area is designed, by Stage 8's navigation work at the latest (Monthly Plan's placement by Stage 13).
+- The **Overview** may surface Available but does not own it. **Accounts** keeps position and balance trust, with no competing headline beside Net worth, Own and Owe. **Cash flow** keeps what happened in a period, and Available is not part of it.
+
+### 8.4 Stage numbering: old → new
+
+| Before 2026-09-27 | From 2026-09-27 | Acceptance assertions |
+|---|---|---|
+| 6 Commitments | **6** Commitments | A-30…A-32, M1-1, M1-2 (unchanged) |
+| 7 Budgets | **13** Monthly Plan (replaces Budgets) | A-40, M1-4 |
+| 8 Goals and earmarks | **7** Protected money | A-50, A-51 |
+| 9 Available and position | **8** Available | A-60, A-61, M1-3, Available values in M2/M3 |
+| 10 Signal engine | **9** Signals | A-70…A-73, M1-5, M2-3 |
+| 11 Overview | **10** Overview + V1 readiness | — (V1 exit: all but A-40, M1-4) |
+| 12 Demo data and polish | split: V1 demo, polish and README → **10**; extended history → **11** | — |
+| — | **12** Trends (new) | — |
+
+**Code follow-up (before Stage 6 starts):** the stage labels and comments that still use the old numbers are corrected in a small, separate code change: `acceptance/catalogue.ts` stage names, `src/components/shell/navigation.ts` and `src/app/page.tsx` ("Stage 11" → Stage 10), and `src/db/seed/demo-seed.ts` ("Stage 12" → Stages 10 and 11), plus the catalogue's A-70 title ("goal under-covered" → protected money). This boundary did not touch code.
+
+### 8.5 Open decisions: intentionally unresolved
+
+Every item here is **deliberately open, not forgotten**. A stage's plan resolves the items it is blocked by before implementation starts, and records the answer in the owning document.
+
+**A. Implementation blockers**
+
+| # | Decision | Owning doc | Resolve before |
+|---|---|---|---|
+| O-1 | How a pending commitment whose `expected_account` is an asset account **excluded** from Available affects Available. Today's frozen formula subtracts it anyway; that rule is under reconsideration. Stage 6 keeps `expected_account` descriptive. | [domain-model.md §10](domain-model.md) | **Stage 8** freezing Available's semantics |
+| O-2 | Signal family 2's trigger: stricter or otherwise meaningfully more selective than What changed; A-72 must stay present. | [domain-model.md §11](domain-model.md) | **Stage 9** |
+| O-3 | Protected money: the container's code name, and the representation of operation kinds ("reduce" and "release" are not assumed to be separate values). | [domain-model.md §9.1](domain-model.md) | **Stage 7** implementation |
+| O-4 | **Use:** how much is released when the expense differs from the reservation, and what happens to the release when the Use transaction is edited or deleted. | [domain-model.md §9.1](domain-model.md) | implementing **Use** (not required in the minimum Stage 7 slice) |
+| O-5 | "Typical" for Trends and signal family 3: the window, and mean or median. | this file, Stage 12 | **Stage 12** |
+| O-6 | Monthly Plan intentions: effective-dated or month-specific. Either reproduces A-40 and M1-4. | [domain-model.md §7](domain-model.md) | **Stage 13** |
+
+**B. Later product questions**
+
+| # | Question | Resolve when |
+|---|---|---|
+| P-1 | An explicit protected-money ↔ commitment relationship (sinking funds). **Not a V1 blocker:** the conservative double reservation is acceptable for V1 ([domain-model.md §10](domain-model.md)). | if the revisit trigger fires (double reservation seen often) |
+| P-2 | The forward-looking area's final name, its navigation placement, and Monthly Plan's placement (§8.3). | when the area is designed, no later than Stage 8's navigation work (Monthly Plan's placement by Stage 13) |
+| P-3 | Phone tab-bar capacity once Overview and the forward-looking area join the bar (three destinations and the centred + today). | before shipping the navigation that expands it (Stage 8 or 10) |
+| P-4 | How Attention is reachable when signals ship, before the Overview composes it. A direct or temporary surface is acceptable; the final Overview or navigation is not designed early for it. Signals own selection and ranking; the Overview only surfaces them. | the Stage 9 plan |
+| P-5 | The colours of commitments and protected money ([design-direction.md §2](design-direction.md)). | Stages 6 and 7 |
+| P-6 | Signal families 6 (Available low) and 8 (savings-rate change). | a review after V1 |
+
+**Known gap, not an open question:** the account-setup service accepts `included_in_available = false` for a credit card when a caller passes it (no UI does). **Stage 8 closes it** ([domain-model.md §5](domain-model.md)).

@@ -1,6 +1,6 @@
 # FinPilot — Mandatory Acceptance Scenarios
 
-**Status:** Frozen — approved 2026-09-22 (including the August prologue correction)
+**Status:** Frozen — approved 2026-09-22 (including the August prologue correction). Product language and stage mapping updated 2026-09-27 (§9); **no expected value changed**.
 **Binding rules:**
 - The implementation must reproduce **every number in this document exactly**.
 - These scenarios must never be replaced by generic CRUD tests.
@@ -34,9 +34,9 @@
 | Cash | cash | asset | yes | 2,200 |
 | bKash | mobile_wallet | asset | yes | 9,537 |
 | Savings | savings | asset | **no** | 120,000 |
-| Visa | credit_card | liability | yes | −3,200 (owed) |
+| Visa | credit_card | liability | yes (always, for a liability; [domain-model.md §5](domain-model.md)) | −3,200 (owed) |
 
-## 3. Fixture: commitments, budget, goal
+## 3. Fixture: commitments, Monthly Plan intention, protected money
 
 | Commitment | Category | Expected amount | Schedule | Start (anchor) | Expected account |
 |---|---|---|---|---|---|
@@ -44,10 +44,10 @@
 | Internet | Utilities | 1,500 | monthly, the 25th | **Aug 25** | bKash |
 | Streaming | Entertainment | 700 | monthly, the 3rd | **Oct 3** (a new subscription) | Visa |
 
-- **Budget:** Housing, 30,000, effective from **August 2026**.
-- **Goal:** *Laptop*: target 150,000, no target date, active.
+- **Monthly Plan intention** (formerly *Budget*; used only by A-40 and M1-4, Stage 13): Housing, 30,000, from **August 2026**. Whether Stage 13 stores it as an effective-dated intention or as a September plan line is open; either reproduces A-40 and M1-4 exactly.
+- **Protected money** (formerly *Goal*): *Laptop*: target 150,000, no target date, active.
 
-| Earmark entry | Goal | Account | Amount | Balance at that time | Valid? |
+| Earmark entry | Protected-money item | Account | Amount | Balance at that time | Valid? |
 |---|---|---|---|---|---|
 | Aug 10 | Laptop | Savings | +100,000 | 120,000 | yes (100,000 ≤ 120,000) |
 | Sep 3 | Laptop | Bank | +20,000 | 150,000 | yes (20,000 ≤ 150,000) |
@@ -111,7 +111,7 @@
 | A-20 | Δ by category | Health **+30,000** · Shopping **−2,000** · Groceries **−800** · Food & Dining **−750** · Housing 0 · Fees & Charges 0 |
 | A-21 | Totals | net Δ **+26,450** (66,487 − 40,037); gross increases **30,000** |
 | A-22 | Attribution | Health = **100%** of gross increases; Shopping, Groceries and Food & Dining are offsets. (Relative to the net change, Health would be 113%, which is why gross increases is the denominator.) |
-| A-23 | Materiality (|Δ| ≥ max(500, 10% of the previous-window amount)) | Health, Shopping (vs 3,800), Groceries (vs 5,000) and Food & Dining (vs 1,200) are all **material** |
+| A-23 | Materiality (\|Δ\| ≥ max(500, 10% of the previous-window amount)) | Health, Shopping (vs 3,800), Groceries (vs 5,000) and Food & Dining (vs 1,200) are all **material** |
 
 ### 5.3 Commitments
 | ID | Assertion | Expected |
@@ -120,12 +120,15 @@
 | A-31 | Pending with due date ≤ Oct 22 (the Available horizon) | Internet 1,500 + Rent 30,000 + Streaming 700 = **32,200** |
 | A-32 | Materialisation is idempotent | reading twice produces **no duplicate** occurrences |
 
-### 5.4 Budget
+### 5.4 Monthly Plan (formerly Budget) — Stage 13, deferred beyond the V1 candidate
+
+Kept deliberately, with every value unchanged: this is the commitment-aware projection that Monthly Plan must reproduce. "Limit" reads as the planned intention for the category. A-40 and M1-4 stay `todo` at the V1 candidate.
+
 | ID | Assertion | Expected |
 |---|---|---|
 | A-40 | Housing, September | limit 30,000 · usage 30,000 · fixed 30,000 · variable 0 · remaining committed 0 · projected **30,000** · status **on_track** |
 
-### 5.5 Goal and earmarks
+### 5.5 Protected money and earmarks
 | ID | Assertion | Expected |
 |---|---|---|
 | A-50 | Laptop | reserved **120,000** (Savings 100,000 + Bank 20,000) · covered **110,000** (Savings 90,000 + Bank 20,000) · short **10,000** (Savings) · progress **73%** (110,000 / 150,000) |
@@ -134,15 +137,15 @@
 ### 5.6 Available
 | ID | Assertion | Expected |
 |---|---|---|
-| A-60 | Bridge | included asset balances **146,163** (133,000 + 4,200 + 8,963) → − credit owed **6,000** = 140,163 → − commitments due ≤ Oct 22 **32,200** = 107,963 → − reserved for goals on included accounts **20,000** = **Available 87,963** |
+| A-60 | Bridge | included asset balances **146,163** (133,000 + 4,200 + 8,963) → − credit owed **6,000** = 140,163 → − commitments due ≤ Oct 22 **32,200** = 107,963 → − protected money reserved on included accounts **20,000** = **Available 87,963** |
 | A-61 | Exclusions | the Savings balance (90,000) and the Savings earmark are **not** part of Available; the Oct 1 salary is **not** included (V1 has no expected income) |
 
 ### 5.7 Signals (presence and parameters)
 | ID | Signal | Parameters |
 |---|---|---|
-| A-70 | Goal under-covered | Laptop, short **10,000**, account Savings |
+| A-70 | Protected money under-covered (family 5) | Laptop, short **10,000**, account Savings |
 | A-71 | Commitment due soon | Internet, due Sep 25, **in 3 days**, 1,500 |
-| A-72 | Month-over-month attribution | Health accounted for **all** of the increase (+30,000); offsets: Shopping −2,000, Groceries −800, Food & Dining −750 |
+| A-72 | Month-over-month attribution (family 2; its trigger rule is decided in Stage 9 and must keep this signal present) | Health accounted for **all** of the increase (+30,000); offsets: Shopping −2,000, Groceries −800, Food & Dining −750 |
 | A-73 | Reconciliation adjustment (info) | Cash, unexplained difference **350**, Sep 20 |
 
 ## 6. Mutations (each applied independently to the base scenario)
@@ -153,7 +156,7 @@
 | M1-1 | Occurrence | Rent Sep 1 is back to **pending**, displayed as **overdue** |
 | M1-2 | Balances | Bank **163,000**; net worth **260,163**; spending Sep 1–22 **36,487** |
 | M1-3 | Available **unchanged** | included assets 176,163 → − 6,000 → − commitments **62,200** (overdue Rent Sep 1 30,000 + 32,200) → − 20,000 = **87,963** |
-| M1-4 | Housing budget | usage 0 · remaining committed 30,000 (the overdue occurrence in the current month) · projected **30,000** · **on_track** |
+| M1-4 | Housing Monthly Plan line (formerly budget; Stage 13) | usage 0 · remaining committed 30,000 (the overdue occurrence in the current month) · projected **30,000** · **on_track** |
 | M1-5 | Signal | Rent **overdue 21 days** (due Sep 1) |
 
 ### M2 — move the Sep 15 lunch (row 8) from Cash to bKash
@@ -192,11 +195,15 @@
 | 5d — Charts / visual analytics | dropped at the Milestone B review |
 | 5e — Evidence & trust close-out | none |
 | 6 — Commitments | A-30, A-31, A-32, M1-1, M1-2 |
-| 7 — Budgets | A-40, M1-4 |
-| 8 — Goals and earmarks | A-50, A-51 |
-| 9 — Available | A-60, A-61, M1-3, and the Available values in M2-2, M3-1 and M3-3 |
-| 10 — Signals | A-70, A-71, A-72, A-73, M1-5, M2-3 |
-| 11 — Overview | full suite green (no `todo` remaining) |
+| 7 — Protected money | A-50, A-51 |
+| 8 — Available | A-60, A-61, M1-3, and the Available values in M2-2, M3-1 and M3-3 |
+| 9 — Signals | A-70, A-71, A-72, A-73, M1-5, M2-3 |
+| 10 — Overview + V1 readiness | none new. **V1 exit criterion:** every assertion is green except A-40 and M1-4, which are deliberately deferred with Monthly Plan. |
+| 11 — Extended demo history | none |
+| 12 — Trends | none |
+| 13 — Monthly Plan | A-40, M1-4 → **full suite green** (no `todo` remaining) |
+
+Stage numbers changed on 2026-09-27 ([roadmap.md §8](roadmap.md) maps old → new). The change-log entries below keep the numbers they were written with.
 
 ## 9. Change log
 
@@ -208,3 +215,4 @@
 | 2026-09-23 | **Stage 4 split into 4a (reconciliation write path) and 4b (verification status)** in §8. No expected value changed; only the stage that turns each assertion green. A-13 and M2-1 move to 4b. | A checkpoint's status is derived from the ledger *after* the fact, so it is a separate boundary from posting the adjustment. Recorded here because §8 otherwise implies every Stage 4 assertion goes green together. |
 | 2026-09-24 | **Stage 5 split into 5a–5d** in §8. No expected value changed; A-20…A-23 now go green in 5b. | Monthly analysis is built in its conceptual order (what happened → where it went → what changed → evidence → visuals); a single stage would have combined four boundaries. Recorded here because §8 otherwise implies every Stage 5 assertion goes green together. |
 | 2026-09-27 | **§8: Stage 5d dropped and 5e (evidence & trust close-out) added** at the Milestone B review. No expected value changed, and no assertion moved. | 5d had no assertions; charts are now built within the stages that own their concepts. Recorded here so §8 matches [roadmap.md](roadmap.md). |
+| 2026-09-27 | **Product-architecture decisions: language and stage mapping only. No expected value changed, and every assertion ID is kept.** §3 and §5.4–§5.7: *Budget* → Monthly Plan intention, *Goal* → Protected money. §8: A-50/A-51 → Stage 7, Available → Stage 8, signals → Stage 9, **A-40 and M1-4 → Stage 13 (Monthly Plan)**, deferred beyond the V1 candidate but not weakened; the V1 exit criterion becomes "all green except A-40 and M1-4". A-72 is kept while family 2's trigger is reconsidered for Stage 9. Visa's `included_in_available` is now required rather than chosen (the liability invariant); its value was already *yes*. A-23: the pipes in `\|Δ\|` are escaped so the table parses (Markdown only; wording and values unchanged). | Budgets are superseded by the optional Monthly Plan and Goals by Protected money ([domain-model.md §7, §9](domain-model.md)); the stages were re-sequenced ([roadmap.md §8](roadmap.md)). |

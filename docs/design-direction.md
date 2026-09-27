@@ -55,7 +55,7 @@ These tokens are the whole palette: the default Tailwind palette is removed ([gl
 - **One selected state:** `mist` background, `ocean` text, `ocean` edge, for chips, segmented controls and active filters.
 - **Status is always icon + word + colour,** never colour alone.
 - **Contrast (measured):** ink 16.3 and ink-2 7.2 on white; ink-2 6.7 on canvas and 6.2 on mist; navy 11.9 on white and 10.2 on mist; ocean 5.9 on white and 5.0 on mist; ink on coral 5.3. Control edges, focus and the navy tab mark are ≥ 3:1.
-- **Not decided yet:** the colours of commitments (Stage 6) and goal reserves (Stage 8). No hue is reserved for them.
+- **Not decided yet:** the colours of commitments (Stage 6) and protected money (Stage 7). No hue is reserved for them.
 
 ## 3. Typography and numbers
 
@@ -99,8 +99,19 @@ These tokens are the whole palette: the default Tailwind palette is removed ([gl
   - **Composition strip:** the month's spending as one bar, largest category first. Its tones (navy, ocean, tide) only separate neighbouring segments.
   - **Ranked bars:** one per category, in one blue, drawn against the largest; every spent category is listed.
   - **Change magnitude bars:** one per material driver in What changed, navy for higher and ocean for lower, drawn against the largest change.
-- **Fact vs expectation** (for Stages 6–9): **filled** = has happened; **soft tint + outline** = spoken for or expected; **empty with a red outline** = missing (shortfall, over-committed). Expected amounts always carry a date or a purpose.
+- **Fact vs expectation** (for Commitments, Protected money, Available and Monthly Plan): **filled** = has happened; **soft tint + outline** = spoken for or expected; **empty with a red outline** = missing (shortfall, over-committed). Expected amounts always carry a date or a purpose.
 - **Hand-built in CSS (SVG where a shape needs it), with no chart library** ([tech-stack.md](tech-stack.md)). A new chart is added only when its concept exists and its question isn't already answered.
+- **Approved future directions** (2026-09-27; recorded because their owning concepts are now decided, not yet designed):
+
+  | Owner | Visual | The one question it answers |
+  |---|---|---|
+  | Available (Stage 8) | one explainable segmented bar / bridge: what is spoken for (credit owed, commitments, protected money) and what remains | How much of my money is already spoken for, and by what? |
+  | Protected money (Stage 7) | a progress bar **only when a target exists**; covered and short stay distinguishable | How close am I, and is it all still really there? |
+  | Trends (Stage 12) | **one** longitudinal Income vs Spending visual over complete months; a category sparkline only later, if it proves useful | Is the gap between what I earn and spend a pattern or a one-off? |
+  | Monthly Plan (Stage 13) | actual vs intention / projection per planned line | Am I on pace against what I intended? |
+
+  Cash flow's ranked bars never gain plan markers; plans keep their own visual. The Overview reuses the Available visual rather than adding charts, and Signals have none.
+- **Rejected for now:** a savings-rate line (it redraws Income vs Spending); a net-worth line (its monthly change is essentially Left over, A-14); donut; Sankey; stacked category area; heatmap calendar; a commitment calendar; any category colour system; charts on Signals; duplicate charts on the Overview.
 
 ## 6. Screens
 
@@ -167,8 +178,8 @@ It has no metric cards.
 
 | # | Topic | Conflict with a frozen decision | Default until resolved |
 |---|---|---|---|
-| D1 | Overview gains secondary panels (category composition, income vs spending, budgets, goals, upcoming, recent) | [product-baseline.md §6](product-baseline.md) caps the Overview at 4–5 zones | Decide at Stage 11. Candidate: the §6 zones on the first screen, plus one "Plans and breakdowns" band below it, with no duplicated question. |
-| D2 | Net worth trend line | Net worth over time is **V1.1** (baseline §9; tech-stack change log) | Net worth shown as a figure with assets/owed; no trend line in V1 |
+| D1 | Overview gains secondary panels (category composition, income vs spending, budgets, goals, upcoming, recent) | [product-baseline.md §6](product-baseline.md) caps the Overview at 4–5 zones | **Resolved 2026-09-27: no secondary panels.** The Overview (Stage 10) is narrowed to Available, Attention and a concise current-month outcome; composition, commitments, protected money and recent activity stay with their owning pages. |
+| D2 | Net worth trend line | Net worth over time is **V1.1** (baseline §9; tech-stack change log) | **Resolved 2026-09-27: rejected for now.** It would largely redraw Trends' Income vs Spending (A-14). Net worth stays a figure with Own and Owe. |
 | D3 | A "Next income" card | Available is "before new income"; expected income is **V1.1** (runway) | Not shown |
 | D4 | Donut chart for categories | Baseline §4.2 names the category donut as part of the generic tracker set | Ranked bars / composition strip (§5) |
 | D5 | "Subscriptions" as a category | Removed by the baseline; derived from commitments | Subscriptions appear only as commitments |
@@ -183,3 +194,4 @@ Earlier entries are history. Where an entry describes a visual system, the curre
 | 2026-09-22 | Created at the design gate, from two mocks and three reference images | The design gate had to be approved before Stage 3 |
 | 2026-09-27 | *(Superseded by the next entry.)* Navy and cream palette (wine, blush and sky retired; coral kept only as the logo accent); seven type steps; one selected state; ocean focus; a filled destructive confirmation; `PanelHeader` and `PanelBand`; composition bars in "Where it went"; page width 1120px; responsive checks at 390/820/1280 | Milestone B review: the navy direction was approved conceptually, then frozen against the real product in the visual-system boundary. The wine identity read as a neutral template with an accent; 13px panel titles left no tier between the page title and metadata; readable text used `ink-3` (about 3:1); control edges were 1.6:1. |
 | 2026-09-27 | **Implemented visual system recorded (§1–§8):** the reference palette (navy `#1F385A`, ocean, light-cyan mist, tide, a warm off-white canvas); coral as the brand and global Add accent only; navy higher / ocean lower in What changed; a Source Serif 4 wordmark; a 1360px workspace; soft card surfaces; the Cash flow, Activity and Accounts compositions (§6); the Kept/Spent bar removed; principles and responsive recomposition made explicit | The palette and the three page redesigns were built against the approved reference after the navy/cream freeze, and the file had fallen behind the committed UI. Coral had briefly marked higher spending, which let an increase read like an error; direction moved to the blue family. The Kept/Spent bar redrew the savings rate printed beside it. |
+| 2026-09-27 | **Product-architecture decisions** ([roadmap.md §8](roadmap.md)): §2 colour note renamed to protected money (Stage 7); §5 records the approved future visual directions, each with its one question and owner, and the rejected charts; §9 D1 (Overview panels) and D2 (net-worth trend) resolved. No screen is specified before it is built. | Goals became Protected money and Budgets the optional Monthly Plan; the chart policy was reviewed so that each visual has one analytical question and no duplicate. |
