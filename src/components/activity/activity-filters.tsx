@@ -50,6 +50,7 @@ export function ActivityFilters({
   const router = useRouter();
   const pathname = usePathname();
   const [pending, startTransition] = useTransition();
+  // What the search field shows: the newest text typed, ahead of the URL.
   const [text, setText] = useState(values.q);
   const searchRef = useRef<HTMLInputElement>(null);
   const range = inclusiveRange(values.from, values.to);
@@ -57,8 +58,28 @@ export function ActivityFilters({
     values.q || values.account || values.category || values.type || values.month || range,
   );
 
+  // The filters most recently asked for. `values` (the URL) lags behind a
+  // navigation still in flight, so every write builds on this instead: a
+  // change made while another is pending, or a debounced search firing late,
+  // composes with it rather than overwriting it. Once none of this bar's
+  // navigations is pending, it follows the URL again, which also picks up
+  // changes made elsewhere (Back, a link).
+  const requested = useRef(values);
+  useEffect(() => {
+    if (pending) return;
+    // The URL has caught up with everything this bar asked for. A search in it
+    // that differs from the last one asked for came from elsewhere, and the
+    // field follows it. One that matches is this bar's own request landing:
+    // the field keeps whatever was typed since.
+    if (values.q !== requested.current.q) setText(values.q);
+    requested.current = values;
+  }, [values, pending]);
+
   const apply = (changes: Partial<FilterValues>) => {
-    const next = { ...values, ...changes };
+    const next = { ...requested.current, ...changes };
+    requested.current = next;
+    // A search set here (Clear) shows at once, not when its navigation lands.
+    if (changes.q !== undefined) setText(changes.q);
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(next)) if (value) params.set(key, value);
     const query = params.toString();
@@ -67,12 +88,9 @@ export function ActivityFilters({
     );
   };
 
-  // Typing filters as you go, without a request per keystroke. When the URL's
-  // query changes from elsewhere (Clear, Back), the field follows it.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => setText(values.q), [values.q]);
+  // Typing filters as you go, without a request per keystroke.
   useEffect(() => {
-    if (text === values.q) return;
+    if (text === requested.current.q) return;
     const timer = window.setTimeout(() => apply({ q: text }), 250);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps

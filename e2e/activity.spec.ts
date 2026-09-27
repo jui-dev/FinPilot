@@ -35,15 +35,24 @@ function amountIn(text: string): number {
 
 const search = (page: Page) => page.getByRole("searchbox", { name: "Search transactions" });
 
+/**
+ * Waits until the filters respond: "/" focuses the search field only once the
+ * filter bar has hydrated and its effects have run, so its selects' change
+ * handlers are attached too. A select changed before then can be lost.
+ */
+async function filtersReady(page: Page) {
+  await expect(async () => {
+    await page.locator("body").press("/");
+    await expect(search(page)).toBeFocused({ timeout: 1_000 });
+  }).toPass({ timeout: 20_000 });
+}
+
 test("search and filters live in the URL, and Clear resets them all", async ({ page }) => {
   await page.goto("/activity");
   await expect(page.getByText(/in this view/)).toHaveCount(0);
 
   // "/" focuses the search field.
-  await expect(async () => {
-    await page.locator("body").press("/");
-    await expect(search(page)).toBeFocused({ timeout: 1_000 });
-  }).toPass({ timeout: 20_000 });
+  await filtersReady(page);
 
   await search(page).fill("bKash");
   await expect(page).toHaveURL(/\/activity\?q=bKash$/);
@@ -68,8 +77,90 @@ test("search and filters live in the URL, and Clear resets them all", async ({ p
   await expect(page.getByRole("button", { name: "Clear" })).toHaveCount(0);
 });
 
+test("a filter chosen while a search is still settling keeps both", async ({ page }) => {
+  await page.goto("/activity");
+  await filtersReady(page);
+
+  // No wait between the two: the Type change lands before the search's
+  // debounce fires, so the two URL updates overlap.
+  await search(page).fill("bKash");
+  await page.getByLabel("Type").selectOption("transfer");
+
+  await expect(page).toHaveURL(/\/activity\?q=bKash&type=transfer$/);
+  await expect(search(page)).toHaveValue("bKash");
+  await expect(page.getByLabel("Type")).toHaveValue("transfer");
+  await expect(page.getByText(/in this view/)).toBeVisible();
+  await expect(page.getByRole("link", { name: /^bKash (top-up|cash-out)/ }).first()).toBeVisible();
+});
+
+test("typing on while an earlier search lands keeps every character", async ({ page }) => {
+  await page.goto("/activity");
+  await filtersReady(page);
+
+  // The navigation for the first debounced search ("round") is held until more
+  // has been typed, then answered at once: it lands after the newer input, as
+  // on a slow connection. Its response is fetched in the meantime.
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => (release = resolve));
+  let started!: () => void;
+  const inFlight = new Promise<void>((resolve) => (started = resolve));
+  await page.route(
+    (url) => url.pathname === "/activity" && url.searchParams.get("q") === "round",
+    async (route) => {
+      started();
+      const response = await route.fetch();
+      await held;
+      await route.fulfill({ response });
+    },
+  );
+
+  await search(page).pressSequentially("round");
+  await inFlight;
+  await search(page).pressSequentially(" trip");
+  release();
+
+  await expect(page).toHaveURL(/\/activity\?q=round\+trip$/);
+  await expect(search(page)).toHaveValue("round trip");
+});
+
+test("Clear discards a search still being typed", async ({ page }) => {
+  await page.goto("/activity?q=bKash");
+  await filtersReady(page);
+
+  await search(page).fill("bKash top");
+  await page.getByRole("button", { name: "Clear" }).click();
+
+  await expect(page).toHaveURL(/\/activity$/);
+  await expect(search(page)).toHaveValue("");
+  await expect(page.getByRole("button", { name: "Clear" })).toHaveCount(0);
+  // A later filter builds on the cleared search, not on the abandoned text.
+  await page.getByLabel("Type").selectOption("transfer");
+  await expect(page).toHaveURL(/\/activity\?type=transfer$/);
+  await expect(search(page)).toHaveValue("");
+});
+
+test("the search field follows the URL when it changes from elsewhere", async ({ page }) => {
+  await page.goto("/activity?q=bKash");
+  await filtersReady(page);
+  await expect(search(page)).toHaveValue("bKash");
+
+  // A link into Activity without a search, then Back and Forward.
+  await page.getByRole("link", { name: "Activity", exact: true }).click();
+  await expect(page).toHaveURL(/\/activity$/);
+  await expect(search(page)).toHaveValue("");
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/activity\?q=bKash$/);
+  await expect(search(page)).toHaveValue("bKash");
+
+  await page.goForward();
+  await expect(page).toHaveURL(/\/activity$/);
+  await expect(search(page)).toHaveValue("");
+});
+
 test("a transfer is signed from the filtered account's side", async ({ page }) => {
   await page.goto("/activity");
+  await filtersReady(page);
   await page.getByLabel("Account").selectOption({ label: "bKash" });
   await expect(page).toHaveURL(/account=/);
 
@@ -93,8 +184,11 @@ test("a view of refunds shows spending as negative", async ({ page }) => {
 test("a transaction opens and closes without losing the view, and is marked while open", async ({
   page,
 }) => {
-  await addExpense(page, "275", "Workspace round trip");
+  // Unique per run, so the row below is this run's even when others exist.
+  const description = `Workspace round trip ${Date.now().toString(36)}`;
+  await addExpense(page, "275", description);
   await page.goto("/activity");
+  await filtersReady(page);
   const month = await page.getByLabel("Period").locator("option").nth(1).getAttribute("value");
   await page.getByLabel("Period").selectOption(month!);
   await search(page).fill("round trip");
@@ -102,14 +196,14 @@ test("a transaction opens and closes without losing the view, and is marked whil
   const filters = new URL(page.url()).search;
 
   // Keyboard: the row is one focusable link; Enter opens it.
-  const row = page.getByRole("link", { name: /Workspace round trip/ });
+  const row = page.getByRole("link", { name: new RegExp(description) });
   await row.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`${filters.replace(/[?+]/g, "\\$&")}&tx=`));
   // Behind the modal panel the page is hidden from the accessibility tree.
   await expect(
-    page.getByRole("link", { name: /Workspace round trip/, includeHidden: true }),
+    page.getByRole("link", { name: new RegExp(description), includeHidden: true }),
   ).toHaveAttribute("aria-current", "true");
 
   await page.keyboard.press("Escape");
