@@ -1,5 +1,5 @@
 # src/components
 
-UI components and charts. Arrives in stage 3, after the design gate is approved.
+UI components. Shared primitives live in `ui/` and follow [docs/design-direction.md](../../docs/design-direction.md): semantic colour tokens and seven type steps only (see `src/app/globals.css`).
 
 See [docs/roadmap.md](../../docs/roadmap.md).

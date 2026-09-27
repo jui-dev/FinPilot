@@ -46,7 +46,7 @@
 | 5c | Evidence drill-down | visible | B — `v0.2-understand` → **review** |
 | 5e | Evidence & trust close-out | visible | B — `v0.2-understand` |
 | ~~5d~~ | ~~Charts / visual analytics~~ | — | **dropped** at the Milestone B review (§7) |
-| V | Visual system / UI upgrade | visible | between B and C |
+| V | Visual system / UI upgrade | visible | between B and C — **done** |
 | 6 | Commitments | visible | C — `v0.3-plan` |
 | 7 | Budgets | visible | C — `v0.3-plan` |
 | 8 | Goals and earmarks | visible | C — `v0.3-plan` |
@@ -213,6 +213,8 @@ Built in its conceptual order: what happened → where it went → what changed 
 - **Builds:** the approved visual direction applied to the real product: deep navy for identity and primary actions, slate/ocean blue for secondary emphasis, soft blue / pale cyan for analytical and supporting surfaces, a warm cream foundation, and restrained coral for rare emphasis. Also semantic type tokens and shared panel primitives.
 - **Rules:** exact colour tokens are tested and then frozen inside this boundary, against the real product rather than in isolation, and recorded in [design-direction.md](design-direction.md) and [product-baseline.md §11](product-baseline.md). Coral is never the colour of spending, and error/destructive states stay distinguishable from it. Information architecture and domain semantics are preserved.
 - **Why before Stage 6:** Stages 6–9 add new surfaces and the first charts; they should be built once, in their final colour roles.
+- **Done (2026-09-27, branch `visual-system`):** tokens frozen in [design-direction.md §2–§7](design-direction.md): the navy/cream palette (wine, blush and sky retired; coral only as the logo accent), seven type steps, one selected state, ocean focus, a filled destructive confirmation, `PanelHeader`/`PanelBand`, composition bars in "Where it went", Net worth first on one-column Accounts, a labelled Verify on phones, and Activity's evidence header. No domain, server, schema or acceptance change.
+- **Left for later:** the colour of commitments (Stage 6) and goal reserves (Stage 8). A copy review: a lone increase among the smaller changes reads "100% of the increase" even when spending fell overall; correct by the formula, but it reads oddly. The side panels (Verify, New account, transaction edit) return focus to the page, not to the button that opened them.
 
 ### Milestone C — "Plan" — tag `v0.3-plan`
 

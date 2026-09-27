@@ -238,12 +238,12 @@ FinPilot must immediately read as a serious **money-management** product. It mus
 - an accounting ERP, a crypto app or a banking clone
 
 - **Navigation:** horizontal/top-level. No permanent desktop sidebar (the other portfolio projects are sidebar-heavy).
-- **Palette direction:**
-  - warm off-white/ivory background and clean white financial surfaces
-  - charcoal/near-black type
-  - refined coral/orange, peach/salmon, and deep burgundy/wine where appropriate
-  - a very selective, subtle sky blue
-  - restrained semantic green/red
+- **Palette direction** (frozen 2026-09-27; tokens in [design-direction.md §2](design-direction.md)):
+  - a warm cream foundation and clean white financial surfaces
+  - navy-tinted near-black type
+  - deep navy for identity and the primary action; slate/ocean blue for interaction and selection; soft blue for quiet selected and analytical surfaces
+  - a restrained coral accent, only as a rare brand mark, never for spending, status or errors
+  - restrained semantic green/amber/red
 - **Feel:** serious, polished, modern, financial, trustworthy, calm, data-driven, premium, but not boring, old-fashioned, cluttered, gimmicky, childish or decorative.
 - **Layout:** excellent whitespace, subtle borders and shadows, strong information hierarchy, serious financial charts.
 - **Avoid:** mountains, motivational illustrations, quotes, lifestyle imagery, excessive gradients, and decorative cards without a function.
@@ -254,4 +254,5 @@ FinPilot must immediately read as a serious **money-management** product. It mus
 
 | Date | Change | Reason |
 |---|---|---|
+| 2026-09-27 | **Palette frozen** (§11): navy and cream replace burgundy/wine; coral is only a rare brand accent. | Visual-system boundary: the direction approved at the Milestone B review was tested against the real product and recorded as tokens in [design-direction.md](design-direction.md). |
 | 2026-09-27 | **Milestone B review: V1 narrowed** (§5). Signal families narrowed to 2, 4, 5 and 7 (the ones the acceptance scenario asserts). Commitment match suggestions and weekly schedules deferred beyond V1. Budgets kept, narrowed. No category bridge chart; charts are built only when their concept exists. No acceptance number changed. | Keeps Portfolio V1 small and coherent without weakening the thesis: Available and its inputs stay complete. Details in [roadmap.md §7](roadmap.md). The palette in §11 is revisited, and frozen, in the visual-system boundary. |

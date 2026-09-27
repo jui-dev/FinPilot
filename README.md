@@ -2,7 +2,7 @@
 
 Personal finance built on a derived ledger: where your money stands, why it changed, and how much of it is actually free.
 
-> **Status:** Milestone B — a manual ledger you can verify against reality (accounts, Activity with search and filters, keyboard-first Quick Add, balance verification that detects changed history), and a monthly Cash flow that explains what changed, with every figure leading back to the transactions behind it. Next: a visual-system upgrade, then commitments, budgets, goals and Available. See [docs/roadmap.md](docs/roadmap.md).
+> **Status:** Milestone B — a manual ledger you can verify against reality (accounts, Activity with search and filters, keyboard-first Quick Add, balance verification that detects changed history), and a monthly Cash flow that explains what changed, with every figure leading back to the transactions behind it. Then a visual-system pass (navy and cream, seven type steps; see [docs/design-direction.md](docs/design-direction.md)). Next: commitments, budgets, goals and Available. See [docs/roadmap.md](docs/roadmap.md).
 
 ## Documentation
 
@@ -41,4 +41,5 @@ npm run dev        # http://localhost:3000
 | `npm run test:e2e`     | End-to-end flows (Playwright)                  |
 
 The end-to-end run needs its browser once: `npx playwright install chromium`. It uses its own
-database (`data/e2e.sqlite`) and server, so it never touches your local ledger.
+database (`data/e2e.sqlite`) and server, so it never touches your local ledger. Stop `npm run dev` first:
+Next.js allows one development server per project.
