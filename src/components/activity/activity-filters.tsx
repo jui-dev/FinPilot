@@ -9,7 +9,6 @@ import type { CategoryKind } from "@/domain/ledger/transactions";
 import { ACTIVITY_TYPE_FILTERS } from "@/server/services/activity-service";
 
 import { monthLabel, rangeLabel } from "../format";
-import { Button } from "../ui/button";
 import { cn } from "../ui/cn";
 import { controlClass, Select } from "../ui/field";
 
@@ -98,7 +97,7 @@ export function ActivityFilters({
     value: string,
     children: React.ReactNode,
   ) => (
-    <label className="min-w-0">
+    <label className="min-w-0 xl:w-40">
       <span className="sr-only">{label}</span>
       <Select
         value={value}
@@ -120,9 +119,11 @@ export function ActivityFilters({
   );
 
   return (
-    // Phones: search, then the filters two by two. Tablets: search on its own
-    // line, the four filters in one row. Desktop: everything in one row.
-    <div className="flex flex-col gap-3 rounded-panel border border-line bg-surface p-3 shadow-panel lg:flex-row lg:items-center">
+    // The workspace's toolbar band. Phones: search, then the filters two by
+    // two. Tablets and small desktops: search on its own line, the four filters
+    // in one row. Wide desktops: everything in one row, the search taking the
+    // width the filters leave, so the controls read as one toolbar.
+    <div className="flex flex-col gap-3 border-b border-line bg-surface px-4 py-4 md:px-5 xl:flex-row xl:items-center xl:gap-2">
       <div className="relative min-w-0 flex-1">
         <Search
           aria-hidden
@@ -146,7 +147,7 @@ export function ActivityFilters({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-[repeat(4,minmax(0,1fr))_auto] lg:flex lg:items-center">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-[repeat(4,minmax(0,1fr))_auto] xl:flex xl:items-center">
         {select(
           "month",
           "Period",
@@ -201,17 +202,18 @@ export function ActivityFilters({
           </>,
         )}
         {active && (
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<X className="size-3.5" />}
+          // A ghost button at the controls' height (the shared small button is
+          // 32px), so it sits on the same line as the selects beside it.
+          <button
+            type="button"
             onClick={() =>
               apply({ q: "", account: "", category: "", type: "", month: "", from: "", to: "" })
             }
-            className="col-span-2 md:col-span-1"
+            className="col-span-2 inline-flex h-10 items-center justify-center gap-2 rounded-control px-3 text-meta font-semibold whitespace-nowrap text-ink-2 transition-colors select-none hover:bg-surface-hover hover:text-ink md:col-span-1 md:h-9"
           >
+            <X aria-hidden className="size-3.5" />
             Clear
-          </Button>
+          </button>
         )}
       </div>
     </div>

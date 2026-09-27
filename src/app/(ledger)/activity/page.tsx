@@ -1,16 +1,13 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { getRequestContext } from "@/app/_server/context";
 import { ActivityFilters } from "@/components/activity/activity-filters";
 import { ActivityList } from "@/components/activity/activity-list";
+import { ActivityScope } from "@/components/activity/activity-scope";
 import { cashFlowHref, cashFlowMonthOf } from "@/components/activity/links";
 import { TransactionPanel } from "@/components/activity/transaction-panel";
 import { monthLabel, rangeLabel } from "@/components/format";
-import { linkClass } from "@/components/ui/button";
-import { cn } from "@/components/ui/cn";
-import { Money } from "@/components/ui/money";
-import { EmptyState, PageHeader, Panel, PanelHeader } from "@/components/ui/panel";
+import { EmptyState } from "@/components/ui/panel";
 import { inclusiveRange, yearMonthOf, type YearMonth } from "@/domain/calendar-date";
 import {
   ACTIVITY_TYPE_FILTERS,
@@ -82,13 +79,12 @@ export default async function ActivityPage({
   // lands on a different month than it names.
   const rangeMonth = range && !account ? cashFlowMonthOf(range) : null;
   const cashFlowMonth = rangeMonth && months.includes(rangeMonth) ? rangeMonth : null;
-  // What the list and its totals cover: the evidence a Cash flow figure or a
-  // verification links to lands here, so the scope is the list's heading.
+  // What the list and its totals cover (the workspace's heading).
   const scope = [
     accounts.find((a) => a.id === account)?.name,
     categories.find((c) => c.id === category)?.name,
     range ? rangeLabel(range) : month ? monthLabel(month) : "all time",
-  ].filter(Boolean);
+  ].filter((part): part is string => Boolean(part));
   const hrefFor = (id: string) => {
     const next = new URLSearchParams();
     for (const [key, value] of Object.entries({ q, account, category, type, month, from, to })) {
@@ -99,87 +95,68 @@ export default async function ActivityPage({
   };
 
   return (
-    <div className="flex flex-col gap-5">
-      <PageHeader
-        title="Activity"
-        description="Every transaction, newest first. Filters stay in the address bar."
-      />
+    <div className="flex flex-col gap-5 md:gap-6">
+      <header className="min-w-0">
+        <h1 className="text-title font-bold text-navy">Activity</h1>
+        <p className="mt-1 text-body text-ink-2">Every transaction, newest first.</p>
+      </header>
 
-      <ActivityFilters
-        options={{
-          accounts: accounts
-            .filter((a) => a.archivedAt === null || a.id === account)
-            .map((a) => ({ id: a.id, name: a.name })),
-          categories: categories
-            .filter((c) => c.archivedAt === null || c.id === category)
-            .map((c) => ({ id: c.id, name: c.name, kind: c.kind })),
-          months,
-        }}
-        values={{ q, account, category, type, month, from, to }}
-      />
-
-      {/* overflow-clip, not overflow-hidden: a hidden overflow makes the panel the
+      {/* One workspace: the filters, what they select, then the rows.
+          overflow-clip, not overflow-hidden: a hidden overflow makes the panel the
           scroll container of the sticky day headers, so they neither stick nor sit
           in place. */}
-      <Panel className="overflow-clip" labelledBy="activity-scope">
-        <PanelHeader
+      <section
+        aria-labelledby="activity-scope"
+        className="overflow-clip rounded-panel border border-line bg-surface shadow-card"
+      >
+        <ActivityFilters
+          options={{
+            accounts: accounts
+              .filter((a) => a.archivedAt === null || a.id === account)
+              .map((a) => ({ id: a.id, name: a.name })),
+            categories: categories
+              .filter((c) => c.archivedAt === null || c.id === category)
+              .map((c) => ({ id: c.id, name: c.name, kind: c.kind })),
+            months,
+          }}
+          values={{ q, account, category, type, month, from, to }}
+        />
+
+        <ActivityScope
           id="activity-scope"
-          title={
-            <>
-              Showing <span>{scope.join(" · ")}</span>
-            </>
+          scope={scope}
+          count={activity.items.length}
+          filtering={filtering}
+          spending={activity.summary.spending}
+          income={activity.summary.income}
+          cashFlow={
+            cashFlowMonth
+              ? {
+                  href: cashFlowHref(cashFlowMonth, yearMonthOf(today)),
+                  label: monthLabel(cashFlowMonth),
+                }
+              : null
           }
-        >
-          <p className="flex flex-wrap items-baseline gap-x-5 text-meta text-ink-2">
-            <span>
-              Spent{" "}
-              <Money
-                amount={activity.summary.spending}
-                sign="negative"
-                className="text-heading font-semibold text-ink"
-              />
-            </span>
-            <span>
-              Income{" "}
-              <Money
-                amount={activity.summary.income}
-                sign="none"
-                className="text-heading font-semibold text-ink"
-              />
-            </span>
-          </p>
-          <p className="basis-full text-meta text-ink-2">
-            {activity.items.length} {activity.items.length === 1 ? "entry" : "entries"}
-            {filtering ? " in this view" : ""}
-            {cashFlowMonth && (
-              <>
-                {" · "}
-                <Link
-                  href={cashFlowHref(cashFlowMonth, yearMonthOf(today))}
-                  className={cn("font-medium whitespace-nowrap text-ink", linkClass)}
-                >
-                  Open {monthLabel(cashFlowMonth)} in Cash flow
-                </Link>
-              </>
-            )}
-          </p>
-        </PanelHeader>
+        />
 
         {activity.items.length === 0 ? (
-          <EmptyState title={filtering ? "Nothing matches these filters" : "No transactions yet"}>
-            {filtering
-              ? "Try a different period, account or category."
-              : "Add your first one with the Add button, or press N."}
-          </EmptyState>
+          <div className="border-t border-line">
+            <EmptyState title={filtering ? "Nothing matches these filters" : "No transactions yet"}>
+              {filtering
+                ? "Try a different period, account or category."
+                : "Add your first one with the Add button, or press N."}
+            </EmptyState>
+          </div>
         ) : (
           <ActivityList
             items={activity.items}
             today={today}
             hrefFor={hrefFor}
             perspectiveAccountId={account || undefined}
+            openId={selected?.primary.id}
           />
         )}
-      </Panel>
+      </section>
 
       <TransactionPanel
         item={selected}
