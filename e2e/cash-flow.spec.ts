@@ -258,3 +258,80 @@ test("an invalid date range falls back to the month, then to all time", async ({
   await page.goto("/activity?from=2026-09-01");
   await expect(page.getByLabel("Period")).toHaveValue("");
 });
+
+/** Activity's "Income" total for the rows shown, in taka. */
+async function activityIncome(page: Page): Promise<number> {
+  return amountIn(await page.getByText(/^Income\s+৳/).innerText());
+}
+
+test("Spending and Income open the transactions behind them, and lead back", async ({ page }) => {
+  await addCashExpense(page, "432", "Evidence of spending");
+  const spending = await figure(page, "Spending");
+  const income = await figure(page, "Income");
+
+  await page.getByRole("link", { name: /^Spending, / }).click();
+  await expect(page).toHaveURL(/\/activity\?from=\d{4}-\d{2}-01&to=\d{4}-\d{2}-\d{2}$/);
+  await expect(page.getByRole("link", { name: /Evidence of spending/ })).toBeVisible();
+  expect(await activitySpent(page)).toBe(spending);
+  await expect(page.getByText(/^Showing/)).toContainText(/\d+ [A-Z][a-z]{2} \d{4}/);
+
+  // The range has a Cash flow period's shape: it opens that month again.
+  await page.getByRole("link", { name: /^Open [A-Z][a-z]+ \d{4} in Cash flow$/ }).click();
+  await expect(page).toHaveURL(/\/cash-flow$/);
+
+  if (income > 0) {
+    await page.getByRole("link", { name: /^Income, / }).click();
+    await expect(page).toHaveURL(/\/activity\?type=income&from=/);
+    expect(await activityIncome(page)).toBe(income);
+  } else {
+    await expect(page.getByRole("link", { name: /^Income, / })).toHaveCount(0);
+  }
+});
+
+test("a complete month's Spending leads back to that month", async ({ page }) => {
+  await page.goto("/cash-flow");
+  await page.getByRole("link", { name: /^Previous month/ }).click();
+  await expect(page.getByText("Full month")).toBeVisible();
+  const month = new URL(page.url()).searchParams.get("month")!;
+  const spending = await page
+    .getByRole("link", { name: /^Spending, / })
+    .innerText()
+    .then(amountIn);
+
+  await page.getByRole("link", { name: /^Spending, / }).click();
+  await expect(page).toHaveURL(/\/activity\?from=/);
+  expect(await activitySpent(page)).toBe(spending);
+  await page.getByRole("link", { name: /in Cash flow$/ }).click();
+  await expect(page).toHaveURL(new RegExp(`/cash-flow\\?month=${month}$`));
+  await expect(page.getByText("Full month")).toBeVisible();
+});
+
+test("smaller changes open, and each one leads to its transactions", async ({ page }) => {
+  // A category nobody has used: ৳10 in it is a change, but never a material one.
+  const name = `Small ${Date.now().toString(36)}`;
+  await page.goto("/settings");
+  const input = page.getByLabel("New expense category");
+  await expect(async () => {
+    await input.fill(name);
+    await input.press("Enter");
+    await expect(page.getByText(name, { exact: true })).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 20_000 });
+  await addExpense(page, "10", "Evidence of a smaller change", name, "Cash");
+
+  await page.goto("/cash-flow");
+  const smaller = whatChanged(page).getByText(/^\d+ smaller changes?$/);
+  const list = whatChanged(page).getByRole("list", { name: "Smaller changes" });
+  await expect(list).toBeHidden();
+  await smaller.click();
+  const row = list.getByRole("listitem").filter({ hasText: name });
+  await expect(row).toBeVisible();
+  expect(amountIn(await row.locator("span.w-28").innerText())).toBe(10);
+
+  await row
+    .getByRole("link", { name: new RegExp(`^${name}, `) })
+    .last()
+    .click();
+  await expect(page).toHaveURL(/\/activity\?category=/);
+  await expect(page.getByRole("link", { name: /Evidence of a smaller change/ })).toBeVisible();
+  expect(await activitySpent(page)).toBe(10);
+});

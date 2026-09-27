@@ -1,10 +1,17 @@
-import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, Minus } from "lucide-react";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Minus,
+} from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { getRequestContext } from "@/app/_server/context";
-import { activityHref } from "@/components/activity/links";
+import { activityHref, cashFlowHref } from "@/components/activity/links";
 import { monthLabel, rangeLabel, shortDate } from "@/components/format";
 import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
@@ -18,16 +25,12 @@ import type {
   ComparisonPeriod,
   SpendingChange,
 } from "@/domain/ledger/month-over-month";
-import { abs, negate } from "@/domain/money";
+import { abs, negate, type Money as MoneyValue } from "@/domain/money";
 import { getMonthlyCashFlow, type MonthOverMonth } from "@/server/services/analysis-service";
 
 export const metadata: Metadata = { title: "Cash flow" };
 
 type SearchParams = Record<string, string | string[] | undefined>;
-
-/** The current month lives at the bare path; earlier months carry ?month=YYYY-MM. */
-const hrefFor = (month: YearMonth, current: YearMonth) =>
-  month === current ? "/cash-flow" : `/cash-flow?month=${month}`;
 
 /** An amount that opens the transactions behind it (Stage 5c). */
 const amountLinkClass = "underline decoration-line-strong underline-offset-4 hover:decoration-ink";
@@ -87,10 +90,21 @@ export default async function CashFlowPage({
 
         <dl className="grid grid-cols-2 gap-px bg-line md:grid-cols-4">
           <Figure term="Income">
-            <Money amount={summary.income} sign="none" />
+            <EvidenceLink
+              amount={summary.income}
+              sign="none"
+              label={`Income, ${rangeLabel(period.range)}`}
+              href={activityHref({ type: "income", range: period.range })}
+            />
           </Figure>
           <Figure term="Spending">
-            <Money amount={summary.spending} />
+            {/* No type filter: Activity's Spent total is expenses net of refunds,
+                exactly this figure; the other rows in the range are not counted. */}
+            <EvidenceLink
+              amount={summary.spending}
+              label={`Spending, ${rangeLabel(period.range)}`}
+              href={activityHref({ range: period.range })}
+            />
           </Figure>
           <Figure term="Left over" hint="Income − spending">
             <Money amount={summary.leftOver} />
@@ -251,16 +265,31 @@ function ChangeDetails({
         </>
       )}
       {smallerChanges.count > 0 && (
-        <p className="flex items-baseline gap-3 border-t border-line px-4 py-3 md:px-5">
-          <span className="min-w-0 flex-1 text-ink-2">
-            {smallerChanges.count === 1
-              ? "1 smaller change"
-              : `${smallerChanges.count} smaller changes`}
-          </span>
-          <span className="w-28 text-right text-[15px] font-medium">
-            <Money amount={smallerChanges.net} sign="always" />
-          </span>
-        </p>
+        // Closed by default so the page stays quiet; opening it shows every
+        // change below the materiality threshold, each with its evidence.
+        <details className="group border-t border-line">
+          <summary className="flex cursor-pointer list-none items-baseline gap-3 px-4 py-3 transition-colors hover:bg-surface-hover md:px-5 [&::-webkit-details-marker]:hidden">
+            <span className="flex min-w-0 flex-1 items-center gap-1.5 text-ink-2">
+              <ChevronDown
+                aria-hidden
+                className="size-4 shrink-0 transition-transform group-open:rotate-180"
+              />
+              {smallerChanges.count === 1
+                ? "1 smaller change"
+                : `${smallerChanges.count} smaller changes`}
+            </span>
+            <span className="w-28 text-right text-[15px] font-medium">
+              <Money amount={smallerChanges.net} sign="always" />
+            </span>
+          </summary>
+          <ul aria-label="Smaller changes" className="border-t border-line">
+            {[...explanation.increases, ...explanation.offsets]
+              .filter((l) => !l.material)
+              .map((line) => (
+                <ChangeRow key={line.categoryId} line={line} ranges={ranges} />
+              ))}
+          </ul>
+        </details>
       )}
     </>
   );
@@ -302,6 +331,31 @@ function ChangeRow({
         <Money amount={line.change} sign="always" />
       </span>
     </li>
+  );
+}
+
+/**
+ * A headline figure that opens the Activity rows behind it. Nothing lies
+ * behind a zero, so a zero is shown as plain text.
+ */
+function EvidenceLink({
+  amount,
+  sign,
+  label,
+  href,
+}: {
+  readonly amount: MoneyValue;
+  readonly sign?: "negative" | "none";
+  /** What the screen reader hears before the amount ("Spending, 1–22 Sep 2026"). */
+  readonly label: string;
+  readonly href: string;
+}) {
+  if (amount === 0) return <Money amount={amount} sign={sign} />;
+  return (
+    <Link href={href} className={amountLinkClass}>
+      <span className="sr-only">{label}: </span>
+      <Money amount={amount} sign={sign} />
+    </Link>
   );
 }
 
@@ -379,7 +433,7 @@ function MonthLink({
   }
   return (
     <Link
-      href={hrefFor(month, current)}
+      href={cashFlowHref(month, current)}
       aria-label={`${name}: ${monthLabel(month)}`}
       className={className}
     >

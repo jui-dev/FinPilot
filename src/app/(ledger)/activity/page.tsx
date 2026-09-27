@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { getRequestContext } from "@/app/_server/context";
 import { ActivityFilters } from "@/components/activity/activity-filters";
 import { ActivityList } from "@/components/activity/activity-list";
+import { cashFlowHref, cashFlowMonthOf } from "@/components/activity/links";
 import { TransactionPanel } from "@/components/activity/transaction-panel";
+import { monthLabel, rangeLabel } from "@/components/format";
 import { Money } from "@/components/ui/money";
 import { EmptyState, PageHeader, Panel } from "@/components/ui/panel";
-import { inclusiveRange, type YearMonth } from "@/domain/calendar-date";
+import { inclusiveRange, yearMonthOf, type YearMonth } from "@/domain/calendar-date";
 import {
   ACTIVITY_TYPE_FILTERS,
   getActivity,
@@ -70,6 +73,20 @@ export default async function ActivityPage({
   ]);
 
   const filtering = Boolean(q || account || category || type || month || range);
+  // A range with a Cash flow period's shape (and no account, which Cash flow
+  // never filters by) can be opened there. Worded "Open", not "Back": where
+  // the person came from is not tracked. Only months with activity qualify —
+  // they always lie within Cash flow's selectable months, so the link never
+  // lands on a different month than it names.
+  const rangeMonth = range && !account ? cashFlowMonthOf(range) : null;
+  const cashFlowMonth = rangeMonth && months.includes(rangeMonth) ? rangeMonth : null;
+  const scope = range
+    ? [
+        accounts.find((a) => a.id === account)?.name,
+        categories.find((c) => c.id === category)?.name,
+        rangeLabel(range),
+      ].filter(Boolean)
+    : [];
   const hrefFor = (id: string) => {
     const next = new URLSearchParams();
     for (const [key, value] of Object.entries({ q, account, category, type, month, from, to })) {
@@ -98,6 +115,22 @@ export default async function ActivityPage({
         }}
         values={{ q, account, category, type, month, from, to }}
       />
+
+      {range && (
+        <p className="-mb-2 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-1 text-[13px] text-ink-2">
+          <span>
+            Showing <span className="font-medium text-ink">{scope.join(" · ")}</span>
+          </span>
+          {cashFlowMonth && (
+            <Link
+              href={cashFlowHref(cashFlowMonth, yearMonthOf(today))}
+              className="font-medium text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink"
+            >
+              Open {monthLabel(cashFlowMonth)} in Cash flow
+            </Link>
+          )}
+        </p>
+      )}
 
       <Panel className="overflow-hidden">
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-4 py-3 text-[13px] text-ink-2 md:px-5">

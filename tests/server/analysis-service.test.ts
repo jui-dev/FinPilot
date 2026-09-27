@@ -474,3 +474,45 @@ describe("evidence behind the figures (Stage 5c)", () => {
     );
   });
 });
+
+describe("evidence behind the headline figures (Milestone B close-out)", () => {
+  /**
+   * Spending links to the whole range with no type filter (Activity's Spent is
+   * expenses net of refunds, exactly Cash flow's spending); Income links to
+   * the range's income rows.
+   */
+  async function expectHeadlinesReconcile(ctx: ServiceContext, flow: MonthlyCashFlow) {
+    const everything = await getActivity(ctx, { range: flow.period.range });
+    const income = await getActivity(ctx, { type: "income", range: flow.period.range });
+    expect(everything.summary.spending).toBe(flow.summary.spending);
+    expect(income.summary.income).toBe(flow.summary.income);
+    expect(income.items.every((i) => i.primary.type === "income")).toBe(true);
+  }
+
+  it("Spending and Income equal the Activity totals behind them in the scenario", async () => {
+    const s = await buildSeptember2026();
+    handle = s.handle;
+    // September to date includes the jacket refund: 66,487 and 95,000.
+    const september = await getMonthlyCashFlow(s.ctx);
+    expect([september.summary.spending, september.summary.income]).toEqual([
+      taka(66_487),
+      taka(95_000),
+    ]);
+    await expectHeadlinesReconcile(s.ctx, september);
+    await expectHeadlinesReconcile(s.ctx, await getMonthlyCashFlow(s.ctx, "2026-08"));
+  });
+
+  it("keeps a refund-heavy month's spending in its evidence", async () => {
+    const { ctx, visa, expense } = await ledger();
+    const [checkup] = await expense("2500", visa, "Health", "2026-08-20");
+    ok(
+      await refundExpense(ctx, checkup!, {
+        amount: "2500",
+        accountId: visa,
+        occurredOn: "2026-09-19",
+      }),
+    );
+    await expectHeadlinesReconcile(ctx, await getMonthlyCashFlow(ctx));
+    await expectHeadlinesReconcile(ctx, await getMonthlyCashFlow(ctx, "2026-08"));
+  });
+});
