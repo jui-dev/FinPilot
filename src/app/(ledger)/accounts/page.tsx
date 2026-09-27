@@ -1,14 +1,17 @@
+import { CheckCircle2, CircleAlert } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getRequestContext } from "@/app/_server/context";
 import { AccountActions } from "@/components/accounts/account-actions";
 import { NewAccountButton } from "@/components/accounts/new-account-panel";
+import { verificationView } from "@/components/accounts/verification-view";
+import { activityHref } from "@/components/activity/links";
 import { shortDate } from "@/components/format";
 import { accountIcon, ACCOUNT_TYPE_LABEL, Glyph } from "@/components/ledger/icons";
 import { Money } from "@/components/ui/money";
 import { EmptyState, PageHeader, Panel, Tag } from "@/components/ui/panel";
-import type { CalendarDate } from "@/domain/calendar-date";
+import { addDays, type CalendarDate } from "@/domain/calendar-date";
 import { accountClass, type AccountType } from "@/domain/ledger/accounts";
 import { NEVER_VERIFIED } from "@/domain/ledger/verification";
 import { negate, type Money as MoneyValue } from "@/domain/money";
@@ -79,7 +82,7 @@ export default async function AccountsPage() {
         actions={<NewAccountButton today={today} />}
       />
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex flex-col gap-5 lg:order-1">
           {GROUPS.map((group) => {
             const groupAccounts = active.filter((a) => group.types.includes(a.type));
@@ -146,6 +149,70 @@ export default async function AccountsPage() {
   );
 }
 
+/**
+ * Whether the account is still as verified (docs/domain-model.md §14). A
+ * changed checkpoint shows how far off it is, the two amounts it compares, and
+ * the entries that make up the recorded amount *as they stand now* — never a
+ * claim about which of them changed: moved or deleted entries leave no trace
+ * without a revision log (V1.1). Never verified says nothing.
+ */
+function VerificationStatus({
+  account,
+  today,
+}: {
+  readonly account: AccountView;
+  readonly today: CalendarDate;
+}) {
+  const view = verificationView(account.verification, account.type);
+  if (view.status === "never_verified") return null;
+  const day = shortDate(view.asOf, today);
+  if (view.status === "verified") {
+    return (
+      <div className="mt-1.5 pl-12 md:pl-[52px]">
+        <Tag tone="positive" icon={<CheckCircle2 aria-hidden className="size-3.5" />}>
+          Verified {day}
+        </Tag>
+      </div>
+    );
+  }
+  const amount = (value: MoneyValue) => (
+    <>
+      <Money amount={value} sign={view.owed ? "none" : "negative"} />
+      {view.owed && " owed"}
+    </>
+  );
+  // A checkpoint cannot predate its account (the reconcile service rejects
+  // it); should one ever exist, there is no valid range to link to.
+  const evidence =
+    account.openedOn <= view.asOf
+      ? activityHref({
+          accountId: account.id,
+          range: { start: account.openedOn, end: addDays(view.asOf, 1) },
+        })
+      : null;
+  return (
+    <div className="mt-1.5 flex flex-col items-start gap-1 pl-12 md:pl-[52px]">
+      <Tag tone="warning" icon={<CircleAlert aria-hidden className="size-3.5" />}>
+        Changed since {day} · <Money amount={view.off} sign="none" /> off
+      </Tag>
+      <p className="text-[12.5px] text-ink-2">
+        Recorded {amount(view.recorded)} for that day · verified {amount(view.verified)}
+        {evidence && (
+          <>
+            {" · "}
+            <Link
+              href={evidence}
+              className="font-medium text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink"
+            >
+              Review entries through {day}
+            </Link>
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
+
 function AccountRow({
   account,
   today,
@@ -156,42 +223,42 @@ function AccountRow({
   const owed = accountClass(account.type) === "liability";
   const shown = owed ? (negate(account.balance) as MoneyValue) : account.balance;
   return (
-    <li className="flex items-center gap-3 border-b border-line px-4 py-3 last:border-b-0 md:gap-4 md:px-5">
-      <Glyph icon={accountIcon(account.type)} />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/activity?account=${account.id}`}
-            className="truncate font-medium hover:underline hover:underline-offset-4"
-          >
-            {account.name}
-          </Link>
-          {account.archived && <Tag>Archived</Tag>}
+    <li className="border-b border-line px-4 py-3 last:border-b-0 md:px-5">
+      <div className="flex items-center gap-3 md:gap-4">
+        <Glyph icon={accountIcon(account.type)} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/activity?account=${account.id}`}
+              className="truncate font-medium hover:underline hover:underline-offset-4"
+            >
+              {account.name}
+            </Link>
+            {account.archived && <Tag>Archived</Tag>}
+          </div>
+          <p className="mt-0.5 truncate text-[12.5px] text-ink-2">
+            {ACCOUNT_TYPE_LABEL[account.type]} · since {shortDate(account.openedOn, today)}
+          </p>
         </div>
-        <p className="mt-0.5 truncate text-[12.5px] text-ink-2">
-          {ACCOUNT_TYPE_LABEL[account.type]} · since {shortDate(account.openedOn, today)}
-          {account.verification.status === "verified" &&
-            ` · Verified ${shortDate(account.verification.asOf!, today)}`}
-          {account.verification.status === "changed" &&
-            ` · Changed since ${shortDate(account.verification.asOf!, today)}`}
-        </p>
+        <div className="flex items-center gap-3">
+          <AccountActions
+            id={account.id}
+            name={account.name}
+            type={account.type}
+            balance={account.balance}
+            today={today}
+            archived={account.archived}
+            canArchive={!account.archived && account.balance === 0}
+            canDelete={account.references === 0}
+          />
+          <span className="text-right text-[15px] font-medium whitespace-nowrap">
+            <Money amount={shown} sign={owed ? "none" : "negative"} />
+            {owed && <span className="ml-1 text-[12.5px] font-normal text-ink-2">owed</span>}
+          </span>
+        </div>
       </div>
-      <div className="flex items-center gap-3">
-        <AccountActions
-          id={account.id}
-          name={account.name}
-          type={account.type}
-          balance={account.balance}
-          today={today}
-          archived={account.archived}
-          canArchive={!account.archived && account.balance === 0}
-          canDelete={account.references === 0}
-        />
-        <span className="text-right text-[15px] font-medium whitespace-nowrap">
-          <Money amount={shown} sign={owed ? "none" : "negative"} />
-          {owed && <span className="ml-1 text-[12.5px] font-normal text-ink-2">owed</span>}
-        </span>
-      </div>
+      {/* Under the name, across the row: the status never squeezes beside the actions. */}
+      <VerificationStatus account={account} today={today} />
     </li>
   );
 }

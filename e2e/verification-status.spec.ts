@@ -91,7 +91,21 @@ test("an account reads as verified, then as changed once earlier history moves",
 
   const after = await metaOf(page, name);
   expect(after).toContain("Changed since");
-  expect(after).not.toMatch(/·\s*Verified/);
+  expect(after).not.toMatch(/Verified \d/);
+  // How far off, and the two amounts compared: never which entry caused it.
+  expect(after).toMatch(/৳\s*250 off/);
+  expect(after).toMatch(/Recorded ৳\s*4,750 for that day · verified ৳\s*5,000/);
+
+  // The evidence: the account's entries through the checkpoint date, as they stand now.
+  const row = page.getByRole("listitem").filter({ hasText: name }).first();
+  await row.getByRole("link", { name: /^Review entries through / }).click();
+  await expect(page).toHaveURL(
+    /\/activity\?account=[^&]+&from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}$/,
+  );
+  await expect(page.getByText(/^Showing/)).toContainText(name);
+  await expect(page.getByRole("link", { name: /in Cash flow$/ })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /Food & Dining/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Opening balance/ })).toBeVisible();
 
   // Verifying again against the corrected ledger settles it.
   await verify(page, name, "4750");

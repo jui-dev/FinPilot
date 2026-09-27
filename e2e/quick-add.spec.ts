@@ -11,8 +11,11 @@ async function balanceOf(page: Page, account: string): Promise<number> {
   await page.goto("/accounts");
   const row = page.getByRole("listitem").filter({ hasText: account }).first();
   const text = await row.innerText();
-  // The row ends with the balance; ৳ and its digits are separate elements.
-  const amounts = [...text.matchAll(/৳\s*([\d,]+)/g)].map((m) => Number(m[1]!.replace(/,/g, "")));
+  // The row ends with the balance; ৳ and its digits are separate elements. The
+  // sign counts: the date-relative demo Cash can be overdrawn by earlier specs.
+  const amounts = [...text.matchAll(/(−?)\s*৳\s*([\d,]+)/g)].map(
+    (m) => (m[1] ? -1 : 1) * Number(m[2]!.replace(/,/g, "")),
+  );
   if (amounts.length === 0) throw new Error(`No balance shown for ${account}: ${text}`);
   return amounts.at(-1)!;
 }

@@ -64,28 +64,37 @@ export function EmptyState({
   );
 }
 
-/** A small neutral or semantic label ("Card payment", "Refund", "Archived"). */
+/**
+ * A small neutral or semantic label ("Card payment", "Refund", "Archived").
+ * A status passes an icon too: status is always icon + word + colour
+ * (docs/design-direction.md §2).
+ */
 export function Tag({
   children,
   tone = "neutral",
+  icon,
 }: {
   readonly children: ReactNode;
-  readonly tone?: "neutral" | "sky" | "positive" | "wine";
+  readonly tone?: "neutral" | "sky" | "positive" | "warning" | "wine";
+  readonly icon?: ReactNode;
 }) {
   const tones = {
     neutral: "bg-surface-hover text-ink-2",
     sky: "bg-sky-soft text-sky-ink",
     positive: "bg-positive-soft text-positive",
+    warning: "bg-warning-soft text-warning",
     wine: "bg-wine-soft text-wine",
   };
   return (
     <span
       className={cn(
-        "inline-flex h-5 items-center rounded-full px-2 text-[11.5px] font-semibold whitespace-nowrap",
+        "inline-flex h-5 items-center gap-1 rounded-full px-2 text-[11.5px] font-semibold whitespace-nowrap",
         tones[tone],
       )}
     >
-      {children}
+      {icon}
+      {/* One flex item, so mixed text and amounts read as one phrase. */}
+      <span>{children}</span>
     </span>
   );
 }

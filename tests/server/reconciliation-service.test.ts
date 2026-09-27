@@ -3,9 +3,9 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { DatabaseHandle } from "@/db/client";
 import { owners, reconciliationCheckpoints, transactions } from "@/db/schema";
-import { monthRange, yearMonth, type CalendarDate } from "@/domain/calendar-date";
+import { inclusiveRange, monthRange, yearMonth, type CalendarDate } from "@/domain/calendar-date";
 import { NEVER_VERIFIED } from "@/domain/ledger/verification";
-import { ZERO } from "@/domain/money";
+import { add, subtract, ZERO } from "@/domain/money";
 import {
   deleteTransaction,
   getAccountBalances,
@@ -15,12 +15,14 @@ import {
   restoreTransaction,
   updateTransaction,
 } from "@/server/services/ledger-service";
+import { getActivity } from "@/server/services/activity-service";
 import {
   getAccountVerifications,
   verifyAccountBalance,
 } from "@/server/services/reconciliation-service";
 import { archiveAccount, deleteAccount } from "@/server/services/setup-service";
 
+import { buildSeptember2026, type Scenario } from "../../acceptance/fixtures/september-2026";
 import { d, errorCode, ok, setupLedger, taka } from "../support/ledger";
 
 /**
@@ -577,5 +579,83 @@ describe("whether an account is still as verified", () => {
     expect(all.get(cash)?.status).toBe("verified");
     expect(all.get(bank)?.status).toBe("never_verified");
     expect(all.get(visa)?.status).toBe("never_verified");
+  });
+});
+
+/**
+ * The evidence behind a changed checkpoint (Milestone B close-out): Accounts
+ * links to the account's Activity from its opening date through the checkpoint
+ * date. That list must be exactly the entries that compose the recorded
+ * balance for that day — as the ledger stands now. It is not a list of what
+ * changed: an entry moved to another account or deleted is simply absent.
+ */
+describe("the entries behind a checkpoint", () => {
+  /** The account's side of each listed row (a transfer counts on either end). */
+  async function evidence(s: Scenario, accountId: string, asOf: CalendarDate) {
+    const { items } = await getActivity(s.ctx, {
+      accountId,
+      range: inclusiveRange("2026-08-01", asOf)!,
+    });
+    let total = ZERO;
+    for (const row of items.flatMap((i) => (i.fee ? [i.primary, i.fee] : [i.primary]))) {
+      if (row.account.id === accountId) total = add(total, row.amount);
+      if (row.counterAccount?.id === accountId) total = subtract(total, row.amount);
+    }
+    return { ids: items.map((i) => i.primary.id), types: items.map((i) => i.primary.type), total };
+  }
+
+  it("lists exactly the entries that make up the verified Cash balance on Sep 20", async () => {
+    const s = await buildSeptember2026();
+    handle = s.handle;
+    const status = (await getAccountVerifications(s.ctx, [s.accounts.cash])).get(s.accounts.cash)!;
+    const { ids, types, total } = await evidence(s, s.accounts.cash, d("2026-09-20"));
+
+    expect(status.status).toBe("verified");
+    expect(total).toBe(status.recorded);
+    expect(total).toBe(taka(4_200));
+    // The adjustment, both cash-outs (in), the Sep 15 lunch and Aug 15 food,
+    // and the opening balance; nothing dated after Sep 20.
+    expect(ids.slice(0, 5)).toEqual([s.rows.R10, s.rows.R8, s.rows.R7, s.rows.P6, s.rows.P5]);
+    expect(types).toEqual([
+      "adjustment",
+      "expense",
+      "transfer",
+      "expense",
+      "transfer",
+      "opening_balance",
+    ]);
+  });
+
+  it("still composes the recorded amount under M2, though the moved lunch is not listed", async () => {
+    const s = await buildSeptember2026();
+    handle = s.handle;
+    ok(
+      await updateTransaction(s.ctx, s.rows.R8!, {
+        type: "expense",
+        amount: taka(450),
+        accountId: s.accounts.bkash,
+        categoryId: s.category("Food & Dining"),
+        occurredOn: d("2026-09-15"),
+      }),
+    );
+    const status = (await getAccountVerifications(s.ctx, [s.accounts.cash])).get(s.accounts.cash)!;
+    const { ids, total } = await evidence(s, s.accounts.cash, d("2026-09-20"));
+
+    expect(status).toMatchObject({ status: "changed", recorded: taka(4_650), drift: taka(450) });
+    expect(total).toBe(status.recorded);
+    // The entry whose move changed the checkpoint now lives on bKash.
+    expect(ids).not.toContain(s.rows.R8);
+  });
+
+  it("leaves no trace of a deleted entry, and still composes the recorded amount", async () => {
+    const s = await buildSeptember2026();
+    handle = s.handle;
+    ok(await deleteTransaction(s.ctx, s.rows.P6!));
+    const status = (await getAccountVerifications(s.ctx, [s.accounts.cash])).get(s.accounts.cash)!;
+    const { ids, total } = await evidence(s, s.accounts.cash, d("2026-09-20"));
+
+    expect(status).toMatchObject({ status: "changed", recorded: taka(5_400), drift: taka(1_200) });
+    expect(total).toBe(status.recorded);
+    expect(ids).not.toContain(s.rows.P6);
   });
 });
