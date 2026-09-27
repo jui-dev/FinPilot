@@ -18,7 +18,7 @@ import { cn } from "@/components/ui/cn";
 import { Money } from "@/components/ui/money";
 import { EmptyState, PageHeader, Panel, PanelBand, PanelHeader } from "@/components/ui/panel";
 import { addDays, dayOfMonth, type DateRange, type YearMonth } from "@/domain/calendar-date";
-import { formatPercent, formatShare } from "@/domain/ledger/analytics";
+import { formatPercent, formatShare, type Ratio } from "@/domain/ledger/analytics";
 import type { CashFlowPeriod, CompositionLine } from "@/domain/ledger/cash-flow";
 import type {
   CategoryChange,
@@ -375,29 +375,52 @@ function CategoryRow({
 }) {
   const refunded = line.amount < 0;
   return (
-    <li className="flex items-baseline gap-3 border-b border-line px-4 py-3 last:border-b-0 md:px-5">
-      <span className="min-w-0 flex-1 truncate">
-        <Link
-          href={activityHref({ categoryId: line.categoryId, range })}
-          className="font-medium hover:underline hover:underline-offset-4"
-        >
-          {line.name}
-        </Link>
-      </span>
-      {line.share && (
-        <span className="text-meta text-ink-2 tabular-nums">{formatShare(line.share)}</span>
-      )}
-      <span className="w-28 text-right text-body font-semibold">
-        {refunded ? (
-          <>
-            <Money amount={negate(line.amount)} sign="none" />
-            <span className="ml-1 text-meta font-normal text-ink-2">back</span>
-          </>
-        ) : (
-          <Money amount={line.amount} sign="none" />
+    <li className="border-b border-line px-4 py-3 last:border-b-0 md:px-5">
+      <div className="flex items-baseline gap-3">
+        <span className="min-w-0 flex-1 truncate">
+          <Link
+            href={activityHref({ categoryId: line.categoryId, range })}
+            className="font-medium hover:underline hover:underline-offset-4"
+          >
+            {line.name}
+          </Link>
+        </span>
+        {line.share && (
+          <span className="text-meta text-ink-2 tabular-nums">{formatShare(line.share)}</span>
         )}
-      </span>
+        <span className="w-28 text-right text-body font-semibold">
+          {refunded ? (
+            <>
+              <Money amount={negate(line.amount)} sign="none" />
+              <span className="ml-1 text-meta font-normal text-ink-2">back</span>
+            </>
+          ) : (
+            <Money amount={line.amount} sign="none" />
+          )}
+        </span>
+      </div>
+      {/* Lines refunded more than spent have no share, so no bar. */}
+      {line.share && <ShareBar share={line.share} />}
     </li>
+  );
+}
+
+/**
+ * How much of the spending a category is, drawn to scale under its row. It
+ * shows the same Ratio the percentage beside it prints, and adds nothing to
+ * it, so it is hidden from assistive technology. One hue: the label, not the
+ * colour, says which category it is.
+ */
+function ShareBar({ share }: { readonly share: Ratio }) {
+  const percent = (share.numerator / share.denominator) * 100;
+  return (
+    <span aria-hidden className="mt-2 block h-1 overflow-hidden rounded-full bg-mist">
+      <span
+        className="block h-full rounded-full bg-tide"
+        // A share that "<1%" describes is still visible; a true zero is not.
+        style={{ width: percent > 0 ? `max(2px, ${percent}%)` : "0" }}
+      />
+    </span>
   );
 }
 
