@@ -25,7 +25,8 @@ interface ChangeRanges {
  * first, the two totals side by side, then the categories that drove it.
  * Every figure and every materiality decision comes from the domain; this only
  * lays them out. Direction is always carried by the sign, the word and the
- * arrow; colour repeats it (coral higher, blue lower) and never stands alone.
+ * arrow; colour only repeats it (navy higher, ocean lower) and never stands
+ * alone. Neither is a warning or error colour: a change in spending is not a fault.
  */
 export function WhatChanged({
   change,
@@ -96,7 +97,7 @@ function Explanation({
           aria-hidden
           className={cn(
             "grid size-10 shrink-0 place-items-center rounded-full",
-            direction === "higher" && "bg-coral-soft text-navy",
+            direction === "higher" && "bg-mist text-navy",
             direction === "lower" && "bg-mist text-ocean",
             direction === "same" && "bg-surface-hover text-ink-2",
           )}
@@ -202,7 +203,7 @@ function DriverGroup({
       <h3 className="flex items-center gap-2 px-5 pt-4 text-meta font-semibold text-ink-2">
         <span
           aria-hidden
-          className={cn("size-2 rounded-full", tone === "higher" ? "bg-coral" : "bg-ocean")}
+          className={cn("size-2 rounded-full", tone === "higher" ? "bg-navy" : "bg-ocean")}
         />
         {title}
       </h3>
@@ -269,7 +270,7 @@ function DriverRow({
           <span
             className={cn(
               "block h-full rounded-full",
-              bar.tone === "higher" ? "bg-coral" : "bg-ocean",
+              bar.tone === "higher" ? "bg-navy" : "bg-ocean",
             )}
             style={{ width: bar.fraction > 0 ? `max(3px, ${bar.fraction * 100}%)` : "0" }}
           />

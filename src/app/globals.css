@@ -33,12 +33,11 @@
   /* Accent blue: supporting marks in charts. Graphics only (1.98:1 on white). */
   --color-tide: #96bed4;
   /*
-   * Coral: the Add action and the "higher" mark in a change explanation. Graphics
+   * Coral: the brand accent and the global Add action, nothing else. Graphics
    * and fills only: text on coral is ink (5.3:1), coral is never text (3.05:1),
-   * never a total, never an error.
+   * never a financial direction, a total, a status or an error.
    */
   --color-coral: #f06a4e;
-  --color-coral-soft: #fde7e1;
 
   --color-positive: #2b6f4f;
   --color-positive-soft: #e4f1ea;

@@ -2,7 +2,7 @@ import { ArrowDownLeft, ArrowUpRight, ChevronRight, type LucideIcon } from "luci
 import Link from "next/link";
 
 import type { DateRange } from "@/domain/calendar-date";
-import { formatPercent, type Ratio } from "@/domain/ledger/analytics";
+import { formatPercent } from "@/domain/ledger/analytics";
 import type { CashFlowSummary } from "@/domain/ledger/cash-flow";
 import type { Money as MoneyValue } from "@/domain/money";
 
@@ -86,28 +86,6 @@ function LeftOver({ summary }: { readonly summary: CashFlowSummary }) {
           {!savingsRate && <dd className="text-meta text-ink-2">No income this month</dd>}
         </div>
       </dl>
-      {savingsRate && <IncomeSplit rate={savingsRate} />}
-    </div>
-  );
-}
-
-/**
- * Income as one thin bar, split into what was kept and what was spent. Both
- * widths come from the savings rate the card prints; the bar adds no figure of
- * its own, so it is hidden from assistive technology. Drawn only when the rate
- * is a real share of income (0–100%).
- */
-function IncomeSplit({ rate }: { readonly rate: Ratio }) {
-  const kept = rate.numerator / rate.denominator;
-  if (!(kept >= 0 && kept <= 1)) return null;
-  return (
-    <div aria-hidden className="mt-5 flex items-center gap-3">
-      <span className="text-meta font-medium text-navy">Kept</span>
-      <span className="flex h-2 min-w-0 flex-1 gap-0.5 overflow-hidden rounded-full bg-surface">
-        {kept > 0 && <span className="rounded-full bg-navy" style={{ flexGrow: kept }} />}
-        {kept < 1 && <span className="rounded-full bg-tide" style={{ flexGrow: 1 - kept }} />}
-      </span>
-      <span className="text-meta text-ink-2">Spent</span>
     </div>
   );
 }
