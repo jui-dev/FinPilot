@@ -123,13 +123,13 @@ Deferred to V1.1: expected income (runway), split transactions, CSV import/expor
 - Flat categories (income or expense kind).
 - **Quick Add:** keyboard-first with sensible defaults, and usable at phone width.
 - Transaction list with search and filters.
-- Calendar-month category budgets with a commitment-aware projection.
-- Recurring commitments (outflows only), with occurrence states, a Pay action and user-confirmed matching.
+- Calendar-month category budgets with a commitment-aware projection, kept narrow: what happened vs what I intended to spend (§12).
+- Recurring commitments (outflows only), with occurrence states and a Pay action. Match suggestions and weekly schedules are deferred beyond V1 (§12).
 - Goals backed by earmarks, with shortfall detection.
 - Derived position: net worth, assets/liabilities and **Available** (with its bridge).
-- Cash flow, a category bridge and composition.
+- Cash flow and composition, with evidence behind every figure. No category bridge chart (§12).
 - Like-for-like month-over-month contribution.
-- A deterministic signal engine (8 rule families).
+- A deterministic signal engine: 4 rule families in V1 (month-over-month attribution, commitments, goal cover, reconciliation); the other 4 are deferred (§12).
 - A dated demo seed with a one-command reset.
 - A single fixed owner. Every table is owner-scoped from day one.
 
@@ -249,3 +249,9 @@ FinPilot must immediately read as a serious **money-management** product. It mus
 - **Avoid:** mountains, motivational illustrations, quotes, lifestyle imagery, excessive gradients, and decorative cards without a function.
 - **Design gate:** the UI/UX architecture and visual design are agreed in a dedicated discussion during foundation stages F0–F2, and **must be approved before Stage 3** (see [roadmap.md](roadmap.md)). No generic dashboard design is improvised during implementation.
 - **Design gate outcome (2026-09-22):** the approved direction is recorded in [design-direction.md](design-direction.md). It refines this palette into semantic tokens and lists the reference-driven proposals that would touch frozen decisions (§6, §9) as open items. Nothing in this baseline changes until those items are decided.
+
+## 12. Change log
+
+| Date | Change | Reason |
+|---|---|---|
+| 2026-09-27 | **Milestone B review: V1 narrowed** (§5). Signal families narrowed to 2, 4, 5 and 7 (the ones the acceptance scenario asserts). Commitment match suggestions and weekly schedules deferred beyond V1. Budgets kept, narrowed. No category bridge chart; charts are built only when their concept exists. No acceptance number changed. | Keeps Portfolio V1 small and coherent without weakening the thesis: Available and its inputs stay complete. Details in [roadmap.md §7](roadmap.md). The palette in §11 is revisited, and frozen, in the visual-system boundary. |

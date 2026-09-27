@@ -2,7 +2,7 @@
 
 Personal finance built on a derived ledger: where your money stands, why it changed, and how much of it is actually free.
 
-> **Status:** Stage 3 — a usable manual ledger: accounts, the Activity list with search and filters, and keyboard-first Quick Add. Reconciliation, analysis, plans and the Overview come in later stages. See [docs/roadmap.md](docs/roadmap.md).
+> **Status:** Milestone B — a manual ledger you can verify against reality (accounts, Activity with search and filters, keyboard-first Quick Add, balance verification that detects changed history), and a monthly Cash flow that explains what changed, with every figure leading back to the transactions behind it. Next: a visual-system upgrade, then commitments, budgets, goals and Available. See [docs/roadmap.md](docs/roadmap.md).
 
 ## Documentation
 

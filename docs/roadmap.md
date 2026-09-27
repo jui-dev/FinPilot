@@ -44,7 +44,9 @@
 | 5a | Monthly cash flow foundation | visible | B — `v0.2-understand` |
 | 5b | Month-over-month explanation | visible | B — `v0.2-understand` |
 | 5c | Evidence drill-down | visible | B — `v0.2-understand` → **review** |
-| 5d | Charts / visual analytics | visible | deferred; placement decided at the Milestone B review |
+| 5e | Evidence & trust close-out | visible | B — `v0.2-understand` |
+| ~~5d~~ | ~~Charts / visual analytics~~ | — | **dropped** at the Milestone B review (§7) |
+| V | Visual system / UI upgrade | visible | between B and C |
 | 6 | Commitments | visible | C — `v0.3-plan` |
 | 7 | Budgets | visible | C — `v0.3-plan` |
 | 8 | Goals and earmarks | visible | C — `v0.3-plan` |
@@ -191,20 +193,36 @@ Built in its conceptual order: what happened → where it went → what changed 
 ##### 5c — Evidence drill-down
 - **Builds:** a date-range filter for Activity in URL params, and links from cash-flow and contribution figures to the filtered transactions.
 
-##### 5d — Charts / visual analytics
-- **Builds:** the visx charts (bridge, diverging bars, composition), with the per-chart Recharts fallback.
-- **Deferred from the current implementation sequence.** Whether charts come before the `v0.2-understand` tag or move to the visual-refinement phase is decided at the Milestone B review after 5c.
+##### ~~5d — Charts / visual analytics~~ (dropped)
+- **Dropped at the Milestone B review (2026-09-27; §7).** There is no standalone chart stage. Each chart must earn its place and is built only when its concept exists: budget bullet bars in Stage 7, the Available bar in Stage 9. Inline composition bars for "Where it went" may be considered in the visual-system boundary. visx is not installed ([tech-stack.md](tech-stack.md)).
 
-- **→ Checkpoint review** after 5c: the product feel, and where charts belong.
+- **→ Checkpoint review** after 5c: held 2026-09-27 (§7).
+
+##### 5e — Evidence & trust close-out
+- **Builds:**
+  - Activity states the scope of a date-range view, and offers the Cash flow month when the range has a Cash flow period's shape.
+  - Cash flow's Income and Spending figures open the Activity rows behind them.
+  - The smaller changes can be expanded, each with its evidence.
+  - A verification status shows how far off a changed checkpoint is, the recorded and verified amounts, and a link to the account's entries through the checkpoint date, as they stand now. It never claims which entries caused the difference: without a revision log the ledger cannot know.
+- **Tests that must pass:** service tests that every linked figure equals the Activity total behind it, and that a checkpoint's evidence composes its recorded balance (base, M2, a deleted entry); E2E for each link.
+- **Acceptance:** none new.
+- **Then:** tag `v0.2-understand`.
+
+### Visual system / UI upgrade (between Milestones B and C)
+
+- **Builds:** the approved visual direction applied to the real product: deep navy for identity and primary actions, slate/ocean blue for secondary emphasis, soft blue / pale cyan for analytical and supporting surfaces, a warm cream foundation, and restrained coral for rare emphasis. Also semantic type tokens and shared panel primitives.
+- **Rules:** exact colour tokens are tested and then frozen inside this boundary, against the real product rather than in isolation, and recorded in [design-direction.md](design-direction.md) and [product-baseline.md §11](product-baseline.md). Coral is never the colour of spending, and error/destructive states stay distinguishable from it. Information architecture and domain semantics are preserved.
+- **Why before Stage 6:** Stages 6–9 add new surfaces and the first charts; they should be built once, in their final colour roles.
 
 ### Milestone C — "Plan" — tag `v0.3-plan`
 
 #### 6 — Commitments
+- **Scope (Milestone B review):** only what the core product and Available need. Match suggestions and weekly schedules are deferred beyond V1.
 - **Builds:**
   - Commitment rules (schedules, month-end clamping).
   - Lazy, idempotent materialisation up to today + 60 days, and occurrence states.
   - **Pay**, which creates a linked expense.
-  - Match suggestions, confirmed by the user.
+  - ~~Match suggestions, confirmed by the user.~~ Deferred beyond V1.
   - Unlinking when a transaction is deleted.
   - The Upcoming list.
 - **Why before budgets:** the budget projection needs to know which spending is fixed and which is variable.
@@ -218,6 +236,7 @@ Built in its conceptual order: what happened → where it went → what changed 
 - **Commit:** `feat(commitments): recurring commitments, occurrences and matching`
 
 #### 7 — Budgets
+- **Scope (Milestone B review):** kept in V1, narrowed to the distinction between what happened and what I intended to spend. No envelope system, no forecasting beyond the documented projection. A-40 and M1-4 are unchanged.
 - **Builds:**
   - Effective-dated, calendar-month limits.
   - Usage net of refunds.
@@ -262,9 +281,10 @@ Built in its conceptual order: what happened → where it went → what changed 
 - **Commit:** `feat(position): Available with explainable bridge`
 
 #### 10 — Signal engine
+- **Scope (Milestone B review):** V1 has rule families 2 (month-over-month attribution), 4 (commitments due / overdue), 5 (goal under-covered) and 7 (reconciliation), which are the ones the acceptance scenario asserts. Families 1, 3, 6 and 8 are deferred beyond V1 unless a later review finds a compelling dependency.
 - **Builds:**
   - The context builder.
-  - Eight pure rule families.
+  - Four pure rule families (see Scope).
   - Keys, severity and ranking; templates.
   - Evidence filters (drill-down).
   - Per-period dismissals.
@@ -291,7 +311,7 @@ Built in its conceptual order: what happened → where it went → what changed 
 - **Builds:**
   - **The final seed generator:** 9–12 months of history, dates relative to today, curated Bangladeshi merchants, and anomalies planted so every signal rule fires.
   - **Polish:** a responsive pass, empty states, an accessibility pass, and a performance check at seed volume.
-  - **README:** architecture, decisions, how to run.
+  - **README:** architecture, decisions, how to run, and **screenshots** (required). A short recording or GIF is optional.
 - **Tests that must pass:** a seed smoke test (every rule fires on a fresh seed), plus the full suite.
 - **What you can see at the end:** clone → `npm install` → `npm run db:reset` → `npm run dev`.
 - **Deferred:** deployment and the public demo strategy, auth, V1.1 items.
@@ -310,7 +330,8 @@ Built in its conceptual order: what happened → where it went → what changed 
 | 5a | none (A-03…A-05 already green) |
 | 5b | A-20…A-23 |
 | 5c | none |
-| 5d | none |
+| 5e | none |
+| V | none |
 | 6 | A-30…A-32, M1-1, M1-2 |
 | 7 | A-40, M1-4 |
 | 8 | A-50, A-51 |
@@ -331,3 +352,16 @@ These come after Portfolio V1, each as a separate discussion:
 - MCP
 
 See [product-baseline.md §9](product-baseline.md).
+
+## 7. Milestone B review outcome (2026-09-27)
+
+Agreed after Stage 5c. Scope and sequence changes only; no acceptance number changed.
+
+1. **Stage 5d is dropped** as a standalone stage, and visx is not installed. Charts must earn their place individually; budget and Available visuals wait until those concepts exist.
+2. **Visual direction approved conceptually** (navy / slate-ocean blue / soft blue and pale cyan / warm cream / restrained coral). Exact tokens are frozen inside the visual-system boundary.
+3. **Sequence:** 5e Evidence & trust close-out → tag `v0.2-understand` → visual system / UI upgrade → Stage 6.
+4. **Signals** narrowed to families 2, 4, 5 and 7 for V1.
+5. **Budgets** kept, narrowed; A-40 and M1-4 unchanged.
+6. **Commitments:** match suggestions and weekly schedules deferred beyond V1.
+7. **Deployment** stays after V1; README screenshots are required in Stage 12.
+8. `v0.2-understand` is tagged only after 5e is implemented, validated, reviewed and committed.

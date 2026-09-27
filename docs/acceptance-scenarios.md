@@ -189,7 +189,8 @@
 | 5a — Monthly cash flow foundation | none (A-03, A-04, A-05 are already green) |
 | 5b — Month-over-month explanation | A-20, A-21, A-22, A-23 |
 | 5c — Evidence drill-down | none |
-| 5d — Charts / visual analytics | none |
+| 5d — Charts / visual analytics | dropped at the Milestone B review |
+| 5e — Evidence & trust close-out | none |
 | 6 — Commitments | A-30, A-31, A-32, M1-1, M1-2 |
 | 7 — Budgets | A-40, M1-4 |
 | 8 — Goals and earmarks | A-50, A-51 |
@@ -206,3 +207,4 @@
 | 2026-09-22 | Added A-14 (net worth reconciles with flows), A-23 (materiality), A-30/A-32 (occurrence set, idempotency), A-51 (rollback), M1-2/M1-4, and the Available values in M2/M3 | These make explicit what the approved scenario implied, and give the rollback rule from the tech stack decision its test |
 | 2026-09-23 | **Stage 4 split into 4a (reconciliation write path) and 4b (verification status)** in §8. No expected value changed; only the stage that turns each assertion green. A-13 and M2-1 move to 4b. | A checkpoint's status is derived from the ledger *after* the fact, so it is a separate boundary from posting the adjustment. Recorded here because §8 otherwise implies every Stage 4 assertion goes green together. |
 | 2026-09-24 | **Stage 5 split into 5a–5d** in §8. No expected value changed; A-20…A-23 now go green in 5b. | Monthly analysis is built in its conceptual order (what happened → where it went → what changed → evidence → visuals); a single stage would have combined four boundaries. Recorded here because §8 otherwise implies every Stage 5 assertion goes green together. |
+| 2026-09-27 | **§8: Stage 5d dropped and 5e (evidence & trust close-out) added** at the Milestone B review. No expected value changed, and no assertion moved. | 5d had no assertions; charts are now built within the stages that own their concepts. Recorded here so §8 matches [roadmap.md](roadmap.md). |
