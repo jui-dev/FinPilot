@@ -33,12 +33,15 @@ export function VerifyBalanceButton({
   type,
   balance,
   today,
+  emphasized = false,
 }: {
   readonly id: string;
   readonly name: string;
   readonly type: AccountType;
   readonly balance: MoneyValue;
   readonly today: CalendarDate;
+  /** Outlined rather than quiet, when the row's verification has changed. */
+  readonly emphasized?: boolean;
 }) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
@@ -76,7 +79,7 @@ export function VerifyBalanceButton({
   return (
     <>
       <Button
-        variant="ghost"
+        variant={emphasized ? "secondary" : "ghost"}
         size="sm"
         className={ROW_ACTION}
         icon={<CheckCircle2 className="size-4" />}
@@ -89,6 +92,7 @@ export function VerifyBalanceButton({
         title={`Verify the balance of ${name}`}
       >
         Verify
+        <span className="sr-only"> {name}</span>
       </Button>
 
       <SidePanel

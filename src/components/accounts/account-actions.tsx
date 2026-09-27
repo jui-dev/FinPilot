@@ -9,36 +9,27 @@ import {
   restoreAccountAction,
 } from "@/app/_server/actions";
 
-import type { CalendarDate } from "@/domain/calendar-date";
-import type { AccountType } from "@/domain/ledger/accounts";
-import type { Money } from "@/domain/money";
-
 import { Button } from "../ui/button";
 import { Modal } from "../ui/overlay";
 import { useToast } from "../ui/toast";
-import { ROW_ACTION, VerifyBalanceButton } from "./verify-balance-panel";
+import { ROW_ACTION } from "./verify-balance-panel";
 
 /**
- * Only the actions the ledger allows are offered: verifying needs an account
- * that is still in use, archiving needs a zero balance, deleting needs an
+ * Managing an account, beside its balance's Verify: only the actions the
+ * ledger allows are offered. Archiving needs a zero balance, deleting needs an
  * account nothing ever referenced. Archiving is reversible, so it is confirmed
- * by an Undo message rather than a dialog.
+ * by an Undo message rather than a dialog. Each button names its account for
+ * screen readers, since every row repeats the same words.
  */
 export function AccountActions({
   id,
   name,
-  type,
-  balance,
-  today,
   canArchive,
   canDelete,
   archived,
 }: {
   readonly id: string;
   readonly name: string;
-  readonly type: AccountType;
-  readonly balance: Money;
-  readonly today: CalendarDate;
   readonly canArchive: boolean;
   readonly canDelete: boolean;
   readonly archived: boolean;
@@ -93,10 +84,7 @@ export function AccountActions({
   };
 
   return (
-    <div className="flex items-center gap-0.5">
-      {!archived && (
-        <VerifyBalanceButton id={id} name={name} type={type} balance={balance} today={today} />
-      )}
+    <div className="flex flex-wrap items-center justify-end gap-0.5">
       {archived ? (
         <Button
           variant="ghost"
@@ -107,6 +95,7 @@ export function AccountActions({
           onClick={() => void restore()}
         >
           Restore
+          <span className="sr-only"> {name}</span>
         </Button>
       ) : (
         canArchive && (
@@ -120,6 +109,7 @@ export function AccountActions({
             title="Archive this account"
           >
             Archive
+            <span className="sr-only"> {name}</span>
           </Button>
         )
       )}
@@ -134,6 +124,7 @@ export function AccountActions({
             title="Delete this account"
           >
             Delete
+            <span className="sr-only"> {name}</span>
           </Button>
           <Modal
             open={confirming}
