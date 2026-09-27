@@ -170,7 +170,7 @@ export function QuickAdd({
       }
       footer={
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-[12px] text-ink-3">
+          <p className="text-[12px] text-ink-2">
             <kbd className="font-medium">Enter</kbd> to save ·{" "}
             <kbd className="font-medium">Ctrl</kbd>+<kbd className="font-medium">Enter</kbd> to save
             &amp; add another
@@ -377,7 +377,7 @@ export function QuickAdd({
               <Amount amount={selected.balance} className="font-medium text-ink" />
             )}
             {type !== "transfer" && (
-              <span className="text-ink-3">
+              <span className="text-ink-2">
                 {" "}
                 · {shortDate(occurredOn as CalendarDate, data.today)}
               </span>

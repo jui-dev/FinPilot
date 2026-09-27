@@ -3,7 +3,7 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 import { cn } from "./cn";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger" | "link";
+type Variant = "primary" | "secondary" | "ghost" | "danger" | "destructive" | "link";
 type Size = "sm" | "md" | "icon";
 
 const base =
@@ -11,12 +11,15 @@ const base =
   "disabled:pointer-events-none disabled:opacity-45 select-none";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-wine text-white hover:bg-wine-hover",
+  primary: "bg-navy text-white hover:bg-navy-hover",
   secondary:
-    "border border-line-strong bg-surface text-ink hover:border-ink-3 hover:bg-surface-hover",
+    "border border-line-strong bg-surface text-ink hover:border-ink-2 hover:bg-surface-hover",
   ghost: "text-ink-2 hover:bg-surface-hover hover:text-ink",
+  /** An inline destructive action (e.g. a row's Delete). */
   danger: "text-negative hover:bg-negative-soft",
-  link: "font-medium text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink",
+  /** The confirming button of a destructive dialog: filled, never the brand colour. */
+  destructive: "bg-negative text-white hover:bg-negative/90",
+  link: "font-medium text-ink underline decoration-ocean/50 underline-offset-4 hover:decoration-ocean",
 };
 
 const sizes: Record<Size, string> = {

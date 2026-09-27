@@ -75,7 +75,7 @@ export function Segmented<T extends string>({
               "inline-flex flex-1 items-center justify-center gap-1.5 rounded-[6px] font-medium whitespace-nowrap transition-colors disabled:opacity-40",
               size === "sm" ? "h-7 px-2.5 text-[13px]" : "h-8 px-3 text-[13.5px]",
               selected
-                ? "bg-surface text-ink shadow-[0_0_0_1px_var(--color-line-strong)]"
+                ? "bg-mist text-ocean shadow-[0_0_0_1px_var(--color-ocean)]"
                 : "text-ink-2 hover:text-ink",
             )}
           >
@@ -107,8 +107,8 @@ export function Chip({
       className={cn(
         "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[13px] font-medium whitespace-nowrap transition-colors",
         selected
-          ? "border-wine bg-wine-soft text-wine"
-          : "border-line-strong bg-surface text-ink-2 hover:border-ink-3 hover:text-ink",
+          ? "border-ocean bg-mist text-ocean"
+          : "border-line-strong bg-surface text-ink-2 hover:border-ink-2 hover:text-ink",
         className,
       )}
     >

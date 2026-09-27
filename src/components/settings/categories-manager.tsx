@@ -91,7 +91,7 @@ function CategoryGroup({
     <Panel className="flex flex-col overflow-hidden">
       <div className="flex items-baseline justify-between gap-3 border-b border-line px-4 py-3 md:px-5">
         <h2 className="text-[13px] font-semibold">{title}</h2>
-        <p className="text-[12.5px] text-ink-3">{note}</p>
+        <p className="text-[12.5px] text-ink-2">{note}</p>
       </div>
 
       {sorted.length === 0 ? (
@@ -212,7 +212,7 @@ function CategoryRow({ category }: { readonly category: CategoryView }) {
               </span>
               {category.archived && <Tag>Archived</Tag>}
             </div>
-            <p className="mt-0.5 text-[12.5px] text-ink-3">
+            <p className="mt-0.5 text-[12.5px] text-ink-2">
               {category.uses === 0
                 ? "Not used yet"
                 : `${category.uses} ${category.uses === 1 ? "transaction" : "transactions"}`}

@@ -75,15 +75,14 @@ export function Tag({
   icon,
 }: {
   readonly children: ReactNode;
-  readonly tone?: "neutral" | "sky" | "positive" | "warning" | "wine";
+  readonly tone?: "neutral" | "info" | "positive" | "warning";
   readonly icon?: ReactNode;
 }) {
   const tones = {
     neutral: "bg-surface-hover text-ink-2",
-    sky: "bg-sky-soft text-sky-ink",
+    info: "bg-mist text-ocean",
     positive: "bg-positive-soft text-positive",
     warning: "bg-warning-soft text-warning",
-    wine: "bg-wine-soft text-wine",
   };
   return (
     <span

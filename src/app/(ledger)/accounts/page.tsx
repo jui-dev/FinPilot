@@ -91,7 +91,7 @@ export default async function AccountsPage() {
               <Panel key={group.title} className="overflow-hidden">
                 <div className="flex items-baseline justify-between gap-3 border-b border-line px-4 py-3 md:px-5">
                   <h2 className="text-[13px] font-semibold">{group.title}</h2>
-                  <p className="text-[12.5px] text-ink-3">{group.note}</p>
+                  <p className="text-[12.5px] text-ink-2">{group.note}</p>
                 </div>
                 <ul>
                   {groupAccounts.map((account) => (
@@ -202,7 +202,7 @@ function VerificationStatus({
             {" · "}
             <Link
               href={evidence}
-              className="font-medium text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink"
+              className="font-medium text-ink underline decoration-ocean/50 underline-offset-4 hover:decoration-ocean"
             >
               Review entries through {day}
             </Link>

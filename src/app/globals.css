@@ -9,39 +9,44 @@
   --color-*: initial;
   --color-white: #ffffff;
 
-  --color-canvas: #f6f4f1;
+  /* Foundation: a warm cream canvas under white panels. */
+  --color-canvas: #f5f1ea;
   --color-surface: #ffffff;
-  --color-surface-subtle: #faf8f6;
-  --color-surface-hover: #f3f0ec;
-  --color-line: #e8e3dc;
-  --color-line-strong: #d6cfc5;
+  --color-surface-subtle: #faf7f2;
+  --color-surface-hover: #f1ece3;
+  --color-line: #e7e1d6;
+  /* Control edges: 3:1 against white (WCAG 1.4.11). */
+  --color-line-strong: #9c9485;
 
-  --color-ink: #1b1b24;
-  --color-ink-2: #5f5e6b;
-  --color-ink-3: #8f8d98;
+  /* Text and figures. ink-3 is for icons and placeholders, never for text a person must read. */
+  --color-ink: #172033;
+  --color-ink-2: #4f5869;
+  --color-ink-3: #8b919c;
 
-  --color-wine: #6e2442;
-  --color-wine-hover: #5a1d36;
-  --color-wine-soft: #f5e8ec;
-  --color-coral: #e07a64;
-  --color-blush: #f8e1da;
+  /* Identity: the logo, the primary action, the active destination. Never a status. */
+  --color-navy: #1d3050;
+  --color-navy-hover: #15243d;
+  /* Interaction: focus, selection, evidence links. Never a financial direction. */
+  --color-ocean: #355f7d;
+  /* Quiet selected and analytical surfaces. */
+  --color-mist: #e5eef4;
+  /* The fill of a composition bar, and nothing else. */
+  --color-tide: #5b84a3;
+  /* A rare brand accent (the logo). Never spending, status, errors, controls or amounts. */
+  --color-coral: #df7a62;
 
-  --color-sky: #7fa6c9;
-  --color-sky-soft: #e8f0f7;
-  --color-sky-ink: #3e6488;
-
-  --color-positive: #2f7a57;
-  --color-positive-soft: #e5f1ea;
-  --color-warning: #a86a10;
+  --color-positive: #2b6f4f;
+  --color-positive-soft: #e4f1ea;
+  --color-warning: #9a5b0b;
   --color-warning-soft: #fbf0dc;
-  --color-negative: #c0392b;
-  --color-negative-soft: #fbe8e5;
+  --color-negative: #b42318;
+  --color-negative-soft: #fbe9e6;
 
   --radius-panel: 12px;
   --radius-control: 8px;
 
-  --shadow-panel: 0 1px 2px rgb(27 27 36 / 0.04);
-  --shadow-overlay: 0 12px 32px rgb(27 27 36 / 0.14), 0 2px 6px rgb(27 27 36 / 0.06);
+  --shadow-panel: 0 1px 2px rgb(23 32 51 / 0.04);
+  --shadow-overlay: 0 12px 32px rgb(23 32 51 / 0.14), 0 2px 6px rgb(23 32 51 / 0.06);
 
   --animate-fade-in: fade-in 160ms ease-out;
   --animate-pop-in: pop-in 180ms cubic-bezier(0.2, 0.7, 0.2, 1);
@@ -102,7 +107,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-wine);
+    outline: 2px solid var(--color-ocean);
     outline-offset: 2px;
   }
 

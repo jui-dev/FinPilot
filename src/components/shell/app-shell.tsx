@@ -59,8 +59,8 @@ export function AppShell({
         <header className="sticky top-0 z-30 border-b border-line bg-surface">
           <div className="mx-auto flex h-14 max-w-[1120px] items-center gap-6 px-4 md:px-6">
             <Link href={HOME_PATH} className="flex items-center gap-2.5 font-semibold">
-              <span aria-hidden className="grid size-7 place-items-center rounded-[7px] bg-wine">
-                <span className="block h-[3px] w-3.5 rounded-full bg-white" />
+              <span aria-hidden className="grid size-7 place-items-center rounded-[7px] bg-navy">
+                <span className="block h-[3px] w-3.5 rounded-full bg-coral" />
                 <span className="sr-only">FinPilot</span>
               </span>
               <span className="text-[15px] tracking-tight">FinPilot</span>
@@ -77,7 +77,7 @@ export function AppShell({
                     className={cn(
                       "-mb-px flex items-center border-b-2 px-3.5 text-sm font-medium transition-colors",
                       active
-                        ? "border-wine text-ink"
+                        ? "border-navy text-ink"
                         : "border-transparent text-ink-2 hover:text-ink",
                     )}
                   >
@@ -134,7 +134,7 @@ export function AppShell({
             className="flex flex-col items-center justify-center py-1.5"
             aria-label="Add a transaction"
           >
-            <span className="-mt-5 grid size-12 place-items-center rounded-[14px] bg-wine text-white shadow-overlay">
+            <span className="-mt-5 grid size-12 place-items-center rounded-[14px] bg-navy text-white shadow-overlay">
               <Plus className="size-6" strokeWidth={2.25} />
             </span>
           </button>

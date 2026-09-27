@@ -23,7 +23,7 @@ export interface EventDescription {
   readonly meta: string[];
   readonly icon: LucideIcon;
   readonly tone: GlyphTone;
-  readonly tag: { readonly label: string; readonly tone: "sky" | "positive" | "neutral" } | null;
+  readonly tag: { readonly label: string; readonly tone: "info" | "positive" | "neutral" } | null;
   readonly amount: Money;
   readonly sign: "negative" | "always" | "none";
   readonly amountClass: string;
@@ -82,8 +82,8 @@ export function describeEvent(item: ActivityItem, perspectiveAccountId?: string)
           (cardPayment ? "Card payment" : `Transfer to ${to?.name ?? "account"}`),
         meta: item.fee ? [route, `+ ${feeText(item)} fee`] : [route],
         icon: TransferIcon,
-        tone: "sky",
-        tag: cardPayment ? { label: "Card payment", tone: "sky" } : null,
+        tone: "info",
+        tag: cardPayment ? { label: "Card payment", tone: "info" } : null,
         amount: outgoing ? negate(magnitude) : magnitude,
         sign: incoming ? "always" : outgoing ? "negative" : "none",
         amountClass: "text-ink-2",

@@ -28,7 +28,7 @@ interface OverlayProps {
   readonly onOpenAutoFocus?: (event: Event) => void;
 }
 
-const overlayClass = "fixed inset-0 z-40 bg-[rgb(27_27_36/0.32)] animate-fade-in";
+const overlayClass = "fixed inset-0 z-40 bg-ink/30 animate-fade-in";
 
 function Close() {
   return (

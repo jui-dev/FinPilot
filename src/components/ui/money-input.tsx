@@ -36,15 +36,15 @@ export function MoneyInput({
   return (
     <div
       className={cn(
-        "flex items-baseline gap-1.5 border-line-strong transition-colors focus-within:border-wine",
+        "flex items-baseline gap-1.5 border-line-strong transition-colors focus-within:border-ocean",
         large
           ? "border-b-2 pb-1"
-          : "h-10 rounded-control border bg-surface px-3 focus-within:ring-2 focus-within:ring-wine-soft",
+          : "h-10 rounded-control border bg-surface px-3 focus-within:ring-1 focus-within:ring-ocean",
         rest["aria-invalid"] && "border-negative",
         className,
       )}
     >
-      <span aria-hidden className={cn("font-medium text-ink-3", large ? "text-2xl" : "text-sm")}>
+      <span aria-hidden className={cn("font-medium text-ink-2", large ? "text-2xl" : "text-sm")}>
         ৳
       </span>
       <input

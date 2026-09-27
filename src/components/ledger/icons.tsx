@@ -61,12 +61,12 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   "Fees & Charges": Receipt,
 };
 
-export type GlyphTone = "neutral" | "positive" | "sky";
+export type GlyphTone = "neutral" | "positive" | "info";
 
 const tones: Record<GlyphTone, string> = {
   neutral: "bg-surface-hover text-ink-2",
   positive: "bg-positive-soft text-positive",
-  sky: "bg-sky-soft text-sky-ink",
+  info: "bg-mist text-ocean",
 };
 
 /** A small round icon badge in front of a row. */

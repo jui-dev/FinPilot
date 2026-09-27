@@ -142,7 +142,7 @@ export function AccountActions({
                 <Button variant="ghost" onClick={() => setConfirming(false)}>
                   Cancel
                 </Button>
-                <Button variant="primary" pending={pending} onClick={() => void remove()}>
+                <Button variant="destructive" pending={pending} onClick={() => void remove()}>
                   Delete account
                 </Button>
               </div>

@@ -33,7 +33,7 @@ export const metadata: Metadata = { title: "Cash flow" };
 type SearchParams = Record<string, string | string[] | undefined>;
 
 /** An amount that opens the transactions behind it (Stage 5c). */
-const amountLinkClass = "underline decoration-line-strong underline-offset-4 hover:decoration-ink";
+const amountLinkClass = "underline decoration-ocean/50 underline-offset-4 hover:decoration-ocean";
 
 /** "1–24 Sep, so far" for the running month; "Full month" for a finished one. */
 function periodNote(period: CashFlowPeriod): string {
@@ -123,7 +123,7 @@ export default async function CashFlowPage({
           <h2 id="cash-flow-composition" className="text-[13px] font-semibold">
             Where it went
           </h2>
-          <p className="text-[12.5px] text-ink-3">By category, largest first</p>
+          <p className="text-[12.5px] text-ink-2">By category, largest first</p>
         </div>
 
         {quiet ? (

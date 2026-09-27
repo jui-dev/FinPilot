@@ -5,8 +5,8 @@ import { cn } from "./cn";
 
 export const controlClass =
   "h-10 w-full rounded-control border border-line-strong bg-surface px-3 text-sm text-ink " +
-  "placeholder:text-ink-3 transition-colors hover:border-ink-3 " +
-  "focus-visible:border-wine focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wine-soft " +
+  "placeholder:text-ink-3 transition-colors hover:border-ink-2 " +
+  "focus-visible:border-ocean focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ocean " +
   "aria-[invalid=true]:border-negative disabled:opacity-45";
 
 export function Field({
@@ -35,7 +35,7 @@ export function Field({
           {error}
         </p>
       ) : hint ? (
-        <p className="text-[13px] text-ink-3">{hint}</p>
+        <p className="text-[13px] text-ink-2">{hint}</p>
       ) : null}
     </div>
   );

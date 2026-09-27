@@ -111,11 +111,11 @@ export function ActivityFilters({
         className={cn(
           controlClass,
           "h-9 w-full min-w-0 appearance-none bg-[right_0.6rem_center] bg-no-repeat pr-8 text-[13px]",
-          value && "border-ink-3 bg-surface-hover font-medium text-ink",
+          value && "border-ocean bg-mist font-medium text-ocean",
         )}
         style={{
           backgroundImage:
-            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238f8d98' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
+            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238b919c' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
         }}
       >
         {children}

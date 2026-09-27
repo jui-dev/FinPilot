@@ -124,7 +124,7 @@ export default async function ActivityPage({
           {cashFlowMonth && (
             <Link
               href={cashFlowHref(cashFlowMonth, yearMonthOf(today))}
-              className="font-medium text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink"
+              className="font-medium text-ink underline decoration-ocean/50 underline-offset-4 hover:decoration-ocean"
             >
               Open {monthLabel(cashFlowMonth)} in Cash flow
             </Link>
