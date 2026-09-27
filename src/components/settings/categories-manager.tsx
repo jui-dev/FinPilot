@@ -16,7 +16,7 @@ import { categoryIcon, Glyph } from "../ledger/icons";
 import { Button } from "../ui/button";
 import { controlClass } from "../ui/field";
 import { cn } from "../ui/cn";
-import { EmptyState, Panel, Tag } from "../ui/panel";
+import { EmptyState, Panel, PanelHeader, Tag } from "../ui/panel";
 import { useToast } from "../ui/toast";
 
 export interface CategoryView {
@@ -89,10 +89,7 @@ function CategoryGroup({
 
   return (
     <Panel className="flex flex-col overflow-hidden">
-      <div className="flex items-baseline justify-between gap-3 border-b border-line px-4 py-3 md:px-5">
-        <h2 className="text-[13px] font-semibold">{title}</h2>
-        <p className="text-[12.5px] text-ink-2">{note}</p>
-      </div>
+      <PanelHeader title={title} note={note} />
 
       {sorted.length === 0 ? (
         <EmptyState title="No categories yet">Add the first one below.</EmptyState>
@@ -119,7 +116,7 @@ function CategoryGroup({
             aria-label={`New ${kind} category`}
             aria-invalid={error ? true : undefined}
             maxLength={40}
-            className={cn(controlClass, "h-9 text-[13px]", error && "border-negative")}
+            className={controlClass({ size: "sm" })}
           />
           <Button
             type="submit"
@@ -132,7 +129,7 @@ function CategoryGroup({
             Add
           </Button>
         </div>
-        {error && <p className="text-[13px] text-negative">{error}</p>}
+        {error && <p className="text-meta text-negative">{error}</p>}
       </form>
     </Panel>
   );
@@ -185,7 +182,7 @@ function CategoryRow({ category }: { readonly category: CategoryView }) {
             aria-invalid={error ? true : undefined}
             maxLength={40}
             autoFocus
-            className={cn(controlClass, "h-8 text-[13px]", error && "border-negative")}
+            className={controlClass({ size: "xs" })}
           />
           <Button type="submit" variant="ghost" size="sm" icon={<Check className="size-4" />}>
             <span className="sr-only">Save name</span>
@@ -212,7 +209,7 @@ function CategoryRow({ category }: { readonly category: CategoryView }) {
               </span>
               {category.archived && <Tag>Archived</Tag>}
             </div>
-            <p className="mt-0.5 text-[12.5px] text-ink-2">
+            <p className="mt-0.5 text-meta text-ink-2">
               {category.uses === 0
                 ? "Not used yet"
                 : `${category.uses} ${category.uses === 1 ? "transaction" : "transactions"}`}
@@ -273,7 +270,7 @@ function CategoryRow({ category }: { readonly category: CategoryView }) {
           </div>
         </>
       )}
-      {error && !renaming && <p className="text-[13px] text-negative">{error}</p>}
+      {error && !renaming && <p className="text-meta text-negative">{error}</p>}
     </li>
   );
 }

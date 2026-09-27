@@ -34,7 +34,7 @@ export function ActivityList({
     <div>
       {[...days].map(([day, dayItems]) => (
         <section key={day}>
-          <h2 className="sticky top-14 z-10 flex items-baseline justify-between gap-3 border-b border-line bg-surface/95 px-4 py-2 text-[12.5px] font-semibold text-ink-2 backdrop-blur md:px-5">
+          <h2 className="sticky top-14 z-10 flex items-baseline justify-between gap-3 border-b border-line bg-surface/95 px-4 py-2 text-meta font-semibold text-ink-2 backdrop-blur md:px-5">
             {dayLabel(day, today)}
           </h2>
           <ul>
@@ -76,14 +76,14 @@ function ActivityRow({
             <span className="truncate font-medium">{event.title}</span>
             {event.tag && <Tag tone={event.tag.tone}>{event.tag.label}</Tag>}
           </span>
-          <span className="mt-0.5 block truncate text-[12.5px] text-ink-2">
+          <span className="mt-0.5 block truncate text-meta text-ink-2">
             {event.meta.join(" · ")}
           </span>
         </span>
         <Money
           amount={event.amount}
           sign={event.sign}
-          className={`shrink-0 text-[15px] font-medium ${event.amountClass}`}
+          className={`shrink-0 text-body font-semibold ${event.amountClass}`}
         />
       </Link>
     </li>

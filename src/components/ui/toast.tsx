@@ -50,7 +50,7 @@ export function ToastProvider({ children }: { readonly children: ReactNode }) {
             key={toast.id}
             role="status"
             className={
-              "pointer-events-auto flex max-w-[min(560px,100%)] animate-pop-in items-center gap-4 rounded-control px-4 py-3 text-sm shadow-overlay " +
+              "pointer-events-auto flex max-w-[min(560px,100%)] animate-pop-in items-center gap-4 rounded-control px-4 py-3 text-body shadow-overlay " +
               (toast.tone === "error" ? "bg-negative text-white" : "bg-ink text-white")
             }
           >

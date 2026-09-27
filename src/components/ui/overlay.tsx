@@ -53,13 +53,11 @@ function Frame({
     <>
       <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3">
         <div className="min-w-0 flex-1">
-          <Dialog.Title
-            className={cn(hideTitle ? "sr-only" : "text-[17px] leading-snug font-semibold")}
-          >
+          <Dialog.Title className={cn(hideTitle ? "sr-only" : "text-heading font-semibold")}>
             {title}
           </Dialog.Title>
           {description ? (
-            <Dialog.Description className="mt-0.5 text-[13px] text-ink-2">
+            <Dialog.Description className="mt-0.5 text-meta text-ink-2">
               {description}
             </Dialog.Description>
           ) : (

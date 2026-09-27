@@ -3,6 +3,13 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 import { cn } from "./cn";
 
+/**
+ * An underlined text link: evidence amounts, "Review entries through …", "Open … in
+ * Cash flow". The ocean underline marks something that opens the rows behind it.
+ */
+export const linkClass =
+  "underline decoration-ocean/50 underline-offset-4 transition-colors hover:decoration-ocean";
+
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "destructive" | "link";
 type Size = "sm" | "md" | "icon";
 
@@ -19,12 +26,12 @@ const variants: Record<Variant, string> = {
   danger: "text-negative hover:bg-negative-soft",
   /** The confirming button of a destructive dialog: filled, never the brand colour. */
   destructive: "bg-negative text-white hover:bg-negative/90",
-  link: "font-medium text-ink underline decoration-ocean/50 underline-offset-4 hover:decoration-ocean",
+  link: `font-medium text-ink ${linkClass}`,
 };
 
 const sizes: Record<Size, string> = {
-  sm: "h-8 rounded-control px-3 text-[13px]",
-  md: "h-10 rounded-control px-4 text-sm",
+  sm: "h-8 rounded-control px-3 text-meta",
+  md: "h-10 rounded-control px-4 text-body",
   /** Icon-only: a 32px square with no horizontal padding, so a 16px icon keeps its size. */
   icon: "size-8 rounded-control",
 };

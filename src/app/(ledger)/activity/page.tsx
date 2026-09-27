@@ -7,6 +7,8 @@ import { ActivityList } from "@/components/activity/activity-list";
 import { cashFlowHref, cashFlowMonthOf } from "@/components/activity/links";
 import { TransactionPanel } from "@/components/activity/transaction-panel";
 import { monthLabel, rangeLabel } from "@/components/format";
+import { linkClass } from "@/components/ui/button";
+import { cn } from "@/components/ui/cn";
 import { Money } from "@/components/ui/money";
 import { EmptyState, PageHeader, Panel } from "@/components/ui/panel";
 import { inclusiveRange, yearMonthOf, type YearMonth } from "@/domain/calendar-date";
@@ -117,14 +119,14 @@ export default async function ActivityPage({
       />
 
       {range && (
-        <p className="-mb-2 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-1 text-[13px] text-ink-2">
+        <p className="-mb-2 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-1 text-meta text-ink-2">
           <span>
             Showing <span className="font-medium text-ink">{scope.join(" · ")}</span>
           </span>
           {cashFlowMonth && (
             <Link
               href={cashFlowHref(cashFlowMonth, yearMonthOf(today))}
-              className="font-medium text-ink underline decoration-ocean/50 underline-offset-4 hover:decoration-ocean"
+              className={cn("font-medium text-ink", linkClass)}
             >
               Open {monthLabel(cashFlowMonth)} in Cash flow
             </Link>
@@ -132,8 +134,11 @@ export default async function ActivityPage({
         </p>
       )}
 
-      <Panel className="overflow-hidden">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-4 py-3 text-[13px] text-ink-2 md:px-5">
+      {/* overflow-clip, not overflow-hidden: a hidden overflow makes the panel the
+          scroll container of the sticky day headers, so they neither stick nor sit
+          in place. */}
+      <Panel className="overflow-clip">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-4 py-3 text-meta text-ink-2 md:px-5">
           <span>
             {activity.items.length} {activity.items.length === 1 ? "entry" : "entries"}
             {filtering ? " in this view" : ""}

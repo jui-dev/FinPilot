@@ -30,9 +30,9 @@ export function SetupRequired({ problem }: { readonly problem: SetupProblem }) {
         <span aria-hidden className="grid size-10 place-items-center rounded-full bg-surface-hover">
           <Database className="size-5 text-ink-2" strokeWidth={1.75} />
         </span>
-        <h1 className="mt-4 text-xl font-semibold tracking-tight">{title}</h1>
-        <p className="mt-1.5 text-sm text-ink-2">{detail}</p>
-        <pre className="mt-5 overflow-x-auto rounded-control bg-surface-subtle px-4 py-3 text-[13px] text-ink">
+        <h1 className="mt-4 text-heading font-semibold">{title}</h1>
+        <p className="mt-1.5 text-body text-ink-2">{detail}</p>
+        <pre className="mt-5 overflow-x-auto rounded-control bg-surface-subtle px-4 py-3 text-meta text-ink">
           npm run db:reset
         </pre>
       </div>

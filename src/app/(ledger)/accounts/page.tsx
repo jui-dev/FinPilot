@@ -9,8 +9,10 @@ import { verificationView } from "@/components/accounts/verification-view";
 import { activityHref } from "@/components/activity/links";
 import { shortDate } from "@/components/format";
 import { accountIcon, ACCOUNT_TYPE_LABEL, Glyph } from "@/components/ledger/icons";
+import { linkClass } from "@/components/ui/button";
+import { cn } from "@/components/ui/cn";
 import { Money } from "@/components/ui/money";
-import { EmptyState, PageHeader, Panel, Tag } from "@/components/ui/panel";
+import { EmptyState, PageHeader, Panel, PanelHeader, Tag } from "@/components/ui/panel";
 import { addDays, type CalendarDate } from "@/domain/calendar-date";
 import { accountClass, type AccountType } from "@/domain/ledger/accounts";
 import { NEVER_VERIFIED } from "@/domain/ledger/verification";
@@ -89,10 +91,7 @@ export default async function AccountsPage() {
             if (groupAccounts.length === 0) return null;
             return (
               <Panel key={group.title} className="overflow-hidden">
-                <div className="flex items-baseline justify-between gap-3 border-b border-line px-4 py-3 md:px-5">
-                  <h2 className="text-[13px] font-semibold">{group.title}</h2>
-                  <p className="text-[12.5px] text-ink-2">{group.note}</p>
-                </div>
+                <PanelHeader title={group.title} note={group.note} />
                 <ul>
                   {groupAccounts.map((account) => (
                     <AccountRow key={account.id} account={account} today={today} />
@@ -112,9 +111,7 @@ export default async function AccountsPage() {
 
           {archived.length > 0 && (
             <Panel className="overflow-hidden">
-              <div className="border-b border-line px-4 py-3 md:px-5">
-                <h2 className="text-[13px] font-semibold text-ink-2">Archived</h2>
-              </div>
+              <PanelHeader title="Archived" />
               <ul>
                 {archived.map((account) => (
                   <AccountRow key={account.id} account={account} today={today} />
@@ -125,11 +122,11 @@ export default async function AccountsPage() {
         </div>
 
         <Panel className="h-fit p-5 lg:order-2">
-          <h2 className="text-[13px] font-semibold text-ink-2">Net worth</h2>
-          <p className="mt-1 text-[32px] leading-none font-semibold tracking-tight">
+          <h2 className="text-meta font-semibold text-ink-2">Net worth</h2>
+          <p className="mt-1 text-display font-semibold">
             <Money amount={position.netWorth} />
           </p>
-          <dl className="mt-5 flex flex-col gap-2.5 text-sm">
+          <dl className="mt-5 flex flex-col gap-2.5 text-body">
             <div className="flex items-baseline justify-between gap-3">
               <dt className="text-ink-2">Own</dt>
               <dd className="font-medium">
@@ -195,15 +192,12 @@ function VerificationStatus({
       <Tag tone="warning" icon={<CircleAlert aria-hidden className="size-3.5" />}>
         Changed since {day} · <Money amount={view.off} sign="none" /> off
       </Tag>
-      <p className="text-[12.5px] text-ink-2">
+      <p className="text-meta text-ink-2">
         Recorded {amount(view.recorded)} for that day · verified {amount(view.verified)}
         {evidence && (
           <>
             {" · "}
-            <Link
-              href={evidence}
-              className="font-medium text-ink underline decoration-ocean/50 underline-offset-4 hover:decoration-ocean"
-            >
+            <Link href={evidence} className={cn("font-medium text-ink", linkClass)}>
               Review entries through {day}
             </Link>
           </>
@@ -236,7 +230,7 @@ function AccountRow({
             </Link>
             {account.archived && <Tag>Archived</Tag>}
           </div>
-          <p className="mt-0.5 truncate text-[12.5px] text-ink-2">
+          <p className="mt-0.5 truncate text-meta text-ink-2">
             {ACCOUNT_TYPE_LABEL[account.type]} · since {shortDate(account.openedOn, today)}
           </p>
         </div>
@@ -251,9 +245,9 @@ function AccountRow({
             canArchive={!account.archived && account.balance === 0}
             canDelete={account.references === 0}
           />
-          <span className="text-right text-[15px] font-medium whitespace-nowrap">
+          <span className="text-right text-body font-semibold whitespace-nowrap">
             <Money amount={shown} sign={owed ? "none" : "negative"} />
-            {owed && <span className="ml-1 text-[12.5px] font-normal text-ink-2">owed</span>}
+            {owed && <span className="ml-1 text-meta font-normal text-ink-2">owed</span>}
           </span>
         </div>
       </div>

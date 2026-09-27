@@ -44,7 +44,10 @@ export function MoneyInput({
         className,
       )}
     >
-      <span aria-hidden className={cn("font-medium text-ink-2", large ? "text-2xl" : "text-sm")}>
+      <span
+        aria-hidden
+        className={cn("font-medium text-ink-2", large ? "text-title" : "text-body")}
+      >
         ৳
       </span>
       <input
@@ -53,7 +56,7 @@ export function MoneyInput({
         autoComplete="off"
         className={cn(
           "w-full min-w-0 bg-transparent tabular-nums outline-none placeholder:text-ink-3",
-          large ? "text-[34px] leading-tight font-semibold tracking-tight" : "h-full text-sm",
+          large ? "text-display font-semibold" : "h-full text-body",
         )}
         value={value}
         onChange={(e) => onValueChange(e.target.value.replace(/[^\d.,]/g, ""))}

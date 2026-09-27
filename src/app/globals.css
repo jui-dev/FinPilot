@@ -42,6 +42,29 @@
   --color-negative: #b42318;
   --color-negative-soft: #fbe9e6;
 
+  /*
+   * Seven type steps and no others (docs/design-direction.md §3). Weight stays
+   * an explicit utility; display and title shrink on phones (see base layer).
+   */
+  --text-*: initial;
+  --text-display: 2rem;
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -0.02em;
+  --text-title: 1.75rem;
+  --text-title--line-height: 1.15;
+  --text-title--letter-spacing: -0.02em;
+  --text-figure: 1.25rem;
+  --text-figure--line-height: 1.2;
+  --text-figure--letter-spacing: -0.01em;
+  --text-heading: 1rem;
+  --text-heading--line-height: 1.35;
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.45;
+  --text-meta: 0.8125rem;
+  --text-meta--line-height: 1.4;
+  --text-micro: 0.75rem;
+  --text-micro--line-height: 1.25;
+
   --radius-panel: 12px;
   --radius-control: 8px;
 
@@ -92,6 +115,14 @@
     border-color: var(--color-line);
   }
 
+  /* Phones: the two largest steps come down one notch; the class names stay the same. */
+  @media (width < 48rem) {
+    :root {
+      --text-display: 1.75rem;
+      --text-title: 1.5rem;
+    }
+  }
+
   html {
     color-scheme: light;
     -webkit-text-size-adjust: 100%;
@@ -101,8 +132,8 @@
     background: var(--color-canvas);
     color: var(--color-ink);
     font-family: var(--font-sans);
-    font-size: 14px;
-    line-height: 1.45;
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
     -webkit-font-smoothing: antialiased;
   }
 

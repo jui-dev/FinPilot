@@ -101,8 +101,8 @@ export function VerifyBalanceButton({
           }}
         >
           <div className="flex items-baseline justify-between gap-3 rounded-control bg-surface-hover px-3 py-2.5">
-            <span className="text-[13px] text-ink-2">{owed ? "Recorded as owed" : "Recorded"}</span>
-            <span className="text-[15px] font-medium">
+            <span className="text-meta text-ink-2">{owed ? "Recorded as owed" : "Recorded"}</span>
+            <span className="text-body font-semibold">
               <Money amount={shown} sign={owed ? "none" : "negative"} />
             </span>
           </div>

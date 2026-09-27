@@ -129,7 +129,7 @@ function EventPanel({
       }
     >
       {row.type === "adjustment" ? (
-        <p className="py-6 text-sm text-ink-2">
+        <p className="py-6 text-body text-ink-2">
           Balance adjustments come from reconciling an account and cannot be edited.
         </p>
       ) : row.type === "opening_balance" ? (
@@ -278,7 +278,7 @@ function EditForm({
         <div className="flex flex-wrap items-center gap-2">
           <Tag tone="positive">Refund</Tag>
           {item.refundOf && (
-            <span className="text-[13px] text-ink-2">
+            <span className="text-meta text-ink-2">
               of {item.refundOf.description ?? item.refundOf.category?.name ?? "an expense"} ·{" "}
               {shortDate(item.refundOf.occurredOn, today)}
             </span>
@@ -479,7 +479,7 @@ function RefundForm({
         void submit();
       }}
     >
-      <p className="text-[13px] text-ink-2">
+      <p className="text-meta text-ink-2">
         A refund reduces spending in this expense&apos;s own category, so the category totals stay
         honest.
       </p>
@@ -567,7 +567,7 @@ function OpeningBalanceForm({
         void submit();
       }}
     >
-      <p className="text-[13px] text-ink-2">
+      <p className="text-meta text-ink-2">
         Recorded when {row.account.name} was added, dated {longDate(row.occurredOn)}. Everything
         since then is built on top of it.
       </p>

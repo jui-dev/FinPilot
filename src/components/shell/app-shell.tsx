@@ -63,7 +63,7 @@ export function AppShell({
                 <span className="block h-[3px] w-3.5 rounded-full bg-coral" />
                 <span className="sr-only">FinPilot</span>
               </span>
-              <span className="text-[15px] tracking-tight">FinPilot</span>
+              <span className="text-heading">FinPilot</span>
             </Link>
 
             <nav aria-label="Main" className="hidden h-full items-stretch md:flex">
@@ -75,7 +75,7 @@ export function AppShell({
                     href={item.href}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "-mb-px flex items-center border-b-2 px-3.5 text-sm font-medium transition-colors",
+                      "-mb-px flex items-center border-b-2 px-3.5 text-body font-medium transition-colors",
                       active
                         ? "border-navy text-ink"
                         : "border-transparent text-ink-2 hover:text-ink",
@@ -88,7 +88,7 @@ export function AppShell({
             </nav>
 
             <div className="ml-auto flex items-center gap-2 md:gap-3">
-              <span className="hidden text-[13px] text-ink-2 lg:inline">{longDate(today)}</span>
+              <span className="hidden text-meta text-ink-2 lg:inline">{longDate(today)}</span>
               <Tag>Demo</Tag>
               <button
                 type="button"
@@ -97,9 +97,7 @@ export function AppShell({
               >
                 <Plus className="size-4" strokeWidth={2.25} />
                 Add
-                <kbd className="rounded border border-white/40 px-1 text-[10.5px] font-medium">
-                  N
-                </kbd>
+                <kbd className="rounded border border-white/40 px-1 text-micro font-medium">N</kbd>
               </button>
               <Link
                 href={SETTINGS_PATH}
@@ -166,7 +164,7 @@ function TabLink({
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition-colors",
+        "flex flex-col items-center gap-0.5 py-2 text-micro font-medium transition-colors",
         active ? "text-ink" : "text-ink-2",
       )}
     >

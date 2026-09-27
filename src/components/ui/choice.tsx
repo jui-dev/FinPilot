@@ -73,7 +73,7 @@ export function Segmented<T extends string>({
             onKeyDown={onKeyDown}
             className={cn(
               "inline-flex flex-1 items-center justify-center gap-1.5 rounded-[6px] font-medium whitespace-nowrap transition-colors disabled:opacity-40",
-              size === "sm" ? "h-7 px-2.5 text-[13px]" : "h-8 px-3 text-[13.5px]",
+              size === "sm" ? "h-7 px-2.5 text-meta" : "h-8 px-3 text-body",
               selected
                 ? "bg-mist text-ocean shadow-[0_0_0_1px_var(--color-ocean)]"
                 : "text-ink-2 hover:text-ink",
@@ -105,7 +105,7 @@ export function Chip({
       aria-pressed={selected}
       onClick={onClick}
       className={cn(
-        "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[13px] font-medium whitespace-nowrap transition-colors",
+        "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-meta font-medium whitespace-nowrap transition-colors",
         selected
           ? "border-ocean bg-mist text-ocean"
           : "border-line-strong bg-surface text-ink-2 hover:border-ink-2 hover:text-ink",

@@ -11,7 +11,7 @@ import { ACTIVITY_TYPE_FILTERS } from "@/server/services/activity-service";
 import { monthLabel, rangeLabel } from "../format";
 import { Button } from "../ui/button";
 import { cn } from "../ui/cn";
-import { controlClass } from "../ui/field";
+import { controlClass, Select } from "../ui/field";
 
 export interface FilterOptions {
   readonly accounts: ReadonlyArray<{ id: string; name: string }>;
@@ -68,7 +68,9 @@ export function ActivityFilters({
     );
   };
 
-  // Typing filters as you go, without a request per keystroke.
+  // Typing filters as you go, without a request per keystroke. When the URL's
+  // query changes from elsewhere (Clear, Back), the field follows it.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setText(values.q), [values.q]);
   useEffect(() => {
     if (text === values.q) return;
@@ -98,7 +100,7 @@ export function ActivityFilters({
   ) => (
     <label className="min-w-0">
       <span className="sr-only">{label}</span>
-      <select
+      <Select
         value={value}
         onChange={(event) =>
           // A month (or all time) replaces any date range.
@@ -108,18 +110,12 @@ export function ActivityFilters({
               : { [name]: event.target.value },
           )
         }
-        className={cn(
-          controlClass,
-          "h-9 w-full min-w-0 appearance-none bg-[right_0.6rem_center] bg-no-repeat pr-8 text-[13px]",
-          value && "border-ocean bg-mist font-medium text-ocean",
-        )}
-        style={{
-          backgroundImage:
-            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238b919c' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
-        }}
+        controlSize="sm"
+        selected={Boolean(value)}
+        className="min-w-0"
       >
         {children}
-      </select>
+      </Select>
     </label>
   );
 
@@ -138,7 +134,7 @@ export function ActivityFilters({
           onChange={(event) => setText(event.target.value)}
           placeholder="Search description, category, account or amount"
           aria-label="Search transactions"
-          className={cn(controlClass, "h-9 pr-9 pl-9 text-[13px]")}
+          className={cn(controlClass({ size: "sm" }), "pr-9 pl-9")}
         />
         {pending && (
           <LoaderCircle

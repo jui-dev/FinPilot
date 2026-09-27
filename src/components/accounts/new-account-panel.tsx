@@ -94,7 +94,7 @@ export function NewAccountButton({ today }: { readonly today: CalendarDate }) {
           </Field>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-[13px] font-medium text-ink-2">Type</span>
+            <span className="text-meta font-medium text-ink-2">Type</span>
             <Segmented
               label="Account type"
               size="sm"

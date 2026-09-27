@@ -22,8 +22,8 @@ export default function LedgerError({
       <span aria-hidden className="grid size-10 place-items-center rounded-full bg-negative-soft">
         <TriangleAlert className="size-5 text-negative" strokeWidth={1.75} />
       </span>
-      <h1 className="mt-4 text-lg font-semibold tracking-tight">This page could not be loaded</h1>
-      <p className="mt-1.5 text-sm text-ink-2">
+      <h1 className="mt-4 text-heading font-semibold">This page could not be loaded</h1>
+      <p className="mt-1.5 text-body text-ink-2">
         Nothing was changed. Try again, and if it keeps happening check that the database is in
         place with <code className="text-ink">npm run db:reset</code>.
       </p>

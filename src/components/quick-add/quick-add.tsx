@@ -170,7 +170,7 @@ export function QuickAdd({
       }
       footer={
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-[12px] text-ink-2">
+          <p className="text-meta text-ink-2">
             <kbd className="font-medium">Enter</kbd> to save ·{" "}
             <kbd className="font-medium">Ctrl</kbd>+<kbd className="font-medium">Enter</kbd> to save
             &amp; add another
@@ -209,7 +209,7 @@ export function QuickAdd({
             {...errorProps("quick-amount", errors.amount)}
           />
           {errors.amount && (
-            <p id="quick-amount-error" className="mt-1.5 text-[13px] text-negative">
+            <p id="quick-amount-error" className="mt-1.5 text-meta text-negative">
               {errors.amount}
             </p>
           )}
@@ -279,7 +279,7 @@ export function QuickAdd({
         ) : (
           <>
             <div>
-              <p className="mb-2 text-[13px] font-medium text-ink-2">Category</p>
+              <p className="mb-2 text-meta font-medium text-ink-2">Category</p>
               <div className="flex flex-wrap gap-2">
                 {visible.map((category) => (
                   <Chip
@@ -304,12 +304,12 @@ export function QuickAdd({
                 )}
               </div>
               {errors.categoryId && (
-                <p className="mt-1.5 text-[13px] text-negative">{errors.categoryId}</p>
+                <p className="mt-1.5 text-meta text-negative">{errors.categoryId}</p>
               )}
             </div>
 
             <div>
-              <p className="mb-2 text-[13px] font-medium text-ink-2">
+              <p className="mb-2 text-meta font-medium text-ink-2">
                 {type === "income" ? "Received in" : "Paid from"}
               </p>
               <div className="flex flex-wrap gap-2">
@@ -324,7 +324,7 @@ export function QuickAdd({
                 ))}
               </div>
               {errors.accountId && (
-                <p className="mt-1.5 text-[13px] text-negative">{errors.accountId}</p>
+                <p className="mt-1.5 text-meta text-negative">{errors.accountId}</p>
               )}
             </div>
           </>
@@ -345,7 +345,8 @@ export function QuickAdd({
                 max={data.today}
                 value={occurredOn}
                 onChange={(e) => setOccurredOn(e.target.value)}
-                className="h-8 w-[9.5rem] text-[13px]"
+                controlSize="xs"
+                className="w-[9.5rem]"
                 {...errorProps("quick-date", errors.occurredOn)}
               />
             </div>
@@ -362,7 +363,7 @@ export function QuickAdd({
         </div>
 
         {selected && (
-          <p className="text-[13px] text-ink-2">
+          <p className="text-meta text-ink-2">
             {selected.name} now{" "}
             {accountClass(selected.type) === "liability" ? (
               <>

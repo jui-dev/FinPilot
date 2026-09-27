@@ -24,6 +24,42 @@ export function Panel({
   );
 }
 
+/**
+ * The title row of a panel: the question it answers, and optionally a short
+ * note (its scope or ordering) or other content beside it. Wraps on phones.
+ */
+export function PanelHeader({
+  id,
+  title,
+  note,
+  children,
+}: {
+  /** Referenced by the Panel's `labelledBy`. */
+  readonly id?: string;
+  readonly title: ReactNode;
+  readonly note?: ReactNode;
+  readonly children?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-line px-4 py-3 md:px-5">
+      <h2 id={id} className="text-heading font-semibold">
+        {title}
+      </h2>
+      {note && <p className="text-meta text-ink-2">{note}</p>}
+      {children}
+    </div>
+  );
+}
+
+/** A labelled band between groups of rows inside a panel ("Higher", "Lower"). */
+export function PanelBand({ children }: { readonly children: ReactNode }) {
+  return (
+    <h3 className="border-y border-line bg-surface-subtle px-4 py-2 text-meta font-semibold text-ink-2 md:px-5">
+      {children}
+    </h3>
+  );
+}
+
 export function PageHeader({
   title,
   description,
@@ -36,10 +72,8 @@ export function PageHeader({
   return (
     <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
       <div className="min-w-0">
-        <h1 className="text-[26px] leading-tight font-semibold tracking-tight md:text-[28px]">
-          {title}
-        </h1>
-        {description && <p className="mt-1 text-sm text-ink-2">{description}</p>}
+        <h1 className="text-title font-semibold">{title}</h1>
+        {description && <p className="mt-1 text-body text-ink-2">{description}</p>}
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}
     </header>
@@ -57,8 +91,8 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center gap-2 px-6 py-14 text-center">
-      <p className="text-[15px] font-semibold">{title}</p>
-      {children && <p className="max-w-sm text-sm text-ink-2">{children}</p>}
+      <p className="text-heading font-semibold">{title}</p>
+      {children && <p className="max-w-sm text-body text-ink-2">{children}</p>}
       {action && <div className="mt-3">{action}</div>}
     </div>
   );
@@ -87,7 +121,7 @@ export function Tag({
   return (
     <span
       className={cn(
-        "inline-flex h-5 items-center gap-1 rounded-full px-2 text-[11.5px] font-semibold whitespace-nowrap",
+        "inline-flex h-5 items-center gap-1 rounded-full px-2 text-micro font-semibold whitespace-nowrap",
         tones[tone],
       )}
     >

@@ -13,10 +13,10 @@ import type { ReactNode } from "react";
 import { getRequestContext } from "@/app/_server/context";
 import { activityHref, cashFlowHref } from "@/components/activity/links";
 import { monthLabel, rangeLabel, shortDate } from "@/components/format";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, linkClass } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
 import { Money } from "@/components/ui/money";
-import { EmptyState, PageHeader, Panel } from "@/components/ui/panel";
+import { EmptyState, PageHeader, Panel, PanelBand, PanelHeader } from "@/components/ui/panel";
 import { addDays, dayOfMonth, type DateRange, type YearMonth } from "@/domain/calendar-date";
 import { formatPercent, formatShare } from "@/domain/ledger/analytics";
 import type { CashFlowPeriod, CompositionLine } from "@/domain/ledger/cash-flow";
@@ -31,9 +31,6 @@ import { getMonthlyCashFlow, type MonthOverMonth } from "@/server/services/analy
 export const metadata: Metadata = { title: "Cash flow" };
 
 type SearchParams = Record<string, string | string[] | undefined>;
-
-/** An amount that opens the transactions behind it (Stage 5c). */
-const amountLinkClass = "underline decoration-ocean/50 underline-offset-4 hover:decoration-ocean";
 
 /** "1–24 Sep, so far" for the running month; "Full month" for a finished one. */
 function periodNote(period: CashFlowPeriod): string {
@@ -80,10 +77,10 @@ export default async function CashFlowPage({
         <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 md:px-5">
           <MonthLink month={previous} current={current} direction="previous" />
           <div className="min-w-0 text-center">
-            <h2 id="cash-flow-period" className="text-base font-semibold">
+            <h2 id="cash-flow-period" className="text-heading font-semibold">
               {label}
             </h2>
-            <p className="text-[12.5px] text-ink-2">{periodNote(period)}</p>
+            <p className="text-meta text-ink-2">{periodNote(period)}</p>
           </div>
           <MonthLink month={next} current={current} direction="next" />
         </div>
@@ -119,12 +116,11 @@ export default async function CashFlowPage({
       </Panel>
 
       <Panel className="overflow-hidden" labelledBy="cash-flow-composition">
-        <div className="flex items-baseline justify-between gap-3 border-b border-line px-4 py-3 md:px-5">
-          <h2 id="cash-flow-composition" className="text-[13px] font-semibold">
-            Where it went
-          </h2>
-          <p className="text-[12.5px] text-ink-2">By category, largest first</p>
-        </div>
+        <PanelHeader
+          id="cash-flow-composition"
+          title="Where it went"
+          note="By category, largest first"
+        />
 
         {quiet ? (
           <EmptyState title={`Nothing was spent in ${label}`}>
@@ -143,9 +139,7 @@ export default async function CashFlowPage({
             )}
             {composition.refundedMoreThanSpent.length > 0 && (
               <>
-                <h3 className="border-y border-line bg-surface-subtle px-4 py-2 text-[12.5px] font-semibold text-ink-2 md:px-5">
-                  Refunded more than spent
-                </h3>
+                <PanelBand>Refunded more than spent</PanelBand>
                 <ul aria-label="Refunded more than spent">
                   {composition.refundedMoreThanSpent.map((line) => (
                     <CategoryRow key={line.categoryId} line={line} range={period.range} />
@@ -184,12 +178,11 @@ function WhatChanged({
     explanation.unchanged.length === 0;
   return (
     <Panel className="overflow-hidden" labelledBy="cash-flow-change">
-      <div className="flex items-baseline justify-between gap-3 border-b border-line px-4 py-3 md:px-5">
-        <h2 id="cash-flow-change" className="text-[13px] font-semibold">
-          What changed
-        </h2>
-        {change && <p className="text-[12.5px] text-ink-2">{comparisonNote(change.comparison)}</p>}
-      </div>
+      <PanelHeader
+        id="cash-flow-change"
+        title="What changed"
+        note={change ? comparisonNote(change.comparison) : undefined}
+      />
       {!explanation ? (
         <EmptyState title="No earlier month to compare with" />
       ) : quiet ? (
@@ -225,7 +218,7 @@ function ChangeDetails({
       <div className="flex items-start gap-3 px-4 py-4 md:px-5">
         <Icon aria-hidden className="mt-1 size-5 shrink-0 text-ink-2" />
         <div>
-          <p className="text-[18px] leading-tight font-semibold">
+          <p className="text-figure font-semibold">
             {net === 0 ? (
               "Spending unchanged"
             ) : (
@@ -234,7 +227,7 @@ function ChangeDetails({
               </>
             )}
           </p>
-          <p className="mt-0.5 text-[12.5px] text-ink-2">
+          <p className="mt-0.5 text-meta text-ink-2">
             <Money amount={previousTotal} /> → <Money amount={currentTotal} />
           </p>
         </div>
@@ -242,9 +235,7 @@ function ChangeDetails({
 
       {higher.length > 0 && (
         <>
-          <h3 className="border-y border-line bg-surface-subtle px-4 py-2 text-[12.5px] font-semibold text-ink-2 md:px-5">
-            Higher
-          </h3>
+          <PanelBand>Higher</PanelBand>
           <ul aria-label="Categories that were higher">
             {higher.map((line) => (
               <ChangeRow key={line.categoryId} line={line} ranges={ranges} />
@@ -254,9 +245,7 @@ function ChangeDetails({
       )}
       {lower.length > 0 && (
         <>
-          <h3 className="border-y border-line bg-surface-subtle px-4 py-2 text-[12.5px] font-semibold text-ink-2 md:px-5">
-            Lower
-          </h3>
+          <PanelBand>Lower</PanelBand>
           <ul aria-label="Categories that were lower">
             {lower.map((line) => (
               <ChangeRow key={line.categoryId} line={line} ranges={ranges} />
@@ -278,7 +267,7 @@ function ChangeDetails({
                 ? "1 smaller change"
                 : `${smallerChanges.count} smaller changes`}
             </span>
-            <span className="w-28 text-right text-[15px] font-medium">
+            <span className="w-28 text-right text-body font-semibold">
               <Money amount={smallerChanges.net} sign="always" />
             </span>
           </summary>
@@ -307,7 +296,7 @@ function ChangeRow({
   readonly ranges: ChangeRanges;
 }) {
   const evidence = (amount: CategoryChange["previous"], range: DateRange) => (
-    <Link href={activityHref({ categoryId: line.categoryId, range })} className={amountLinkClass}>
+    <Link href={activityHref({ categoryId: line.categoryId, range })} className={linkClass}>
       <span className="sr-only">
         {line.name}, {rangeLabel(range)}:{" "}
       </span>
@@ -318,16 +307,16 @@ function ChangeRow({
     <li className="flex items-baseline gap-3 border-b border-line px-4 py-3 last:border-b-0 md:px-5">
       <span className="min-w-0 flex-1">
         <span className="block truncate font-medium">{line.name}</span>
-        <span className="block text-[12.5px] text-ink-2">
+        <span className="block text-meta text-ink-2">
           {evidence(line.previous, ranges.previous)} → {evidence(line.current, ranges.current)}
         </span>
       </span>
       {line.shareOfIncreases && (
-        <span className="text-[13px] text-ink-2 tabular-nums">
+        <span className="text-meta text-ink-2 tabular-nums">
           {formatShare(line.shareOfIncreases)} of the increase
         </span>
       )}
-      <span className="w-28 text-right text-[15px] font-medium">
+      <span className="w-28 text-right text-body font-semibold">
         <Money amount={line.change} sign="always" />
       </span>
     </li>
@@ -352,7 +341,7 @@ function EvidenceLink({
 }) {
   if (amount === 0) return <Money amount={amount} sign={sign} />;
   return (
-    <Link href={href} className={amountLinkClass}>
+    <Link href={href} className={linkClass}>
       <span className="sr-only">{label}: </span>
       <Money amount={amount} sign={sign} />
     </Link>
@@ -370,9 +359,9 @@ function Figure({
 }) {
   return (
     <div className="bg-surface px-4 py-4 md:px-5">
-      <dt className="text-[13px] text-ink-2">{term}</dt>
-      <dd className="mt-1 text-[20px] leading-tight font-semibold tracking-tight">{children}</dd>
-      {hint && <dd className="mt-0.5 text-[12px] text-ink-2">{hint}</dd>}
+      <dt className="text-meta text-ink-2">{term}</dt>
+      <dd className="mt-1 text-figure font-semibold">{children}</dd>
+      {hint && <dd className="mt-0.5 text-meta text-ink-2">{hint}</dd>}
     </div>
   );
 }
@@ -396,13 +385,13 @@ function CategoryRow({
         </Link>
       </span>
       {line.share && (
-        <span className="text-[13px] text-ink-2 tabular-nums">{formatShare(line.share)}</span>
+        <span className="text-meta text-ink-2 tabular-nums">{formatShare(line.share)}</span>
       )}
-      <span className="w-28 text-right text-[15px] font-medium">
+      <span className="w-28 text-right text-body font-semibold">
         {refunded ? (
           <>
             <Money amount={negate(line.amount)} sign="none" />
-            <span className="ml-1 text-[12.5px] font-normal text-ink-2">back</span>
+            <span className="ml-1 text-meta font-normal text-ink-2">back</span>
           </>
         ) : (
           <Money amount={line.amount} sign="none" />
