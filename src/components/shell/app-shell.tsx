@@ -21,6 +21,13 @@ const TAB_ICONS = {
   "/cash-flow": ArrowDownUp,
 } as const;
 
+/**
+ * The one workspace width the navigation and every page share: a desktop
+ * ceiling of 1360px (1296px of content inside 32px gutters), so wide monitors
+ * get a substantial workspace without lines stretching across an ultrawide.
+ */
+const SHELL_WIDTH = "mx-auto w-full max-w-[1360px] px-4 md:px-6 lg:px-8";
+
 /** Tabs before the centred + on phones; the rest follow it. */
 const TABS_BEFORE_ADD = Math.ceil(PRIMARY_NAV.length / 2);
 
@@ -57,13 +64,13 @@ export function AppShell({
     <ToastProvider>
       <div className="flex min-h-dvh flex-col">
         <header className="sticky top-0 z-30 border-b border-line bg-surface">
-          <div className="mx-auto flex h-14 max-w-[1120px] items-center gap-6 px-4 md:px-6">
+          <div className={cn(SHELL_WIDTH, "flex h-14 items-center gap-6")}>
             <Link href={HOME_PATH} className="flex items-center gap-2.5 font-semibold">
               <span aria-hidden className="grid size-7 place-items-center rounded-[7px] bg-navy">
                 <span className="block h-[3px] w-3.5 rounded-full bg-coral" />
                 <span className="sr-only">FinPilot</span>
               </span>
-              <span className="text-heading">FinPilot</span>
+              <span className="font-brand text-figure font-bold text-navy">FinPilot</span>
             </Link>
 
             <nav aria-label="Main" className="hidden h-full items-stretch md:flex">
@@ -77,7 +84,7 @@ export function AppShell({
                     className={cn(
                       "-mb-px flex items-center border-b-2 px-3.5 text-body font-medium transition-colors",
                       active
-                        ? "border-navy text-ink"
+                        ? "border-navy text-navy"
                         : "border-transparent text-ink-2 hover:text-ink",
                     )}
                   >
@@ -93,11 +100,11 @@ export function AppShell({
               <button
                 type="button"
                 onClick={() => setAdding(true)}
-                className={cn(buttonClass("primary", "sm"), "gap-2 max-md:hidden")}
+                className={cn(buttonClass("accent", "sm"), "gap-2 max-md:hidden")}
               >
                 <Plus className="size-4" strokeWidth={2.25} />
                 Add
-                <kbd className="rounded border border-white/40 px-1 text-micro font-medium">N</kbd>
+                <kbd className="rounded border border-ink/30 px-1 text-micro font-medium">N</kbd>
               </button>
               <Link
                 href={SETTINGS_PATH}
@@ -114,9 +121,7 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1120px] flex-1 px-4 pt-6 pb-28 md:px-6 md:pb-12">
-          {children}
-        </main>
+        <main className={cn(SHELL_WIDTH, "flex-1 pt-6 pb-28 md:pb-12")}>{children}</main>
 
         <nav
           aria-label="Main"
@@ -132,7 +137,7 @@ export function AppShell({
             className="flex flex-col items-center justify-center py-1.5"
             aria-label="Add a transaction"
           >
-            <span className="-mt-5 grid size-12 place-items-center rounded-[14px] bg-navy text-white shadow-overlay">
+            <span className="-mt-5 grid size-12 place-items-center rounded-[14px] bg-coral text-ink shadow-overlay">
               <Plus className="size-6" strokeWidth={2.25} />
             </span>
           </button>

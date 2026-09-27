@@ -10,7 +10,7 @@ import { cn } from "./cn";
 export const linkClass =
   "underline decoration-ocean/50 underline-offset-4 transition-colors hover:decoration-ocean";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger" | "destructive" | "link";
+type Variant = "primary" | "accent" | "secondary" | "ghost" | "danger" | "destructive" | "link";
 type Size = "sm" | "md" | "icon";
 
 const base =
@@ -19,6 +19,8 @@ const base =
 
 const variants: Record<Variant, string> = {
   primary: "bg-navy text-white hover:bg-navy-hover",
+  /** The Add action: coral with ink text (5.3:1); white on coral would be 3.05:1. */
+  accent: "bg-coral text-ink hover:bg-coral/85",
   secondary:
     "border border-line-strong bg-surface text-ink hover:border-ink-2 hover:bg-surface-hover",
   ghost: "text-ink-2 hover:bg-surface-hover hover:text-ink",

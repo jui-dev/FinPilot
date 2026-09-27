@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Hanken_Grotesk, Noto_Sans_Bengali } from "next/font/google";
+import { Hanken_Grotesk, Noto_Sans_Bengali, Source_Serif_4 } from "next/font/google";
 import type { ReactNode } from "react";
 
 import "./globals.css";
@@ -17,6 +17,14 @@ const bengali = Noto_Sans_Bengali({
   variable: "--font-bengali",
 });
 
+// The wordmark's face; nothing else is set in it.
+const serif = Source_Serif_4({
+  subsets: ["latin"],
+  weight: ["700"],
+  display: "swap",
+  variable: "--font-serif",
+});
+
 export const metadata: Metadata = {
   title: { default: "FinPilot", template: "%s · FinPilot" },
   description:
@@ -29,7 +37,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en-BD" className={`${hanken.variable} ${bengali.variable}`}>
+    <html lang="en-BD" className={`${hanken.variable} ${bengali.variable} ${serif.variable}`}>
       <body>{children}</body>
     </html>
   );

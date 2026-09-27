@@ -9,8 +9,8 @@
   --color-*: initial;
   --color-white: #ffffff;
 
-  /* Foundation: a warm cream canvas under white panels. */
-  --color-canvas: #f5f1ea;
+  /* Foundation: a warm off-white canvas under white cards. */
+  --color-canvas: #f8f7f3;
   --color-surface: #ffffff;
   --color-surface-subtle: #faf7f2;
   --color-surface-hover: #f1ece3;
@@ -23,17 +23,22 @@
   --color-ink-2: #4f5869;
   --color-ink-3: #8b919c;
 
-  /* Identity: the logo, the primary action, the active destination. Never a status. */
-  --color-navy: #1d3050;
-  --color-navy-hover: #15243d;
-  /* Interaction: focus, selection, evidence links. Never a financial direction. */
-  --color-ocean: #355f7d;
-  /* Quiet selected and analytical surfaces. */
-  --color-mist: #e5eef4;
-  /* The fill of a composition bar, and nothing else. */
-  --color-tide: #5b84a3;
-  /* A rare brand accent (the logo). Never spending, status, errors, controls or amounts. */
-  --color-coral: #df7a62;
+  /* Identity and the strongest emphasis: logo, headings, key figures. Never a status. */
+  --color-navy: #1f385a;
+  --color-navy-hover: #182d49;
+  /* Secondary blue: interaction (focus, selection) and analytical marks. */
+  --color-ocean: #46678d;
+  /* Light cyan: the hero surface, selected and quiet analytical surfaces. Never text. */
+  --color-mist: #d8f3f5;
+  /* Accent blue: supporting marks in charts. Graphics only (1.98:1 on white). */
+  --color-tide: #96bed4;
+  /*
+   * Coral: the Add action and the "higher" mark in a change explanation. Graphics
+   * and fills only: text on coral is ink (5.3:1), coral is never text (3.05:1),
+   * never a total, never an error.
+   */
+  --color-coral: #f06a4e;
+  --color-coral-soft: #fde7e1;
 
   --color-positive: #2b6f4f;
   --color-positive-soft: #e4f1ea;
@@ -44,7 +49,7 @@
 
   /*
    * Seven type steps and no others (docs/design-direction.md §3). Weight stays
-   * an explicit utility; display and title shrink on phones (see base layer).
+   * an explicit utility; display, title and figure shrink on phones (see base layer).
    */
   --text-*: initial;
   --text-display: 2rem;
@@ -69,6 +74,7 @@
   --radius-control: 8px;
 
   --shadow-panel: 0 1px 2px rgb(23 32 51 / 0.04);
+  --shadow-card: 0 1px 2px rgb(31 56 90 / 0.05), 0 6px 20px -6px rgb(31 56 90 / 0.08);
   --shadow-overlay: 0 12px 32px rgb(23 32 51 / 0.14), 0 2px 6px rgb(23 32 51 / 0.06);
 
   --animate-fade-in: fade-in 160ms ease-out;
@@ -106,6 +112,8 @@
   --font-sans:
     var(--font-hanken), var(--font-bengali), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     sans-serif;
+  /* The FinPilot wordmark only. */
+  --font-brand: var(--font-serif), Georgia, serif;
 }
 
 @layer base {
@@ -120,6 +128,7 @@
     :root {
       --text-display: 1.75rem;
       --text-title: 1.5rem;
+      --text-figure: 1.125rem;
     }
   }
 
