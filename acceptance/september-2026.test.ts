@@ -16,7 +16,9 @@ import {
   updateTransaction,
 } from "@/server/services/ledger-service";
 
+import type { AttentionSignal } from "@/domain/signals/signals";
 import { getMonthlyCashFlow } from "@/server/services/analysis-service";
+import { getAttention } from "@/server/services/attention-service";
 import { getAvailable, type AvailableView } from "@/server/services/available-service";
 import { getItems, reserve } from "@/server/services/protected-money-service";
 import { getAccountVerifications } from "@/server/services/reconciliation-service";
@@ -133,6 +135,13 @@ async function spendingByName(s: Scenario, range = SEP_1_22): Promise<Record<str
   );
   return Object.fromEntries([...byId].map(([id, amount]) => [names.get(id) ?? id, amount]));
 }
+
+/** The Attention signals of one kind, in their order. */
+const signalsOf = <K extends AttentionSignal["kind"]>(
+  signals: readonly AttentionSignal[],
+  kind: K,
+): Extract<AttentionSignal, { kind: K }>[] =>
+  signals.filter((s): s is Extract<AttentionSignal, { kind: K }> => s.kind === kind);
 
 /** The Available bridge's terms, without its evidence lines. */
 const bridgeTerms = (view: AvailableView) => ({
@@ -632,6 +641,101 @@ const implemented: Record<string, () => Promise<void>> = {
     const view = await getAvailable(s.ctx);
     expect(view.liabilityBalances).toBe(taka(-6_000));
     expect(view.available).toBe(taka(87_963));
+  },
+
+  // -------------------------------------------------------------------------
+  // Stage 9 — Signals (presence and parameters, §5.7; the complete set is not asserted)
+  // -------------------------------------------------------------------------
+
+  "A-70": async () => {
+    const s = await base();
+    expect(signalsOf(await getAttention(s.ctx), "set_aside_short")).toEqual([
+      expect.objectContaining({
+        itemId: s.items.laptop,
+        itemName: "Laptop",
+        accountId: s.accounts.savings,
+        accountName: "Savings",
+        short: taka(10_000),
+      }),
+    ]);
+  },
+
+  "A-71": async () => {
+    const s = await base();
+    expect(signalsOf(await getAttention(s.ctx), "commitment_due_soon")).toContainEqual(
+      expect.objectContaining({
+        commitmentId: s.commitments.internet,
+        name: "Internet",
+        dueOn: "2026-09-25",
+        daysUntil: 3,
+        amount: taka(1_500),
+      }),
+    );
+  },
+
+  "A-72": async () => {
+    const s = await base();
+    const [signal] = signalsOf(await getAttention(s.ctx), "spending_up");
+    expect(signal).toMatchObject({
+      month: "2026-09",
+      previousTotal: taka(40_037),
+      currentTotal: taka(66_487),
+      net: taka(26_450),
+      grossIncreases: taka(30_000),
+    });
+    // Health accounted for all of the increase.
+    expect(
+      signal!.drivers.map((l) => [l.name, l.change, formatShare(l.shareOfIncreases!)]),
+    ).toEqual([["Health", taka(30_000), "100%"]]);
+    // The material offsets.
+    expect(signal!.offsets.map((l) => [l.name, l.change])).toEqual([
+      ["Shopping", taka(-2_000)],
+      ["Groceries", taka(-800)],
+      ["Food & Dining", taka(-750)],
+    ]);
+  },
+
+  "A-73": async () => {
+    const s = await base();
+    const [signal] = signalsOf(await getAttention(s.ctx), "unexplained_adjustment");
+    expect(signal).toMatchObject({
+      accountId: s.accounts.cash,
+      accountName: "Cash",
+      asOf: "2026-09-20",
+      adjustmentId: s.rows.R10,
+      amount: taka(-350),
+    });
+    // The unexplained difference.
+    expect(Math.abs(signal!.amount)).toBe(taka(350));
+  },
+
+  "M1-5": async () => {
+    const s = await m1();
+    expect(signalsOf(await getAttention(s.ctx), "commitment_overdue")).toEqual([
+      expect.objectContaining({
+        commitmentId: s.commitments.rent,
+        name: "Rent",
+        oldestDueOn: "2026-09-01",
+        daysOverdue: 21,
+        total: taka(30_000),
+      }),
+    ]);
+  },
+
+  "M2-3": async () => {
+    const s = await m2();
+    const signals = await getAttention(s.ctx);
+    expect(signalsOf(signals, "verification_changed")).toEqual([
+      expect.objectContaining({
+        accountId: s.accounts.cash,
+        asOf: "2026-09-20",
+        stated: taka(4_200),
+        recorded: taka(4_650),
+        drift: taka(450),
+      }),
+    ]);
+    // One signal per checkpoint: it replaces the A-73 adjustment signal.
+    expect(signalsOf(signals, "unexplained_adjustment")).toEqual([]);
   },
 };
 

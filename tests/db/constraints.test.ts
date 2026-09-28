@@ -651,3 +651,39 @@ describe("protected money: items, earmarks and entries", () => {
     expect(() => exec("DELETE FROM accounts WHERE id = 'o1-bank'")).toThrow(/FOREIGN KEY/);
   });
 });
+
+describe("signal dismissals", () => {
+  const dismissal = (key: unknown, owner = "o1") =>
+    exec(
+      "INSERT INTO signal_dismissals (id, owner_id, signal_key, dismissed_at) VALUES (?, ?, ?, ?)",
+      `sd-${++seq}`,
+      owner,
+      key,
+      NOW,
+    );
+
+  it("holds one dismissal per owner and key, and the same key for another owner", () => {
+    dismissal("spending_up:2026-09");
+    expect(() => dismissal("spending_up:2026-09")).toThrow(/UNIQUE/);
+    expect(() => dismissal("spending_up:2026-09", "o2")).not.toThrow();
+  });
+
+  it("rejects a blank or over-long key", () => {
+    expect(() => dismissal("")).toThrow(/ck_signal_dismissals_key/);
+    expect(() => dismissal("   ")).toThrow(/ck_signal_dismissals_key/);
+    expect(() => dismissal("k".repeat(201))).toThrow(/ck_signal_dismissals_key/);
+    expect(() => dismissal("k".repeat(200))).not.toThrow();
+  });
+
+  it("rejects an unknown owner, and keeps an owner with dismissals from being deleted", () => {
+    expect(() => dismissal("spending_up:2026-09", "nobody")).toThrow(/FOREIGN KEY/);
+    // An owner with nothing but a dismissal, so only that row can block the delete.
+    exec(
+      "INSERT INTO owners (id, name, base_currency, time_zone, created_at, updated_at) VALUES ('o3', 'O', 'BDT', 'Asia/Dhaka', ?, ?)",
+      NOW,
+      NOW,
+    );
+    dismissal("spending_up:2026-09", "o3");
+    expect(() => exec("DELETE FROM owners WHERE id = 'o3'")).toThrow(/FOREIGN KEY/);
+  });
+});

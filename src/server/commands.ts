@@ -26,6 +26,7 @@ import {
 import type { ServiceContext } from "@/server/context";
 import type { ServiceResult } from "@/server/errors";
 import { getActivityItem } from "@/server/services/activity-service";
+import * as attention from "@/server/services/attention-service";
 import * as commitments from "@/server/services/commitment-service";
 import * as ledger from "@/server/services/ledger-service";
 import * as protectedMoney from "@/server/services/protected-money-service";
@@ -427,4 +428,31 @@ export async function releaseProtectedMoney(
   const parsed = earmarkInputSchema.safeParse(raw);
   if (!parsed.success) return invalid(parsed.error);
   return protectedMoneyResult(await protectedMoney.release(ctx, itemId, parsed.data));
+}
+
+// ---------------------------------------------------------------------------
+// Attention
+// ---------------------------------------------------------------------------
+
+/** A signal key as the UI sends it back; whether it may be hidden is the service's decision. */
+const signalKeySchema = z.string().min(1).max(200);
+
+const unknownSignal: CommandResult<never> = {
+  ok: false,
+  message: "That no longer needs your attention.",
+  fieldErrors: {},
+};
+
+/** Hides a dismissible signal for its episode (Hide). */
+export async function dismissSignal(ctx: ServiceContext, raw: unknown): Promise<CommandResult> {
+  const parsed = signalKeySchema.safeParse(raw);
+  if (!parsed.success) return unknownSignal;
+  return fromService(await attention.dismissSignal(ctx, parsed.data));
+}
+
+/** Shows a hidden signal again (Undo). */
+export async function undismissSignal(ctx: ServiceContext, raw: unknown): Promise<CommandResult> {
+  const parsed = signalKeySchema.safeParse(raw);
+  if (!parsed.success) return unknownSignal;
+  return fromService(await attention.undismissSignal(ctx, parsed.data));
 }

@@ -537,3 +537,33 @@ export const earmarkEntries = sqliteTable(
     ),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// signal_dismissals — an Attention signal the person hid for its episode
+// (docs/domain-model.md §11). Keyed by the signal's full key, so hiding
+// September's signal never hides October's. Signals themselves are derived and
+// never stored; there is no history, read state or expiry. Undo deletes the row.
+// ---------------------------------------------------------------------------
+
+export const signalDismissals = sqliteTable(
+  "signal_dismissals",
+  {
+    id: text("id").primaryKey(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => owners.id, { onDelete: "restrict" }),
+    /** The signal's key: `kind : subject`, plus its episode (§11). */
+    signalKey: text("signal_key").notNull(),
+    /** When it was hidden; never updated. */
+    dismissedAt: text("dismissed_at").notNull(),
+  },
+  (t) => [
+    // One dismissal per owner and key; hiding again is a no-op. Also serves
+    // every owner-scoped read.
+    uniqueIndex("ux_signal_dismissals_owner_key").on(t.ownerId, t.signalKey),
+    check(
+      "ck_signal_dismissals_key",
+      sql`length(trim(${t.signalKey})) > 0 AND length(${t.signalKey}) <= 200`,
+    ),
+  ],
+);

@@ -7,8 +7,9 @@ import { clearAllData } from "@/db/seed/reset";
 import { calendarDateFromIso } from "@/domain/calendar-date";
 import { fixedClock } from "@/domain/clock";
 import { fromMajor } from "@/domain/money";
-import type { ServiceContext } from "@/server/context";
+import { writeContext, type ServiceContext } from "@/server/context";
 import { uuidV7Generator } from "@/server/ids";
+import { dismiss } from "@/server/repositories/signal-dismissal-repository";
 import {
   createCommitment,
   getOccurrences,
@@ -198,6 +199,19 @@ describe("clearAllData with protected money", () => {
     for (const table of ["earmark_entries", "earmarks", "protected_money_items", "transactions"]) {
       expect(h.sqlite.prepare(`SELECT count(*) AS n FROM ${table}`).get()).toEqual({ n: 0 });
     }
+    expect(h.sqlite.pragma("foreign_key_check")).toEqual([]);
+  });
+});
+
+describe("clearAllData with signal dismissals", () => {
+  it("clears the owner's dismissals along with the owner", async () => {
+    const { ctx, handle: h } = await verifiedLedger();
+    dismiss(h.db, writeContext(ctx), "spending_up:2026-09");
+    expect(h.sqlite.prepare("SELECT count(*) AS n FROM signal_dismissals").get()).toEqual({ n: 1 });
+
+    clearAllData(h);
+
+    expect(h.sqlite.prepare("SELECT count(*) AS n FROM signal_dismissals").get()).toEqual({ n: 0 });
     expect(h.sqlite.pragma("foreign_key_check")).toEqual([]);
   });
 });

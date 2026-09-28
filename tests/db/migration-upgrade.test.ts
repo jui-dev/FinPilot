@@ -204,3 +204,29 @@ describe("0005_protected_money on a database with data", () => {
     h.close();
   });
 });
+
+describe("0006_signal_dismissals on a database with data", () => {
+  it("adds the dismissal table without touching the ledger", () => {
+    const h = openDatabase(":memory:");
+    migrateDatabase(h, migrationsUpTo(6));
+    seedLedger((sql) => h.sqlite.exec(sql));
+    const before = {
+      transactions: h.sqlite.prepare("SELECT * FROM transactions ORDER BY id").all(),
+      balances: balances(h),
+    };
+
+    migrateDatabase(h);
+
+    expect(h.sqlite.prepare("SELECT * FROM transactions ORDER BY id").all()).toEqual(
+      before.transactions,
+    );
+    expect(balances(h)).toEqual(before.balances);
+    expect(h.sqlite.pragma("foreign_key_check")).toEqual([]);
+
+    // The new table accepts a dismissal for the existing owner.
+    h.sqlite.exec(`INSERT INTO signal_dismissals (id, owner_id, signal_key, dismissed_at)
+      VALUES ('sd', 'o', 'spending_up:2026-09', '${NOW}')`);
+    expect(h.sqlite.pragma("foreign_key_check")).toEqual([]);
+    h.close();
+  });
+});

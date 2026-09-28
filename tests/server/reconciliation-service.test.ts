@@ -18,9 +18,10 @@ import {
 import { getActivity } from "@/server/services/activity-service";
 import {
   getAccountVerifications,
+  getCurrentCheckpoints,
   verifyAccountBalance,
 } from "@/server/services/reconciliation-service";
-import { archiveAccount, deleteAccount } from "@/server/services/setup-service";
+import { archiveAccount, createOwner, deleteAccount } from "@/server/services/setup-service";
 
 import { buildSeptember2026, type Scenario } from "../../acceptance/fixtures/september-2026";
 import { d, errorCode, ok, setupLedger, taka } from "../support/ledger";
@@ -657,5 +658,69 @@ describe("the entries behind a checkpoint", () => {
     expect(status).toMatchObject({ status: "changed", recorded: taka(5_400), drift: taka(1_200) });
     expect(total).toBe(status.recorded);
     expect(ids).not.toContain(s.rows.P6);
+  });
+});
+
+/**
+ * The current checkpoint with the adjustment verifying it posted (Stage 9):
+ * the same status as getAccountVerifications, plus what Attention needs to
+ * name an unexplained difference.
+ */
+describe("current checkpoints and their adjustments", () => {
+  it("reports the Sep 20 Cash checkpoint's −350 adjustment with the same status", async () => {
+    const s = await buildSeptember2026();
+    handle = s.handle;
+    const checkpoints = await getCurrentCheckpoints(s.ctx);
+    const status = (await getAccountVerifications(s.ctx, [s.accounts.cash])).get(s.accounts.cash)!;
+
+    // Only the verified account is present.
+    expect(checkpoints).toEqual([
+      {
+        accountId: s.accounts.cash,
+        verification: status,
+        adjustment: { transactionId: s.rows.R10, amount: taka(-350) },
+      },
+    ]);
+  });
+
+  it("has no adjustment when the ledger already agreed, and follows the latest checkpoint", async () => {
+    const s = await buildSeptember2026();
+    handle = s.handle;
+    // bKash already holds 8,963 on Sep 18: no adjustment is needed.
+    ok(
+      await verifyAccountBalance(s.ctx, {
+        accountId: s.accounts.bkash,
+        asOf: d("2026-09-18"),
+        countedAmount: taka(8_963),
+      }),
+    );
+    // Cash verified again on Sep 22 at what it holds: the new checkpoint has no adjustment.
+    ok(
+      await verifyAccountBalance(s.ctx, {
+        accountId: s.accounts.cash,
+        asOf: d("2026-09-22"),
+        countedAmount: taka(4_200),
+      }),
+    );
+    const byAccount = new Map((await getCurrentCheckpoints(s.ctx)).map((c) => [c.accountId, c]));
+
+    expect(byAccount.get(s.accounts.bkash)).toMatchObject({
+      verification: { status: "verified", asOf: "2026-09-18" },
+      adjustment: null,
+    });
+    expect(byAccount.get(s.accounts.cash)).toMatchObject({
+      verification: { status: "verified", asOf: "2026-09-22" },
+      adjustment: null,
+    });
+  });
+
+  it("reads another owner's checkpoints as absent", async () => {
+    const s = await buildSeptember2026();
+    handle = s.handle;
+    const other = await createOwner(
+      { db: s.ctx.db, ids: s.ctx.ids, now: s.ctx.now },
+      { name: "Other", baseCurrency: "BDT", timeZone: "Asia/Dhaka" },
+    );
+    expect(await getCurrentCheckpoints({ ...s.ctx, ownerId: ok(other) })).toEqual([]);
   });
 });

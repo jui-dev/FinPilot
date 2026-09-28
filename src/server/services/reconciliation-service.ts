@@ -1,5 +1,5 @@
 import type { CalendarDate } from "@/domain/calendar-date";
-import { money } from "@/domain/money";
+import { money, type Money } from "@/domain/money";
 import { NEVER_VERIFIED, verificationOf, type Verification } from "@/domain/ledger/verification";
 import { writeContext, type ServiceContext } from "@/server/context";
 import { runScript, type ServiceResult } from "@/server/errors";
@@ -49,6 +49,34 @@ export async function getAccountVerifications(
     );
   }
   return byAccount;
+}
+
+/** An account's current checkpoint: its status, and the adjustment that verifying it posted. */
+export interface CurrentCheckpoint {
+  readonly accountId: string;
+  readonly verification: Verification;
+  /** The correcting adjustment while it is active; null when the ledger already agreed. */
+  readonly adjustment: { readonly transactionId: string; readonly amount: Money } | null;
+}
+
+/**
+ * Each verified account's current checkpoint, with the same status as
+ * getAccountVerifications and the adjustment that checkpoint posted. Accounts
+ * that were never verified are absent.
+ */
+export async function getCurrentCheckpoints(ctx: ServiceContext): Promise<CurrentCheckpoint[]> {
+  return currentCheckpoints(ctx.db, ctx.ownerId).map((row) => ({
+    accountId: row.accountId,
+    verification: verificationOf(
+      row.asOf as CalendarDate,
+      money(row.statedBalanceMinor),
+      money(row.recordedBalanceMinor),
+    ),
+    adjustment:
+      row.adjustmentId !== null && row.adjustmentAmountMinor !== null
+        ? { transactionId: row.adjustmentId, amount: money(row.adjustmentAmountMinor) }
+        : null,
+  }));
 }
 
 export type { VerifyBalanceInput, VerifyBalanceResult, Verification };
