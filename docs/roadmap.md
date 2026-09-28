@@ -245,7 +245,7 @@ The two inputs to Available: money already obligated and money deliberately set 
   - The Upcoming list.
 - **Requirements from the 2026-09-27 decisions:**
   - Every occurrence↔transaction match is recorded: it is the foundation of Monthly Plan's fixed/variable split (Stage 13).
-  - `expected_account` stays **optional and descriptive**, with no funding semantics, because open decision **O-1** (§8.5) is resolved only before Stage 8.
+  - `expected_account` stays **optional and descriptive**, with no funding semantics, because open decision **O-1** (§8.5) is resolved only before Stage 8. *(O-1 resolved 2026-09-28: it stays descriptive permanently in V1.)*
   - The commitment colour is decided here ([design-direction.md §2](design-direction.md)).
 - **Why first:** obligations are the first input to Available, and commitments are the richest new domain (materialisation, occurrences, Pay).
 - **Domain concepts:** occurrences, matching, overdue.
@@ -281,13 +281,19 @@ The two inputs to Available: money already obligated and money deliberately set 
 
 #### 8 — Available
 - **Question:** *How much can I use now without touching money that is already spoken for?* ([domain-model.md §10](domain-model.md))
-- **Resolve first:** open decision **O-1** (commitments expected from an excluded account), before Available's semantics are frozen.
+- ~~**Resolve first:** open decision **O-1**~~ **Resolved before implementation (2026-09-28, Slice 0; [domain-model.md §5, §10](domain-model.md)):**
+  - **O-1:** every pending commitment due within the horizon reduces Available, whatever its `expected_account`, which stays descriptive and pre-fill information only.
+  - **Set aside enters as covered:** Available subtracts covered (backed) set-aside money on included asset accounts, never the nominal reserved amount.
+  - **Transfers (accepted V1 trade-off):** earmarks never move, release or change automatically. A transfer away from an account that backs set-aside money can create a shortfall, so an included-to-included transfer can raise Available. **Move is not part of Stage 8.**
+  - **Archived accounts:** no special rule. An archived asset follows its `included_in_available`, and liabilities always count. The archived-account balance gap (§8.5) stays deferred.
+  - **Asset preference:** no user-facing toggle or edit UI in Stage 8 / V1. The stored flag and its type defaults stay as they are.
+  - **Bridge term (provisional):** the set-aside deduction is labelled "Covered set aside", never plain "Set aside". Final copy is settled in the UI slice without changing semantics.
 - **Builds:**
   - The Available service (the §10 formula) and its explainable bridge visual.
   - The **liability invariant** at the domain/write boundary: a liability can't be excluded, which closes the known setup-path gap ([domain-model.md §5](domain-model.md)).
-  - The `included_in_available` preference for **asset** accounts.
+  - ~~The `included_in_available` preference for **asset** accounts.~~ *(2026-09-28: no user-facing preference in Stage 8. The existing stored flag and its domain semantics are enforced, and no new functionality is added for it.)*
   - The over-committed state and the "before new income" label.
-  - **The forward-looking product area**, first built here: it leads with Available, and its bridge terms open Commitments and Protected money. Its working name "Plan" is **provisional**. The final name, its navigation placement and the phone tab-bar capacity are decided in this stage's navigation work (§8.3, §8.5).
+  - **The forward-looking product area**, first built here: it leads with Available, and its bridge terms open Commitments and Protected money. Its working name "Plan" is **provisional**. The final name, its navigation placement and the phone tab-bar capacity are decided in this stage's navigation work, the UI slice (§8.3, §8.5; P-2 and P-3 stay open until then).
 - **Why here:** it's the first point where all its inputs exist (see §1, decision 2).
 - **Domain concepts:** Available and its bridge; account eligibility.
 - **Tests that must pass:**
@@ -498,7 +504,7 @@ Every item here is **deliberately open, not forgotten**. A stage's plan resolves
 
 | # | Decision | Owning doc | Resolve before |
 |---|---|---|---|
-| O-1 | How a pending commitment whose `expected_account` is an asset account **excluded** from Available affects Available. Today's frozen formula subtracts it anyway; that rule is under reconsideration. Stage 6 keeps `expected_account` descriptive. | [domain-model.md §10](domain-model.md) | **Stage 8** freezing Available's semantics |
+| ~~O-1~~ | ~~How a pending commitment whose `expected_account` is an asset account **excluded** from Available affects Available.~~ **Resolved 2026-09-28 (before Stage 8):** it reduces Available like every other pending commitment in the horizon. `expected_account` stays descriptive and pre-fill information only, with no funding semantics. | [domain-model.md §10](domain-model.md) | closed |
 | O-2 | Signal family 2's trigger: stricter or otherwise meaningfully more selective than What changed; A-72 must stay present. | [domain-model.md §11](domain-model.md) | **Stage 9** |
 | ~~O-3~~ | ~~Protected money: the container's code name, and the representation of operation kinds.~~ **Resolved 2026-09-28 (Stage 7):** `protected_money_items`; append-only signed earmark entries, positive = Reserve, negative = Release, no operation-kind field. | [domain-model.md §9.1](domain-model.md) | closed |
 | O-4 | **Use:** how much is released when the expense differs from the reservation, and what happens to the release when the Use transaction is edited or deleted. | [domain-model.md §9.1](domain-model.md) | implementing **Use** (not required in the minimum Stage 7 slice) |
@@ -519,4 +525,4 @@ Every item here is **deliberately open, not forgotten**. A stage's plan resolves
 **Known gaps, not open questions:**
 
 - The account-setup service accepts `included_in_available = false` for a credit card when a caller passes it (no UI does). **Stage 8 closes it** ([domain-model.md §5](domain-model.md)).
-- *(Found 2026-09-28, Stage 7.)* An account is archived only at a zero balance, but that is checked only when it is archived. Afterwards, **deleting** a transaction that touched it, or **editing** one so it no longer does, is still allowed (only the new version's accounts are checked), so an archived account can regain a non-zero balance. New entries, restores and reconciliation on it are rejected. Not fixed in Stage 7, which never assumes an archived account holds zero; to be reviewed later.
+- *(Found 2026-09-28, Stage 7.)* An account is archived only at a zero balance, but that is checked only when it is archived. Afterwards, **deleting** a transaction that touched it, or **editing** one so it no longer does, is still allowed (only the new version's accounts are checked), so an archived account can regain a non-zero balance. New entries, restores and reconciliation on it are rejected. Not fixed in Stage 7, which never assumes an archived account holds zero; to be reviewed later. **Not fixed in Stage 8 either (2026-09-28):** Available has no archive filter, so a regained balance counts by the account's flag (always, for a liability) ([domain-model.md §10](domain-model.md)).
