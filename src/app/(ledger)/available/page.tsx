@@ -1,17 +1,26 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
-import { CARD } from "@/components/commitments/occurrence-list";
+import { getRequestContext } from "@/app/_server/context";
+import { AnswerCard } from "@/components/available/answer-card";
+import { Evidence } from "@/components/available/evidence";
 import { AreaSwitch } from "@/components/shell/area-switch";
+import { buttonClass } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/panel";
+import { getAvailable } from "@/server/services/available-service";
 
 export const metadata: Metadata = { title: "Available" };
 
 /**
- * The Available area's landing page. Its answer — the Available bridge — is
- * built in the next Stage 8 slice; until then the page shows no figure, so no
- * number appears without the breakdown that explains it (roadmap §1).
+ * "How much can I actually use right now, and why?" The answer first, then
+ * how it is worked out, then the rows behind it. Every figure is the
+ * Available read model's (docs/domain-model.md §10); nothing is added up here.
  */
-export default function AvailablePage() {
+export default async function AvailablePage() {
+  const request = await getRequestContext();
+  if (!request.ok) return null;
+  const view = await getAvailable(request.ctx);
+
   return (
     <div className="flex flex-col gap-5 md:gap-6">
       <AreaSwitch current="/available" />
@@ -19,12 +28,28 @@ export default function AvailablePage() {
         <h1 className="text-title font-bold text-navy">Available</h1>
         <p className="mt-1 text-body text-ink-2">What you can use now, before new income.</p>
       </header>
-      <section className={CARD} aria-label="Available">
-        <EmptyState title="The breakdown is on its way">
-          This page will show what you can use now: your balances, minus what you owe on cards,
-          payments due soon and money set aside.
-        </EmptyState>
-      </section>
+      {view.accounts.length === 0 ? (
+        <section
+          className="rounded-panel border border-line bg-surface shadow-card"
+          aria-label="Available"
+        >
+          <EmptyState
+            title="No accounts yet"
+            action={
+              <Link href="/accounts" className={buttonClass("primary", "sm")}>
+                Go to Accounts
+              </Link>
+            }
+          >
+            Add the accounts you use and FinPilot works out what you can use now.
+          </EmptyState>
+        </section>
+      ) : (
+        <>
+          <AnswerCard view={view} />
+          <Evidence view={view} />
+        </>
+      )}
     </div>
   );
 }

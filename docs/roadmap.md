@@ -287,7 +287,7 @@ The two inputs to Available: money already obligated and money deliberately set 
   - **Transfers (accepted V1 trade-off):** earmarks never move, release or change automatically. A transfer away from an account that backs set-aside money can create a shortfall, so an included-to-included transfer can raise Available. **Move is not part of Stage 8.**
   - **Archived accounts:** no special rule. An archived asset follows its `included_in_available`, and liabilities always count. The archived-account balance gap (§8.5) stays deferred.
   - **Asset preference:** no user-facing toggle or edit UI in Stage 8 / V1. The stored flag and its type defaults stay as they are.
-  - **Bridge term (provisional):** the set-aside deduction is labelled "Covered set aside", never plain "Set aside". Final copy is settled in the UI slice without changing semantics.
+  - **Bridge term:** the set-aside deduction is labelled **"Set aside from Available"** (Slice 2B, replacing the provisional "Covered set aside"), never plain "Set aside"; the semantics are unchanged ([domain-model.md §10](domain-model.md)).
 - **Builds:**
   - The Available service (the §10 formula) and its explainable bridge visual.
   - The **liability invariant** at the domain/write boundary: a liability can't be excluded, which closes the known setup-path gap ([domain-model.md §5](domain-model.md)).

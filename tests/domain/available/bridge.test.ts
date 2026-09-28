@@ -112,6 +112,7 @@ describe("availableBridge", () => {
       liabilityBalances: taka(-6_000),
       balancesInScope: taka(140_163),
       commitmentsDue: taka(32_200),
+      afterCommitments: taka(107_963),
       coveredEarmarks: taka(20_000),
       available: taka(87_963),
     });
@@ -355,9 +356,8 @@ describe("availableBridge properties", () => {
       fc.property(fc.array(anyAccount, { maxLength: 6 }), fc.array(occurrenceModel), (m, o) => {
         const b = availableBridge(build(m, o));
         expect(b.balancesInScope).toBe(add(b.includedAssetBalances, b.liabilityBalances));
-        expect(b.available).toBe(
-          subtract(subtract(b.balancesInScope, b.commitmentsDue), b.coveredEarmarks),
-        );
+        expect(b.afterCommitments).toBe(subtract(b.balancesInScope, b.commitmentsDue));
+        expect(b.available).toBe(subtract(b.afterCommitments, b.coveredEarmarks));
         expect(b.commitmentsDue).toBe(sum(b.commitments.map((c) => c.expectedAmount)));
         expect(b.coveredEarmarks).toBe(
           sum(b.earmarks.filter((s) => s.deducted).map((s) => s.covered)),

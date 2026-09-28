@@ -93,7 +93,8 @@ export interface AvailableEarmarkLine {
  * The explainable bridge: each term, and the evidence it is summed from.
  *
  *   includedAssetBalances + liabilityBalances = balancesInScope
- *   balancesInScope − commitmentsDue − coveredEarmarks = available
+ *   balancesInScope − commitmentsDue = afterCommitments
+ *   afterCommitments − coveredEarmarks = available
  */
 export interface AvailableBridge {
   readonly today: CalendarDate;
@@ -109,6 +110,8 @@ export interface AvailableBridge {
   readonly balancesInScope: Money;
   /** Σ expected amounts of pending occurrences due on or before horizonEnd, overdue ones included. */
   readonly commitmentsDue: Money;
+  /** balancesInScope − commitmentsDue: what is left once the payments due are met. */
+  readonly afterCommitments: Money;
   /** Σ covered amounts of earmarks on included asset accounts — never the nominal reserved amount. */
   readonly coveredEarmarks: Money;
   /** May be negative (over-committed); never clamped. */
@@ -165,7 +168,8 @@ export function availableBridge(inputs: AvailableInputs): AvailableBridge {
   });
   const coveredEarmarks = sum(earmarks.filter((e) => e.deducted).map((e) => e.covered));
 
-  const available = subtract(subtract(balancesInScope, commitmentsDue), coveredEarmarks);
+  const afterCommitments = subtract(balancesInScope, commitmentsDue);
+  const available = subtract(afterCommitments, coveredEarmarks);
 
   // Invariant: the bridge equals the formula summed directly over the evidence.
   const direct = subtract(
@@ -181,6 +185,7 @@ export function availableBridge(inputs: AvailableInputs): AvailableBridge {
     liabilityBalances,
     balancesInScope,
     commitmentsDue,
+    afterCommitments,
     coveredEarmarks,
     available,
     accounts,

@@ -6,6 +6,7 @@ import {
   type AvailableEarmarkLine,
 } from "@/domain/available/bridge";
 import type { OccurrenceDisplayState } from "@/domain/commitments/occurrences";
+import type { Money } from "@/domain/money";
 import type { ServiceContext } from "@/server/context";
 import { listItems } from "@/server/repositories/protected-money-queries";
 import { getOccurrences } from "@/server/services/commitment-service";
@@ -43,6 +44,12 @@ export interface AvailableCommitmentView extends AvailableCommitmentLine {
 export interface AvailableEarmarkView extends AvailableEarmarkLine {
   readonly itemName: string;
   readonly accountName: string;
+  /**
+   * Evidence only, passed through from the same backing: what is set aside on
+   * the account, and the part its balance no longer backs. Neither is deducted.
+   */
+  readonly reserved: Money;
+  readonly short: Money;
 }
 
 export interface AvailableView extends Omit<
@@ -84,6 +91,7 @@ export async function getAvailable(ctx: ServiceContext): Promise<AvailableView> 
   const accountById = new Map(accounts.map((a) => [a.id, a]));
   const occurrenceById = new Map(occurrences.map((o) => [o.id, o]));
   const itemNames = new Map(listItems(ctx.db, ctx.ownerId).map((i) => [i.id, i.name]));
+  const backingOf = new Map(backing.map((b) => [`${b.itemId}:${b.accountId}`, b]));
 
   return {
     ...bridge,
@@ -100,10 +108,15 @@ export async function getAvailable(ctx: ServiceContext): Promise<AvailableView> 
         display: occurrence.display,
       };
     }),
-    earmarks: bridge.earmarks.map((line) => ({
-      ...line,
-      itemName: itemNames.get(line.itemId)!,
-      accountName: accountById.get(line.accountId)!.name,
-    })),
+    earmarks: bridge.earmarks.map((line) => {
+      const { reserved, short } = backingOf.get(`${line.itemId}:${line.accountId}`)!;
+      return {
+        ...line,
+        itemName: itemNames.get(line.itemId)!,
+        accountName: accountById.get(line.accountId)!.name,
+        reserved,
+        short,
+      };
+    }),
   };
 }

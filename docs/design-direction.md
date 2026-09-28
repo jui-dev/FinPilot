@@ -108,7 +108,7 @@ These tokens are the whole palette: the default Tailwind palette is removed ([gl
 
   | Owner | Visual | The one question it answers |
   |---|---|---|
-  | Available (Stage 8) | one explainable segmented bar / bridge: what is spoken for (credit owed, commitments, covered set aside) and what remains | How much of my money is already spoken for, and by what? |
+  | Available (Stage 8) | one explainable segmented bar / bridge: what is spoken for (credit owed, payments due, set aside from Available) and what remains | How much of my money is already spoken for, and by what? |
   | Protected money (Stage 7) | a progress bar **only when a target exists**; covered and short stay distinguishable | How close am I, and is it all still really there? |
   | Trends (Stage 12) | **one** longitudinal Income vs Spending visual over complete months; a category sparkline only later, if it proves useful | Is the gap between what I earn and spend a pattern or a one-off? |
   | Monthly Plan (Stage 13) | actual vs intention / projection per planned line | Am I on pace against what I intended? |
@@ -146,6 +146,15 @@ It has no metric cards.
 3. **Verification is a first-class trust state:** *Not verified yet* (neutral), *Verified* (positive), *Changed since* a checkpoint (warning), with evidence written neutrally: what the ledger records for that day, what was verified, and a link to the entries through that day. It never claims which entry changed.
 4. **Verify** sits beside the state it resolves; **Archive / Restore / Delete** are management actions at the row's end, shown only when allowed.
 
+### Available: "How much can I actually use right now, and why?"
+
+The landing page of the Available area (Available · Commitments · Set aside). Every figure is the Available read model's; the page adds nothing up.
+
+1. **The answer card:** **Available now** as the hero on mist, the figure in navy (a true minus when negative), a *Before new income* tag, and one sentence naming only what actually stands between the balances and the answer ("What's left of ৳1,46,163 in your accounts after what you owe on cards, payments due by 22 Oct and money set aside"). When negative, an *Over-committed by ৳X* tag in `negative` (icon + words); the figure stays navy.
+2. **The bridge,** beside the hero on desktop and under it on phones: a table with a quiet rail joining each step and a navy node on each running total. In your accounts → Owed on cards / Credit on cards → *After cards* → Due by ‹date› → *After upcoming payments* → Set aside from Available → **Available**. The card rows are left out without a card account.
+3. **The spoken-for bar,** across the card: owed (`ink-3`), payments due (mist with an ocean edge: expected), set aside from Available (`tide`), Available (navy: money that exists and is free), each labelled with its amount. An over-commitment is an outlined `negative` gap past the balances. There is no bar when nothing is in the pool; the bridge explains alone. Hidden from assistive technology: the bridge carries every figure.
+4. **Behind the numbers:** three short sections, one per deduction, listing only the rows behind each figure — the counted accounts and cards (with *Not part of Available* for excluded accounts holding money), the payments due (with *Overdue* / *Due today*), and the set-aside money deducted (a shortfall reads "৳300 short — not deducted"; money on an excluded account reads "Not deducted — Savings isn't part of Available"). Each links to the page that owns it; the page never repeats Accounts, Commitments or Set aside.
+
 ### Set aside: "What am I keeping money for, and is it still really there?"
 
 A page of the Available area, reached through its local switch (Available · Commitments · Set aside; roadmap §8.3). One card of items, no metric cards; a one-line total only when there are two or more.
@@ -180,10 +189,11 @@ A page of the Available area, reached through its local switch (Available · Com
 - **Recompose, don't shrink.** Each core page changes its information hierarchy across phone, tablet and desktop rather than squeezing desktop columns:
   - **Cash flow:** on phones the month leads, then Left over with Income and Spending side by side under it; on wider screens they sit beside the outcome, and Where it went and What changed sit side by side on desktop.
   - **Activity:** phones show two-line rows (description and details, amount); tablets add a Category column and move the account under the description; desktops show all four columns.
+  - **Available:** the answer leads at every width; the bridge sits beside it from 1024px and under it below that; the bar spans the card; Behind the numbers is three columns from 1024px and stacked below.
   - **Accounts:** Net worth leads at every width, Own and Owe beside or under it; on desktop the ledger aligns balances, verifications and Verify in shared columns; on phones a row's actions wrap onto its own lines, keep their words and a 40px touch height.
 - **Navigation:** top navigation from 768px; below it, a bottom tab bar with a centred coral **+**.
 - **Editing:** side panels on desktop; Quick Add as a bottom sheet with the keypad first on phones.
-- **The first viewport states the page's primary answer** (Left over on Cash flow, Net worth on Accounts).
+- **The first viewport states the page's primary answer** (Left over on Cash flow, Net worth on Accounts, Available on Available).
 - **No horizontal page scroll at 390px.** Checked at 390, 820 and 1280px for every change to the core pages and their overlays.
 
 ## 9. Open decisions (raised by the reference images)
@@ -211,3 +221,4 @@ Earlier entries are history. Where an entry describes a visual system, the curre
 | 2026-09-28 | **Stage 8 Slice 0:** §5's Available visual names its set-aside segment "covered set aside" (a provisional term). | Available subtracts only the covered portion; plain "Set aside" means the nominal amount on the Set aside screen ([domain-model.md §10](domain-model.md)). |
 | 2026-09-28 | **Stage 8 Slice 2A:** §6 Set aside is reached through the Available area's local switch (Available · Commitments · Set aside); Available replaces Commitments as the fourth global destination and phone tab. | Navigation decision P-2 ([roadmap.md §8.3](roadmap.md)). |
 | 2026-09-28 | **Negative becomes berry:** `negative` `#B42318` → `#A33A62`, `negative-soft` `#FBE9E6` → `#F8EAF0`, new `negative-hover` `#8A2F52` for the destructive confirmation; the Set aside shortfall (tag and amounts) moves from `warning` to `negative`; §2 records where `negative` is never used, and §5 records chart guidance for it (not built). | The red sat on coral's hue (about 4° vs 10°), so errors read as a darker brand accent. A shortfall was two colours for one fact (a warning tag beside a red-outlined gap); set-aside money that is no longer there is a broken plan, which is what `negative` means. |
+| 2026-09-28 | **Stage 8 Slice 2B:** §6 adds the Available screen; §5's Available visual names its segments (owed, payments due, set aside from Available, Available) and the set-aside deduction reads "Set aside from Available"; §8 adds Available's responsive order. | Built in Stage 8 Slice 2B; "Covered set aside" was provisional and read as jargon. |

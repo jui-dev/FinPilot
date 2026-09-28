@@ -138,6 +138,9 @@ describe("getAvailable", () => {
         accountName: "Bank",
         covered: taka(70_000),
         deducted: true,
+        // Evidence only, from the same backing: neither is deducted.
+        reserved: taka(80_000),
+        short: taka(10_000),
       },
     ]);
     // Available fell by 20,000, not 30,000: the other 10,000 is Laptop's shortfall.
