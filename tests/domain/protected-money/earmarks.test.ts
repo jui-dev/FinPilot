@@ -12,7 +12,7 @@ const t = fromMajor;
 
 const facts = (overrides: Partial<EarmarkEntryFacts> = {}): EarmarkEntryFacts => ({
   item: { archived: false },
-  account: { type: "bank" },
+  account: { type: "bank", archived: false },
   accountBalance: t(10_000),
   reservedOnAccount: ZERO,
   itemReservedOnAccount: ZERO,
@@ -37,10 +37,14 @@ describe("checkEarmarkEntry: write-time invariants", () => {
 
   it("allows every asset account type, savings included, and rejects a liability", () => {
     for (const type of ["cash", "bank", "mobile_wallet", "savings"] as const) {
-      expect(code(t(1), { account: { type } })).toBeUndefined();
+      expect(code(t(1), { account: { type, archived: false } })).toBeUndefined();
     }
-    expect(code(t(1), { account: { type: "credit_card" } })).toBe("account_not_asset");
-    expect(code(t(-1), { account: { type: "credit_card" } })).toBe("account_not_asset");
+    expect(code(t(1), { account: { type: "credit_card", archived: false } })).toBe(
+      "account_not_asset",
+    );
+    expect(code(t(-1), { account: { type: "credit_card", archived: false } })).toBe(
+      "account_not_asset",
+    );
   });
 
   it("allows a reservation up to exactly what the account has not yet set aside", () => {
@@ -85,6 +89,25 @@ describe("checkEarmarkEntry: write-time invariants", () => {
         itemReservedOnAccount: t(10_000),
       }),
     ).toBeUndefined();
+  });
+
+  it("takes no new protection on an archived account, whatever its balance", () => {
+    const archived = { account: { type: "bank" as const, archived: true } };
+    expect(code(t(1), { ...archived, accountBalance: t(10_000) })).toBe("account_archived");
+    expect(
+      code(t(1), { ...archived, reservedOnAccount: t(1_000), itemReservedOnAccount: t(1_000) }),
+    ).toBe("account_archived");
+  });
+
+  it("still releases from an archived account, partly or fully", () => {
+    const held = {
+      account: { type: "bank" as const, archived: true },
+      accountBalance: ZERO,
+      reservedOnAccount: t(3_000),
+      itemReservedOnAccount: t(3_000),
+    };
+    expect(code(t(-1_000), held)).toBeUndefined();
+    expect(code(t(-3_000), held)).toBeUndefined();
   });
 });
 
@@ -208,7 +231,7 @@ describe("A-51: rejected earmarks on the scenario accounts (Sep 22)", () => {
   it("rejects +1,000 on Savings: 100,000 + 1,000 > balance 90,000", () => {
     expect(
       code(t(1_000), {
-        account: { type: "savings" },
+        account: { type: "savings", archived: false },
         accountBalance: t(90_000),
         reservedOnAccount: t(100_000),
         itemReservedOnAccount: t(100_000),
@@ -217,8 +240,11 @@ describe("A-51: rejected earmarks on the scenario accounts (Sep 22)", () => {
   });
 
   it("rejects an earmark on Visa, a liability", () => {
-    expect(code(t(1_000), { account: { type: "credit_card" }, accountBalance: t(-6_000) })).toBe(
-      "account_not_asset",
-    );
+    expect(
+      code(t(1_000), {
+        account: { type: "credit_card", archived: false },
+        accountBalance: t(-6_000),
+      }),
+    ).toBe("account_not_asset");
   });
 });

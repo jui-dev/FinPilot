@@ -165,3 +165,42 @@ describe("0004_commitments on a database with data", () => {
     h.close();
   });
 });
+
+describe("0005_protected_money on a database with data", () => {
+  it("adds the protected-money tables without touching the ledger or commitments", () => {
+    const h = openDatabase(":memory:");
+    migrateDatabase(h, migrationsUpTo(5));
+    seedLedger((sql) => h.sqlite.exec(sql));
+    h.sqlite.exec(`INSERT INTO commitments (id, owner_id, name, category_id, expected_amount_minor,
+        expected_account_id, frequency, interval_count, anchor_on, end_on, generate_from, created_at, updated_at)
+      VALUES ('c', 'o', 'Rent', 'shop', 300000, 'bank', 'monthly', 1, '2026-09-01', NULL, '2026-09-01', '${NOW}', '${NOW}')`);
+    const before = {
+      transactions: h.sqlite.prepare("SELECT * FROM transactions ORDER BY id").all(),
+      commitments: h.sqlite.prepare("SELECT * FROM commitments ORDER BY id").all(),
+      balances: balances(h),
+    };
+
+    migrateDatabase(h);
+
+    expect(h.sqlite.prepare("SELECT * FROM transactions ORDER BY id").all()).toEqual(
+      before.transactions,
+    );
+    expect(h.sqlite.prepare("SELECT * FROM commitments ORDER BY id").all()).toEqual(
+      before.commitments,
+    );
+    expect(balances(h)).toEqual(before.balances);
+    expect(h.sqlite.pragma("foreign_key_check")).toEqual([]);
+
+    // The new tables accept rows referencing the existing accounts.
+    h.sqlite
+      .exec(`INSERT INTO protected_money_items (id, owner_id, name, target_minor, archived_at, created_at, updated_at)
+      VALUES ('laptop', 'o', 'Laptop', 15000000, NULL, '${NOW}', '${NOW}')`);
+    h.sqlite
+      .exec(`INSERT INTO earmarks (id, owner_id, item_id, account_id, priority, ended_at, created_at, updated_at)
+      VALUES ('em', 'o', 'laptop', 'bank', 1, NULL, '${NOW}', '${NOW}')`);
+    h.sqlite.exec(`INSERT INTO earmark_entries (id, owner_id, earmark_id, amount_minor, created_at)
+      VALUES ('ee', 'o', 'em', 2000000, '${NOW}')`);
+    expect(h.sqlite.pragma("foreign_key_check")).toEqual([]);
+    h.close();
+  });
+});

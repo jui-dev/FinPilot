@@ -17,6 +17,7 @@ import {
 } from "@/server/services/ledger-service";
 
 import { getMonthlyCashFlow } from "@/server/services/analysis-service";
+import { getItems, reserve } from "@/server/services/protected-money-service";
 import { getAccountVerifications } from "@/server/services/reconciliation-service";
 
 import { ACCEPTANCE_CATALOGUE } from "./catalogue";
@@ -88,6 +89,12 @@ const m1 = once(async () => {
   built.push(s);
   const result = await deleteTransaction(s.ctx, s.rows.R2!);
   expect(result.ok).toBe(true);
+  return s;
+});
+/** A-51: its own instance, so a write that wrongly succeeded could not leak into other assertions. */
+const a51 = once(async () => {
+  const s = await buildSeptember2026();
+  built.push(s);
   return s;
 });
 afterAll(() => built.forEach((s) => s.handle.close()));
@@ -466,6 +473,56 @@ const implemented: Record<string, () => Promise<void>> = {
     const { s } = await m3Corrected();
     expect((await balances(s)).visa).toBe(taka(-6_000));
     expect(await getTotalSpending(s.ctx, SEP_1_22)).toBe(taka(66_487));
+  },
+
+  "A-50": async () => {
+    const s = await base();
+    const laptop = (await getItems(s.ctx)).find((i) => i.id === s.items.laptop)!;
+    expect(laptop.cover).toMatchObject({
+      target: taka(150_000),
+      reserved: taka(120_000),
+      covered: taka(110_000),
+      short: taka(10_000),
+      stillNeeded: taka(40_000),
+      targetReached: false,
+    });
+    expect(formatPercent(laptop.cover.progress!, 0)).toBe("73%");
+    const byAccount = Object.fromEntries(
+      laptop.earmarks.map((e) => [
+        e.accountId,
+        { reserved: e.reserved, covered: e.covered, short: e.short },
+      ]),
+    );
+    expect(byAccount).toEqual({
+      [s.accounts.savings]: { reserved: taka(100_000), covered: taka(90_000), short: taka(10_000) },
+      [s.accounts.bank]: { reserved: taka(20_000), covered: taka(20_000), short: taka(0) },
+    });
+  },
+
+  "A-51": async () => {
+    const s = await a51();
+    const count = () =>
+      s.handle.sqlite
+        .prepare(
+          "SELECT (SELECT count(*) FROM earmark_entries) AS entries, (SELECT count(*) FROM earmarks) AS earmarks",
+        )
+        .get();
+    const before = count();
+
+    // Sep 22: Savings holds 90,000 and already has 100,000 set aside.
+    const overBalance = await reserve(s.ctx, s.items.laptop, {
+      accountId: s.accounts.savings,
+      amount: taka(1_000),
+    });
+    const onLiability = await reserve(s.ctx, s.items.laptop, {
+      accountId: s.accounts.visa,
+      amount: taka(1_000),
+    });
+
+    expect(overBalance).toMatchObject({ ok: false, error: { code: "exceeds_balance" } });
+    expect(onLiability).toMatchObject({ ok: false, error: { code: "account_not_asset" } });
+    expect(count()).toEqual(before);
+    expect(before).toEqual({ entries: 2, earmarks: 2 });
   },
 };
 

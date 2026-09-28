@@ -19,6 +19,7 @@ export type EarmarkRuleCode =
   | "item_archived"
   | "account_not_found"
   | "account_not_asset"
+  | "account_archived"
   | "exceeds_balance"
   | "exceeds_reserved";
 
@@ -33,7 +34,7 @@ export interface EarmarkRuleViolation {
  */
 export interface EarmarkEntryFacts {
   readonly item: { readonly archived: boolean } | undefined;
-  readonly account: { readonly type: AccountType } | undefined;
+  readonly account: { readonly type: AccountType; readonly archived: boolean } | undefined;
   /** The account's current balance. */
   readonly accountBalance: Money;
   /** Σ current earmarks of every item on the account. */
@@ -58,6 +59,9 @@ const violation = (code: EarmarkRuleCode, message: string): EarmarkRuleViolation
  *    checked against the balance: removing protection is always allowed.
  *
  * An archived item holds nothing (it archives only at zero) and takes no entries.
+ * An archived account takes no new protection — setting money aside is new
+ * activity — but a release from it is always allowed, so protected money can
+ * never be trapped there. An archived account's balance is not assumed to be zero.
  */
 export function checkEarmarkEntry(
   amount: Money,
@@ -79,6 +83,9 @@ export function checkEarmarkEntry(
     return violation("account_not_asset", "Money can only be set aside from an asset account.");
   }
   if (amount > 0) {
+    if (facts.account.archived) {
+      return violation("account_archived", "The account is archived.");
+    }
     if (add(facts.reservedOnAccount, amount) > facts.accountBalance) {
       return violation(
         "exceeds_balance",

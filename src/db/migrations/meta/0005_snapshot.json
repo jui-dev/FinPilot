@@ -1,0 +1,1459 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "925bb0cb-0df9-457d-9bd7-0a1023c6d580",
+  "prevId": "af816203-ff3e-4570-9078-0be98c35a9e5",
+  "tables": {
+    "accounts": {
+      "name": "accounts",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "included_in_available": {
+          "name": "included_in_available",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "opened_on": {
+          "name": "opened_on",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ux_accounts_owner_id": {
+          "name": "ux_accounts_owner_id",
+          "columns": [
+            "owner_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "ux_accounts_owner_name": {
+          "name": "ux_accounts_owner_name",
+          "columns": [
+            "owner_id",
+            "lower(\"name\")"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "accounts_owner_id_owners_id_fk": {
+          "name": "accounts_owner_id_owners_id_fk",
+          "tableFrom": "accounts",
+          "tableTo": "owners",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "ck_accounts_type": {
+          "name": "ck_accounts_type",
+          "value": "\"accounts\".\"type\" IN ('cash', 'bank', 'mobile_wallet', 'savings', 'credit_card')"
+        },
+        "ck_accounts_currency": {
+          "name": "ck_accounts_currency",
+          "value": "length(\"accounts\".\"currency\") = 3"
+        },
+        "ck_accounts_included_bool": {
+          "name": "ck_accounts_included_bool",
+          "value": "\"accounts\".\"included_in_available\" IN (0, 1)"
+        },
+        "ck_accounts_name": {
+          "name": "ck_accounts_name",
+          "value": "length(trim(\"accounts\".\"name\")) > 0"
+        },
+        "ck_accounts_opened_on": {
+          "name": "ck_accounts_opened_on",
+          "value": "date(\"accounts\".\"opened_on\") IS NOT NULL AND \"accounts\".\"opened_on\" = date(\"accounts\".\"opened_on\")"
+        }
+      }
+    },
+    "categories": {
+      "name": "categories",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ux_categories_owner_id": {
+          "name": "ux_categories_owner_id",
+          "columns": [
+            "owner_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "ux_categories_owner_kind_name": {
+          "name": "ux_categories_owner_kind_name",
+          "columns": [
+            "owner_id",
+            "kind",
+            "lower(\"name\")"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "categories_owner_id_owners_id_fk": {
+          "name": "categories_owner_id_owners_id_fk",
+          "tableFrom": "categories",
+          "tableTo": "owners",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "ck_categories_kind": {
+          "name": "ck_categories_kind",
+          "value": "\"categories\".\"kind\" IN ('income', 'expense')"
+        },
+        "ck_categories_name": {
+          "name": "ck_categories_name",
+          "value": "length(trim(\"categories\".\"name\")) > 0"
+        }
+      }
+    },
+    "commitment_occurrences": {
+      "name": "commitment_occurrences",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "commitment_id": {
+          "name": "commitment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "due_on": {
+          "name": "due_on",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expected_amount_minor": {
+          "name": "expected_amount_minor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "transaction_id": {
+          "name": "transaction_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "skipped_at": {
+          "name": "skipped_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ux_commitment_occurrences_due": {
+          "name": "ux_commitment_occurrences_due",
+          "columns": [
+            "commitment_id",
+            "due_on"
+          ],
+          "isUnique": true
+        },
+        "ux_commitment_occurrences_transaction": {
+          "name": "ux_commitment_occurrences_transaction",
+          "columns": [
+            "transaction_id"
+          ],
+          "isUnique": true,
+          "where": "\"commitment_occurrences\".\"transaction_id\" IS NOT NULL"
+        },
+        "ix_commitment_occurrences_owner_due": {
+          "name": "ix_commitment_occurrences_owner_due",
+          "columns": [
+            "owner_id",
+            "due_on"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "commitment_occurrences_owner_id_owners_id_fk": {
+          "name": "commitment_occurrences_owner_id_owners_id_fk",
+          "tableFrom": "commitment_occurrences",
+          "tableTo": "owners",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "fk_commitment_occurrences_commitment": {
+          "name": "fk_commitment_occurrences_commitment",
+          "tableFrom": "commitment_occurrences",
+          "tableTo": "commitments",
+          "columnsFrom": [
+            "owner_id",
+            "commitment_id"
+          ],
+          "columnsTo": [
+            "owner_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "fk_commitment_occurrences_transaction": {
+          "name": "fk_commitment_occurrences_transaction",
+          "tableFrom": "commitment_occurrences",
+          "tableTo": "transactions",
+          "columnsFrom": [
+            "owner_id",
+            "transaction_id"
+          ],
+          "columnsTo": [
+            "owner_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "ck_commitment_occurrences_outcome": {
+          "name": "ck_commitment_occurrences_outcome",
+          "value": "NOT (\"commitment_occurrences\".\"transaction_id\" IS NOT NULL AND \"commitment_occurrences\".\"skipped_at\" IS NOT NULL)"
+        },
+        "ck_commitment_occurrences_amount": {
+          "name": "ck_commitment_occurrences_amount",
+          "value": "typeof(\"commitment_occurrences\".\"expected_amount_minor\") = 'integer' AND \"commitment_occurrences\".\"expected_amount_minor\" > 0"
+        },
+        "ck_commitment_occurrences_due_on": {
+          "name": "ck_commitment_occurrences_due_on",
+          "value": "date(\"commitment_occurrences\".\"due_on\") IS NOT NULL AND \"commitment_occurrences\".\"due_on\" = date(\"commitment_occurrences\".\"due_on\")"
+        }
+      }
+    },
+    "commitments": {
+      "name": "commitments",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "category_id": {
+          "name": "category_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expected_amount_minor": {
+          "name": "expected_amount_minor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expected_account_id": {
+          "name": "expected_account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "frequency": {
+          "name": "frequency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "interval_count": {
+          "name": "interval_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "anchor_on": {
+          "name": "anchor_on",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "end_on": {
+          "name": "end_on",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "generate_from": {
+          "name": "generate_from",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ux_commitments_owner_id": {
+          "name": "ux_commitments_owner_id",
+          "columns": [
+            "owner_id",
+            "id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "commitments_owner_id_owners_id_fk": {
+          "name": "commitments_owner_id_owners_id_fk",
+          "tableFrom": "commitments",
+          "tableTo": "owners",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "fk_commitments_category": {
+          "name": "fk_commitments_category",
+          "tableFrom": "commitments",
+          "tableTo": "categories",
+          "columnsFrom": [
+            "owner_id",
+            "category_id"
+          ],
+          "columnsTo": [
+            "owner_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "fk_commitments_expected_account": {
+          "name": "fk_commitments_expected_account",
+          "tableFrom": "commitments",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "owner_id",
+            "expected_account_id"
+          ],
+          "columnsTo": [
+            "owner_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "ck_commitments_name": {
+          "name": "ck_commitments_name",
+          "value": "length(trim(\"commitments\".\"name\")) > 0"
+        },
+        "ck_commitments_frequency": {
+          "name": "ck_commitments_frequency",
+          "value": "\"commitments\".\"frequency\" IN ('monthly', 'yearly')"
+        },
+        "ck_commitments_interval": {
+          "name": "ck_commitments_interval",
+          "value": "typeof(\"commitments\".\"interval_count\") = 'integer' AND \"commitments\".\"interval_count\" >= 1"
+        },
+        "ck_commitments_amount": {
+          "name": "ck_commitments_amount",
+          "value": "typeof(\"commitments\".\"expected_amount_minor\") = 'integer' AND \"commitments\".\"expected_amount_minor\" > 0"
+        },
+        "ck_commitments_anchor_on": {
+          "name": "ck_commitments_anchor_on",
+          "value": "date(\"commitments\".\"anchor_on\") IS NOT NULL AND \"commitments\".\"anchor_on\" = date(\"commitments\".\"anchor_on\")"
+        },
+        "ck_commitments_end_on": {
+          "name": "ck_commitments_end_on",
+          "value": "\"commitments\".\"end_on\" IS NULL OR (date(\"commitments\".\"end_on\") IS NOT NULL AND \"commitments\".\"end_on\" = date(\"commitments\".\"end_on\") AND \"commitments\".\"end_on\" >= \"commitments\".\"anchor_on\")"
+        },
+        "ck_commitments_generate_from": {
+          "name": "ck_commitments_generate_from",
+          "value": "date(\"commitments\".\"generate_from\") IS NOT NULL AND \"commitments\".\"generate_from\" = date(\"commitments\".\"generate_from\")"
+        }
+      }
+    },
+    "earmark_entries": {
+      "name": "earmark_entries",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "earmark_id": {
+          "name": "earmark_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount_minor": {
+          "name": "amount_minor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ix_earmark_entries_earmark": {
+          "name": "ix_earmark_entries_earmark",
+          "columns": [
+            "owner_id",
+            "earmark_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "earmark_entries_owner_id_owners_id_fk": {
+          "name": "earmark_entries_owner_id_owners_id_fk",
+          "tableFrom": "earmark_entries",
+          "tableTo": "owners",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "fk_earmark_entries_earmark": {
+          "name": "fk_earmark_entries_earmark",
+          "tableFrom": "earmark_entries",
+          "tableTo": "earmarks",
+          "columnsFrom": [
+            "owner_id",
+            "earmark_id"
+          ],
+          "columnsTo": [
+            "owner_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "ck_earmark_entries_amount": {
+          "name": "ck_earmark_entries_amount",
+          "value": "typeof(\"earmark_entries\".\"amount_minor\") = 'integer' AND \"earmark_entries\".\"amount_minor\" <> 0"
+        }
+      }
+    },
+    "earmarks": {
+      "name": "earmarks",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "item_id": {
+          "name": "item_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "priority": {
+          "name": "priority",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "ended_at": {
+          "name": "ended_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ux_earmarks_owner_id": {
+          "name": "ux_earmarks_owner_id",
+          "columns": [
+            "owner_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "ux_earmarks_owner_priority": {
+          "name": "ux_earmarks_owner_priority",
+          "columns": [
+            "owner_id",
+            "priority"
+          ],
+          "isUnique": true
+        },
+        "ux_earmarks_active_item_account": {
+          "name": "ux_earmarks_active_item_account",
+          "columns": [
+            "item_id",
+            "account_id"
+          ],
+          "isUnique": true,
+          "where": "\"earmarks\".\"ended_at\" IS NULL"
+        },
+        "ix_earmarks_account_priority": {
+          "name": "ix_earmarks_account_priority",
+          "columns": [
+            "owner_id",
+            "account_id",
+            "priority"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "earmarks_owner_id_owners_id_fk": {
+          "name": "earmarks_owner_id_owners_id_fk",
+          "tableFrom": "earmarks",
+          "tableTo": "owners",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "fk_earmarks_item": {
+          "name": "fk_earmarks_item",
+          "tableFrom": "earmarks",
+          "tableTo": "protected_money_items",
+          "columnsFrom": [
+            "owner_id",
+            "item_id"
+          ],
+          "columnsTo": [
+            "owner_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "fk_earmarks_account": {
+          "name": "fk_earmarks_account",
+          "tableFrom": "earmarks",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "owner_id",
+            "account_id"
+          ],
+          "columnsTo": [
+            "owner_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "ck_earmarks_priority": {
+          "name": "ck_earmarks_priority",
+          "value": "typeof(\"earmarks\".\"priority\") = 'integer' AND \"earmarks\".\"priority\" >= 1"
+        }
+      }
+    },
+    "owners": {
+      "name": "owners",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "base_currency": {
+          "name": "base_currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "time_zone": {
+          "name": "time_zone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "next_transaction_sequence": {
+          "name": "next_transaction_sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "ck_owners_currency": {
+          "name": "ck_owners_currency",
+          "value": "length(\"owners\".\"base_currency\") = 3"
+        },
+        "ck_owners_sequence": {
+          "name": "ck_owners_sequence",
+          "value": "\"owners\".\"next_transaction_sequence\" >= 1"
+        }
+      }
+    },
+    "protected_money_items": {
+      "name": "protected_money_items",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "target_minor": {
+          "name": "target_minor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ux_protected_money_items_owner_id": {
+          "name": "ux_protected_money_items_owner_id",
+          "columns": [
+            "owner_id",
+            "id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "protected_money_items_owner_id_owners_id_fk": {
+          "name": "protected_money_items_owner_id_owners_id_fk",
+          "tableFrom": "protected_money_items",
+          "tableTo": "owners",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "ck_protected_money_items_name": {
+          "name": "ck_protected_money_items_name",
+          "value": "length(trim(\"protected_money_items\".\"name\")) > 0"
+        },
+        "ck_protected_money_items_target": {
+          "name": "ck_protected_money_items_target",
+          "value": "\"protected_money_items\".\"target_minor\" IS NULL OR (typeof(\"protected_money_items\".\"target_minor\") = 'integer' AND \"protected_money_items\".\"target_minor\" > 0)"
+        }
+      }
+    },
+    "reconciliation_checkpoints": {
+      "name": "reconciliation_checkpoints",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "as_of": {
+          "name": "as_of",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "stated_balance_minor": {
+          "name": "stated_balance_minor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "adjustment_id": {
+          "name": "adjustment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ux_reconciliation_checkpoints_owner_id": {
+          "name": "ux_reconciliation_checkpoints_owner_id",
+          "columns": [
+            "owner_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "ix_reconciliation_checkpoints_account_as_of": {
+          "name": "ix_reconciliation_checkpoints_account_as_of",
+          "columns": [
+            "owner_id",
+            "account_id",
+            "as_of"
+          ],
+          "isUnique": false
+        },
+        "ix_reconciliation_checkpoints_adjustment": {
+          "name": "ix_reconciliation_checkpoints_adjustment",
+          "columns": [
+            "owner_id",
+            "adjustment_id"
+          ],
+          "isUnique": false,
+          "where": "\"reconciliation_checkpoints\".\"adjustment_id\" IS NOT NULL"
+        }
+      },
+      "foreignKeys": {
+        "reconciliation_checkpoints_owner_id_owners_id_fk": {
+          "name": "reconciliation_checkpoints_owner_id_owners_id_fk",
+          "tableFrom": "reconciliation_checkpoints",
+          "tableTo": "owners",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "fk_reconciliation_checkpoints_account": {
+          "name": "fk_reconciliation_checkpoints_account",
+          "tableFrom": "reconciliation_checkpoints",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "owner_id",
+            "account_id"
+          ],
+          "columnsTo": [
+            "owner_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "fk_reconciliation_checkpoints_adjustment": {
+          "name": "fk_reconciliation_checkpoints_adjustment",
+          "tableFrom": "reconciliation_checkpoints",
+          "tableTo": "transactions",
+          "columnsFrom": [
+            "owner_id",
+            "adjustment_id"
+          ],
+          "columnsTo": [
+            "owner_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "ck_reconciliation_checkpoints_as_of": {
+          "name": "ck_reconciliation_checkpoints_as_of",
+          "value": "date(\"reconciliation_checkpoints\".\"as_of\") IS NOT NULL AND \"reconciliation_checkpoints\".\"as_of\" = date(\"reconciliation_checkpoints\".\"as_of\")"
+        },
+        "ck_reconciliation_checkpoints_stated_integer": {
+          "name": "ck_reconciliation_checkpoints_stated_integer",
+          "value": "typeof(\"reconciliation_checkpoints\".\"stated_balance_minor\") = 'integer'"
+        }
+      }
+    },
+    "transactions": {
+      "name": "transactions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sequence": {
+          "name": "sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "occurred_on": {
+          "name": "occurred_on",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount_minor": {
+          "name": "amount_minor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "counter_account_id": {
+          "name": "counter_account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "category_id": {
+          "name": "category_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "refund_of_id": {
+          "name": "refund_of_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "group_id": {
+          "name": "group_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ux_transactions_owner_id": {
+          "name": "ux_transactions_owner_id",
+          "columns": [
+            "owner_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "ux_transactions_owner_sequence": {
+          "name": "ux_transactions_owner_sequence",
+          "columns": [
+            "owner_id",
+            "sequence"
+          ],
+          "isUnique": true
+        },
+        "ux_transactions_active_opening_balance": {
+          "name": "ux_transactions_active_opening_balance",
+          "columns": [
+            "account_id"
+          ],
+          "isUnique": true,
+          "where": "\"transactions\".\"type\" = 'opening_balance' AND \"transactions\".\"deleted_at\" IS NULL"
+        },
+        "ix_transactions_account_date": {
+          "name": "ix_transactions_account_date",
+          "columns": [
+            "owner_id",
+            "account_id",
+            "occurred_on"
+          ],
+          "isUnique": false
+        },
+        "ix_transactions_counter_account_date": {
+          "name": "ix_transactions_counter_account_date",
+          "columns": [
+            "owner_id",
+            "counter_account_id",
+            "occurred_on"
+          ],
+          "isUnique": false,
+          "where": "\"transactions\".\"counter_account_id\" IS NOT NULL"
+        },
+        "ix_transactions_owner_order": {
+          "name": "ix_transactions_owner_order",
+          "columns": [
+            "owner_id",
+            "occurred_on",
+            "sequence"
+          ],
+          "isUnique": false
+        },
+        "ix_transactions_category_date": {
+          "name": "ix_transactions_category_date",
+          "columns": [
+            "owner_id",
+            "category_id",
+            "occurred_on"
+          ],
+          "isUnique": false
+        },
+        "ix_transactions_group": {
+          "name": "ix_transactions_group",
+          "columns": [
+            "group_id"
+          ],
+          "isUnique": false,
+          "where": "\"transactions\".\"group_id\" IS NOT NULL"
+        },
+        "ix_transactions_refund_of": {
+          "name": "ix_transactions_refund_of",
+          "columns": [
+            "owner_id",
+            "refund_of_id"
+          ],
+          "isUnique": false,
+          "where": "\"transactions\".\"refund_of_id\" IS NOT NULL"
+        }
+      },
+      "foreignKeys": {
+        "transactions_owner_id_owners_id_fk": {
+          "name": "transactions_owner_id_owners_id_fk",
+          "tableFrom": "transactions",
+          "tableTo": "owners",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "fk_transactions_account": {
+          "name": "fk_transactions_account",
+          "tableFrom": "transactions",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "owner_id",
+            "account_id"
+          ],
+          "columnsTo": [
+            "owner_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "fk_transactions_counter_account": {
+          "name": "fk_transactions_counter_account",
+          "tableFrom": "transactions",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "owner_id",
+            "counter_account_id"
+          ],
+          "columnsTo": [
+            "owner_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "fk_transactions_category": {
+          "name": "fk_transactions_category",
+          "tableFrom": "transactions",
+          "tableTo": "categories",
+          "columnsFrom": [
+            "owner_id",
+            "category_id"
+          ],
+          "columnsTo": [
+            "owner_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "fk_transactions_refund_of": {
+          "name": "fk_transactions_refund_of",
+          "tableFrom": "transactions",
+          "tableTo": "transactions",
+          "columnsFrom": [
+            "owner_id",
+            "refund_of_id"
+          ],
+          "columnsTo": [
+            "owner_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "ck_transactions_type": {
+          "name": "ck_transactions_type",
+          "value": "\"transactions\".\"type\" IN ('income', 'expense', 'refund', 'transfer', 'opening_balance', 'adjustment')"
+        },
+        "ck_transactions_amount_integer": {
+          "name": "ck_transactions_amount_integer",
+          "value": "typeof(\"transactions\".\"amount_minor\") = 'integer'"
+        },
+        "ck_transactions_occurred_on": {
+          "name": "ck_transactions_occurred_on",
+          "value": "date(\"transactions\".\"occurred_on\") IS NOT NULL AND \"transactions\".\"occurred_on\" = date(\"transactions\".\"occurred_on\")"
+        },
+        "ck_transactions_sequence": {
+          "name": "ck_transactions_sequence",
+          "value": "\"transactions\".\"sequence\" >= 1"
+        },
+        "ck_transactions_income": {
+          "name": "ck_transactions_income",
+          "value": "\"transactions\".\"type\" <> 'income' OR (\"transactions\".\"amount_minor\" > 0 AND \"transactions\".\"category_id\" IS NOT NULL AND \"transactions\".\"counter_account_id\" IS NULL AND \"transactions\".\"refund_of_id\" IS NULL)"
+        },
+        "ck_transactions_expense": {
+          "name": "ck_transactions_expense",
+          "value": "\"transactions\".\"type\" <> 'expense' OR (\"transactions\".\"amount_minor\" < 0 AND \"transactions\".\"category_id\" IS NOT NULL AND \"transactions\".\"counter_account_id\" IS NULL AND \"transactions\".\"refund_of_id\" IS NULL)"
+        },
+        "ck_transactions_refund": {
+          "name": "ck_transactions_refund",
+          "value": "\"transactions\".\"type\" <> 'refund' OR (\"transactions\".\"amount_minor\" > 0 AND \"transactions\".\"category_id\" IS NOT NULL AND \"transactions\".\"counter_account_id\" IS NULL)"
+        },
+        "ck_transactions_transfer": {
+          "name": "ck_transactions_transfer",
+          "value": "\"transactions\".\"type\" <> 'transfer' OR (\"transactions\".\"amount_minor\" < 0 AND \"transactions\".\"counter_account_id\" IS NOT NULL AND \"transactions\".\"counter_account_id\" <> \"transactions\".\"account_id\" AND \"transactions\".\"category_id\" IS NULL AND \"transactions\".\"refund_of_id\" IS NULL)"
+        },
+        "ck_transactions_opening_adjustment": {
+          "name": "ck_transactions_opening_adjustment",
+          "value": "\"transactions\".\"type\" NOT IN ('opening_balance', 'adjustment') OR (\"transactions\".\"amount_minor\" <> 0 AND \"transactions\".\"category_id\" IS NULL AND \"transactions\".\"counter_account_id\" IS NULL AND \"transactions\".\"refund_of_id\" IS NULL)"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {
+      "ux_accounts_owner_name": {
+        "columns": {
+          "lower(\"name\")": {
+            "isExpression": true
+          }
+        }
+      },
+      "ux_categories_owner_kind_name": {
+        "columns": {
+          "lower(\"name\")": {
+            "isExpression": true
+          }
+        }
+      }
+    }
+  }
+}

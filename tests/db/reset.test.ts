@@ -14,6 +14,7 @@ import {
   getOccurrences,
   payOccurrence,
 } from "@/server/services/commitment-service";
+import { createItem, reserve } from "@/server/services/protected-money-service";
 import { verifyAccountBalance } from "@/server/services/reconciliation-service";
 import {
   createAccount,
@@ -176,6 +177,25 @@ describe("clearAllData with commitments", () => {
     clearAllData(h);
 
     for (const table of ["commitment_occurrences", "commitments", "transactions"]) {
+      expect(h.sqlite.prepare(`SELECT count(*) AS n FROM ${table}`).get()).toEqual({ n: 0 });
+    }
+    expect(h.sqlite.pragma("foreign_key_check")).toEqual([]);
+  });
+});
+
+describe("clearAllData with protected money", () => {
+  it("clears items, earmarks and their entries along with the ledger", async () => {
+    const { ctx, handle: h } = await verifiedLedger();
+    const cash = (await getAccounts(ctx)).find((a) => a.name === "Cash")!.id;
+    const created = await createItem(ctx, { name: "Laptop", target: fromMajor(1_000) });
+    if (!created.ok) throw new Error("could not create the item");
+    expect((await reserve(ctx, created.value, { accountId: cash, amount: fromMajor(10) })).ok).toBe(
+      true,
+    );
+
+    clearAllData(h);
+
+    for (const table of ["earmark_entries", "earmarks", "protected_money_items", "transactions"]) {
       expect(h.sqlite.prepare(`SELECT count(*) AS n FROM ${table}`).get()).toEqual({ n: 0 });
     }
     expect(h.sqlite.pragma("foreign_key_check")).toEqual([]);

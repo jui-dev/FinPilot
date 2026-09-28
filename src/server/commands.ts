@@ -18,11 +18,17 @@ import {
   verifyBalanceInputSchema,
 } from "@/domain/ledger/input";
 import type { Money } from "@/domain/money";
+import {
+  earmarkInputSchema,
+  protectedMoneyFieldForRule,
+  protectedMoneyItemInputSchema,
+} from "@/domain/protected-money/input";
 import type { ServiceContext } from "@/server/context";
 import type { ServiceResult } from "@/server/errors";
 import { getActivityItem } from "@/server/services/activity-service";
 import * as commitments from "@/server/services/commitment-service";
 import * as ledger from "@/server/services/ledger-service";
+import * as protectedMoney from "@/server/services/protected-money-service";
 import * as reconciliation from "@/server/services/reconciliation-service";
 import * as setup from "@/server/services/setup-service";
 
@@ -363,3 +369,62 @@ export async function payOccurrence(
 
 export const skipOccurrence = async (ctx: ServiceContext, occurrenceId: string) =>
   fromService(await commitments.skipOccurrence(ctx, occurrenceId));
+
+// ---------------------------------------------------------------------------
+// Protected money ("Set aside")
+// ---------------------------------------------------------------------------
+
+function protectedMoneyResult<T>(result: ServiceResult<T>): CommandResult<T> {
+  if (result.ok) return done(result.value);
+  const field = protectedMoneyFieldForRule(result.error.code);
+  return {
+    ok: false,
+    message: result.error.message,
+    fieldErrors: field ? { [field]: result.error.message } : {},
+  };
+}
+
+export async function createProtectedMoneyItem(
+  ctx: ServiceContext,
+  raw: unknown,
+): Promise<CommandResult<string>> {
+  const parsed = protectedMoneyItemInputSchema.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  return protectedMoneyResult(await protectedMoney.createItem(ctx, parsed.data));
+}
+
+/** Renames an item or changes its target; neither reserves nor releases anything. */
+export async function editProtectedMoneyItem(
+  ctx: ServiceContext,
+  id: string,
+  raw: unknown,
+): Promise<CommandResult> {
+  const parsed = protectedMoneyItemInputSchema.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  return protectedMoneyResult(await protectedMoney.editItem(ctx, id, parsed.data));
+}
+
+export const archiveProtectedMoneyItem = async (ctx: ServiceContext, id: string) =>
+  protectedMoneyResult(await protectedMoney.archiveItem(ctx, id));
+
+/** Sets money aside from an asset account for the item. */
+export async function reserveProtectedMoney(
+  ctx: ServiceContext,
+  itemId: string,
+  raw: unknown,
+): Promise<CommandResult> {
+  const parsed = earmarkInputSchema.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  return protectedMoneyResult(await protectedMoney.reserve(ctx, itemId, parsed.data));
+}
+
+/** Releases money set aside for the item, partly or fully. */
+export async function releaseProtectedMoney(
+  ctx: ServiceContext,
+  itemId: string,
+  raw: unknown,
+): Promise<CommandResult> {
+  const parsed = earmarkInputSchema.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  return protectedMoneyResult(await protectedMoney.release(ctx, itemId, parsed.data));
+}

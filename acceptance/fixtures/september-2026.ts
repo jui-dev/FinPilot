@@ -14,6 +14,7 @@ import {
   getOccurrences,
   payOccurrence,
 } from "@/server/services/commitment-service";
+import { createItem, reserve } from "@/server/services/protected-money-service";
 import { verifyAccountBalance } from "@/server/services/reconciliation-service";
 import { createAccount, createOwner, getCategories } from "@/server/services/setup-service";
 
@@ -24,7 +25,10 @@ import { createAccount, createOwner, getCategories } from "@/server/services/set
  * Stage F2 built the August prologue (P0–P7) and September rows 1–9 and 11;
  * Stage 4a adds row 10 (the Cash reconciliation, −350) through the real
  * reconcile service. Stage 6 adds the three commitments, and records the
- * payments that pay their occurrences (P2, P7, row 2) through Pay.
+ * payments that pay their occurrences (P2, P7, row 2) through Pay. Stage 7
+ * adds the Laptop protected-money item and its two earmarks, reserved through
+ * the real service in ledger order: Savings +100,000 after the Aug 9 row and
+ * Bank +20,000 after the Sep 2 row, each checked against the balance then.
  * Amounts are whole taka here and stored as integer poisha.
  */
 export const TODAY = calendarDateFromIso("2026-09-22");
@@ -40,6 +44,7 @@ export interface Scenario {
   readonly ctx: ServiceContext;
   readonly accounts: Readonly<Record<"bank" | "cash" | "bkash" | "savings" | "visa", string>>;
   readonly commitments: Readonly<Record<"rent" | "internet" | "streaming", string>>;
+  readonly items: Readonly<Record<"laptop", string>>;
   readonly category: (name: string) => string;
   /** Transaction ids by scenario row label (P1…P7, R1…R11). */
   readonly rows: Readonly<Record<string, string>>;
@@ -130,6 +135,13 @@ export async function buildSeptember2026(variant: ScenarioVariant = "base"): Pro
     streaming: await commit("Streaming", "Entertainment", 700, "2026-10-03", accounts.visa),
   };
 
+  // Protected money (docs/acceptance-scenarios.md §3): Laptop, target 150,000.
+  const items = {
+    laptop: unwrap("item Laptop", await createItem(ctx, { name: "Laptop", target: taka(150_000) })),
+  };
+  const earmark = async (label: string, accountId: string, amount: number) =>
+    unwrap(label, await reserve(ctx, items.laptop, { accountId, amount: taka(amount) }));
+
   const rows: Record<string, string> = {};
   const checkpoints: Record<string, string> = {};
   const record = async (label: string, draft: TransactionDraft) => {
@@ -195,6 +207,7 @@ export async function buildSeptember2026(variant: ScenarioVariant = "base"): Pro
   await pay("P2", commitments.rent, "2026-08-01", "2026-08-02", accounts.bank);
   await record("P3", expense("2026-08-06", 5_000, accounts.visa, "Groceries"));
   await record("P4", expense("2026-08-09", 3_800, accounts.visa, "Shopping"));
+  await earmark("Aug 10 earmark", accounts.savings, 100_000); // Savings 120,000
   await cashOut("P5", d("2026-08-13"));
   await record("P6", expense("2026-08-15", 1_200, accounts.cash, "Food & Dining"));
   await pay("P7", commitments.internet, "2026-08-25", "2026-08-25", accounts.bkash);
@@ -202,6 +215,7 @@ export async function buildSeptember2026(variant: ScenarioVariant = "base"): Pro
   // September.
   await record("R1", salary("2026-09-01"));
   await pay("R2", commitments.rent, "2026-09-01", "2026-09-02", accounts.bank);
+  await earmark("Sep 3 earmark", accounts.bank, 20_000); // Bank 150,000
   await record("R3", expense("2026-09-05", 4_200, accounts.visa, "Groceries"));
   await record("R4", expense("2026-09-08", 3_000, accounts.visa, "Shopping"));
   await record(
@@ -236,5 +250,5 @@ export async function buildSeptember2026(variant: ScenarioVariant = "base"): Pro
 
   await record("R11", expense("2026-09-21", 30_000, accounts.savings, "Health"));
 
-  return { handle, ctx, accounts, commitments, category, rows, checkpoints };
+  return { handle, ctx, accounts, commitments, items, category, rows, checkpoints };
 }

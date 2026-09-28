@@ -266,7 +266,8 @@ The two inputs to Available: money already obligated and money deliberately set 
   - Oldest-first backing and shortfall (set aside / covered / short); progress and still needed = max(target − covered, 0) only when a target exists.
   - **Reserve** and **Release** (full or partial, never a transaction). Archive only when nothing remains reserved. Target reached is derived and releases nothing.
   - The simple UI: "Set aside ৳X from …", with a shortfall line only when there is one.
-- **Decided in the Stage 7 plan, not earlier:** the container's code name; how operation kinds are represented (the semantics in [domain-model.md §9.1](domain-model.md) are fixed; the storage is not); whether **Move** is in the minimum slice; the protected-money colour.
+- **Decided before Slice 2 (2026-09-28):** backing priority is the order in which each (item, account) earmark was established, stored explicitly ([domain-model.md §9](domain-model.md)); Reserve on an archived account is rejected (`account_archived`) while Release from it stays allowed.
+- **Decided in the Stage 7 plan, not earlier:** ~~the container's code name; how operation kinds are represented~~ *(resolved as O-3: `protected_money_items`; signed append-only entries with no stored kind, [domain-model.md §9.1](domain-model.md))*; whether **Move** is in the minimum slice; the protected-money colour.
 - **Must not be precluded:** **Use** (through the normal ledger boundary) and **Move**, and a future explicit item↔commitment relationship.
 - **Domain concepts:** earmarks, backing, shortfall, target vs reservation, release.
 - **Tests that must pass:**
@@ -499,7 +500,7 @@ Every item here is **deliberately open, not forgotten**. A stage's plan resolves
 |---|---|---|---|
 | O-1 | How a pending commitment whose `expected_account` is an asset account **excluded** from Available affects Available. Today's frozen formula subtracts it anyway; that rule is under reconsideration. Stage 6 keeps `expected_account` descriptive. | [domain-model.md §10](domain-model.md) | **Stage 8** freezing Available's semantics |
 | O-2 | Signal family 2's trigger: stricter or otherwise meaningfully more selective than What changed; A-72 must stay present. | [domain-model.md §11](domain-model.md) | **Stage 9** |
-| O-3 | Protected money: the container's code name, and the representation of operation kinds ("reduce" and "release" are not assumed to be separate values). | [domain-model.md §9.1](domain-model.md) | **Stage 7** implementation |
+| ~~O-3~~ | ~~Protected money: the container's code name, and the representation of operation kinds.~~ **Resolved 2026-09-28 (Stage 7):** `protected_money_items`; append-only signed earmark entries, positive = Reserve, negative = Release, no operation-kind field. | [domain-model.md §9.1](domain-model.md) | closed |
 | O-4 | **Use:** how much is released when the expense differs from the reservation, and what happens to the release when the Use transaction is edited or deleted. | [domain-model.md §9.1](domain-model.md) | implementing **Use** (not required in the minimum Stage 7 slice) |
 | O-5 | "Typical" for Trends and signal family 3: the window, and mean or median. | this file, Stage 12 | **Stage 12** |
 | O-6 | Monthly Plan intentions: effective-dated or month-specific. Either reproduces A-40 and M1-4. | [domain-model.md §7](domain-model.md) | **Stage 13** |
@@ -515,4 +516,7 @@ Every item here is **deliberately open, not forgotten**. A stage's plan resolves
 | P-5 | The colours of commitments and protected money ([design-direction.md §2](design-direction.md)). | Stages 6 and 7 |
 | P-6 | Signal families 6 (Available low) and 8 (savings-rate change). | a review after V1 |
 
-**Known gap, not an open question:** the account-setup service accepts `included_in_available = false` for a credit card when a caller passes it (no UI does). **Stage 8 closes it** ([domain-model.md §5](domain-model.md)).
+**Known gaps, not open questions:**
+
+- The account-setup service accepts `included_in_available = false` for a credit card when a caller passes it (no UI does). **Stage 8 closes it** ([domain-model.md §5](domain-model.md)).
+- *(Found 2026-09-28, Stage 7.)* An account is archived only at a zero balance, but that is checked only when it is archived. Afterwards, **deleting** a transaction that touched it, or **editing** one so it no longer does, is still allowed (only the new version's accounts are checked), so an archived account can regain a non-zero balance. New entries, restores and reconciliation on it are rejected. Not fixed in Stage 7, which never assumes an archived account holds zero; to be reviewed later.

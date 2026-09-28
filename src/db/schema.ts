@@ -419,3 +419,121 @@ export const commitmentOccurrences = sqliteTable(
     ),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// protected_money_items — what money is set aside for (docs/domain-model.md §9).
+// Shown to the person as "Set aside". A target is intention only: nothing is
+// reserved, backed or released through it.
+// ---------------------------------------------------------------------------
+
+export const protectedMoneyItems = sqliteTable(
+  "protected_money_items",
+  {
+    id: text("id").primaryKey(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => owners.id, { onDelete: "restrict" }),
+    name: text("name").notNull(),
+    /** Optional intention; NULL when the item has no target. */
+    targetMinor: integer("target_minor"),
+    /** Set only when nothing remains reserved (checked by the archive script). */
+    archivedAt: text("archived_at"),
+    ...timestamps,
+  },
+  (t) => [
+    // Parent key for fk_earmarks_item.
+    uniqueIndex("ux_protected_money_items_owner_id").on(t.ownerId, t.id),
+    check("ck_protected_money_items_name", sql`length(trim(${t.name})) > 0`),
+    check(
+      "ck_protected_money_items_target",
+      sql`${t.targetMinor} IS NULL OR (typeof(${t.targetMinor}) = 'integer' AND ${t.targetMinor} > 0)`,
+    ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// earmarks — one (item, account) reservation relationship and its backing
+// priority. Its amount is never stored: it is the sum of its entries. A full
+// release ends it (ended_at); setting money aside again later starts a new
+// earmark, with a new priority behind every existing one.
+// ---------------------------------------------------------------------------
+
+export const earmarks = sqliteTable(
+  "earmarks",
+  {
+    id: text("id").primaryKey(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => owners.id, { onDelete: "restrict" }),
+    itemId: text("item_id").notNull(),
+    accountId: text("account_id").notNull(),
+    /**
+     * Backing priority: lower is backed first (oldest first). Taken as the
+     * owner's highest priority + 1 when the earmark is established, and never
+     * changed. Identity (id) is never used for ordering.
+     */
+    priority: integer("priority").notNull(),
+    /** When a full release brought it to zero; NULL while it is active. */
+    endedAt: text("ended_at"),
+    ...timestamps,
+  },
+  (t) => [
+    foreignKey({
+      name: "fk_earmarks_item",
+      columns: [t.ownerId, t.itemId],
+      foreignColumns: [protectedMoneyItems.ownerId, protectedMoneyItems.id],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "fk_earmarks_account",
+      columns: [t.ownerId, t.accountId],
+      foreignColumns: [accounts.ownerId, accounts.id],
+    }).onDelete("restrict"),
+
+    // Parent key for fk_earmark_entries_earmark.
+    uniqueIndex("ux_earmarks_owner_id").on(t.ownerId, t.id),
+    // Priorities are never shared, so backing order is total and deterministic.
+    uniqueIndex("ux_earmarks_owner_priority").on(t.ownerId, t.priority),
+    // At most one active earmark per item and account.
+    uniqueIndex("ux_earmarks_active_item_account")
+      .on(t.itemId, t.accountId)
+      .where(sql`${t.endedAt} IS NULL`),
+    // Backing reads: an account's earmarks in priority order.
+    index("ix_earmarks_account_priority").on(t.ownerId, t.accountId, t.priority),
+
+    check("ck_earmarks_priority", sql`typeof(${t.priority}) = 'integer' AND ${t.priority} >= 1`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// earmark_entries — append-only signed changes to an earmark
+// (docs/domain-model.md §9): positive reserves, negative releases.
+// ---------------------------------------------------------------------------
+
+export const earmarkEntries = sqliteTable(
+  "earmark_entries",
+  {
+    id: text("id").primaryKey(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => owners.id, { onDelete: "restrict" }),
+    earmarkId: text("earmark_id").notNull(),
+    /** Signed change in integer minor units; never zero. */
+    amountMinor: integer("amount_minor").notNull(),
+    /** Append-only: an entry is never updated, so it has no updated_at. */
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [
+    foreignKey({
+      name: "fk_earmark_entries_earmark",
+      columns: [t.ownerId, t.earmarkId],
+      foreignColumns: [earmarks.ownerId, earmarks.id],
+    }).onDelete("restrict"),
+
+    index("ix_earmark_entries_earmark").on(t.ownerId, t.earmarkId),
+
+    check(
+      "ck_earmark_entries_amount",
+      sql`typeof(${t.amountMinor}) = 'integer' AND ${t.amountMinor} <> 0`,
+    ),
+  ],
+);

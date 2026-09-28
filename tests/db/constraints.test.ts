@@ -537,3 +537,117 @@ describe("commitments and occurrences", () => {
     expect(() => exec("DELETE FROM categories WHERE id = 'o1-shopping'")).toThrow(/FOREIGN KEY/);
   });
 });
+
+describe("protected money: items, earmarks and entries", () => {
+  const item = (values: Partial<Record<string, unknown>> = {}) => {
+    const row = {
+      id: `pm-${seq++}`,
+      owner_id: "o1",
+      name: "Laptop",
+      target_minor: null,
+      ...values,
+    };
+    exec(
+      `INSERT INTO protected_money_items (id, owner_id, name, target_minor, archived_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, NULL, ?, ?)`,
+      row.id,
+      row.owner_id,
+      row.name,
+      row.target_minor,
+      NOW,
+      NOW,
+    );
+    return row.id;
+  };
+  const earmark = (values: Partial<Record<string, unknown>> = {}) => {
+    const row = {
+      id: `em-${seq++}`,
+      owner_id: "o1",
+      item_id: "pm-laptop",
+      account_id: "o1-bank",
+      priority: seq,
+      ended_at: null,
+      ...values,
+    };
+    exec(
+      `INSERT INTO earmarks (id, owner_id, item_id, account_id, priority, ended_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      row.id,
+      row.owner_id,
+      row.item_id,
+      row.account_id,
+      row.priority,
+      row.ended_at,
+      NOW,
+      NOW,
+    );
+    return row.id;
+  };
+  const entry = (values: Partial<Record<string, unknown>> = {}) => {
+    const row = {
+      id: `ee-${seq++}`,
+      owner_id: "o1",
+      earmark_id: "em-1",
+      amount_minor: 100,
+      ...values,
+    };
+    exec(
+      `INSERT INTO earmark_entries (id, owner_id, earmark_id, amount_minor, created_at) VALUES (?, ?, ?, ?, ?)`,
+      row.id,
+      row.owner_id,
+      row.earmark_id,
+      row.amount_minor,
+      NOW,
+    );
+    return row.id;
+  };
+
+  beforeEach(() => {
+    item({ id: "pm-laptop", target_minor: 15_000_000 });
+    earmark({ id: "em-1", priority: 1 });
+  });
+
+  it("accepts an item with or without a target, and signed entries", () => {
+    expect(() => item({ target_minor: null })).not.toThrow();
+    expect(() => entry({ amount_minor: 500 })).not.toThrow();
+    expect(() => entry({ amount_minor: -200 })).not.toThrow();
+  });
+
+  it("rejects a blank name and a zero, negative or fractional target", () => {
+    expect(() => item({ name: "  " })).toThrow(/ck_protected_money_items_name/);
+    expect(() => item({ target_minor: 0 })).toThrow(/ck_protected_money_items_target/);
+    expect(() => item({ target_minor: -1 })).toThrow(/ck_protected_money_items_target/);
+    expect(() => item({ target_minor: 10.5 })).toThrow(/ck_protected_money_items_target/);
+  });
+
+  it("rejects a zero or fractional entry and a non-integer or non-positive priority", () => {
+    expect(() => entry({ amount_minor: 0 })).toThrow(/ck_earmark_entries_amount/);
+    expect(() => entry({ amount_minor: 1.5 })).toThrow(/ck_earmark_entries_amount/);
+    expect(() => earmark({ account_id: "o1-cash", priority: 0 })).toThrow(/ck_earmarks_priority/);
+    expect(() => earmark({ account_id: "o1-cash", priority: 2.5 })).toThrow(/ck_earmarks_priority/);
+  });
+
+  it("holds at most one active earmark per item and account, and never shares a priority", () => {
+    expect(() => earmark({ priority: 50 })).toThrow(/UNIQUE/);
+    expect(() => earmark({ account_id: "o1-cash", priority: 1 })).toThrow(/UNIQUE/);
+    // An ended earmark does not block a new one for the same item and account.
+    exec("UPDATE earmarks SET ended_at = ? WHERE id = 'em-1'", NOW);
+    expect(() => earmark({ priority: 51 })).not.toThrow();
+  });
+
+  it("rejects another owner's item, account or earmark", () => {
+    item({ id: "pm-other", owner_id: "o2" });
+    expect(() => earmark({ item_id: "pm-other", priority: 60 })).toThrow(/FOREIGN KEY/);
+    expect(() => earmark({ account_id: "o2-bank", priority: 61 })).toThrow(/FOREIGN KEY/);
+    expect(() => entry({ owner_id: "o2" })).toThrow(/FOREIGN KEY/);
+  });
+
+  it("restricts hard-deleting an item, account or earmark that is referred to", () => {
+    entry();
+    expect(() => exec("DELETE FROM earmarks WHERE id = 'em-1'")).toThrow(/FOREIGN KEY/);
+    expect(() => exec("DELETE FROM protected_money_items WHERE id = 'pm-laptop'")).toThrow(
+      /FOREIGN KEY/,
+    );
+    expect(() => exec("DELETE FROM accounts WHERE id = 'o1-bank'")).toThrow(/FOREIGN KEY/);
+  });
+});
