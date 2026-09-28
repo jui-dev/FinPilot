@@ -72,14 +72,14 @@ export interface SpokenForBar {
 
 /**
  * How the balances divide into what is spoken for and what is left. The pool
- * is the money in counted accounts (plus a card's credit balance, when a card
- * holds one): owed + payments + set aside + Available = pool. When Available
+ * is the bridge's (the money in counted accounts, plus a card's credit
+ * balance): owed + payments + set aside + Available = pool. When Available
  * is negative, the spoken-for parts exceed the pool and the excess is the
  * over-commitment. With no money in the pool the bar cannot say anything true,
  * so there is none, and the bridge carries the explanation alone.
  */
 export function spokenForBar(view: AvailableView): SpokenForBar | null {
-  const pool = view.liabilityBalances > 0 ? view.balancesInScope : view.includedAssetBalances;
+  const { pool } = view;
   if (pool <= 0) return null;
   const owed = view.liabilityBalances < 0 ? (-view.liabilityBalances as Money) : (0 as Money);
   const parts: [SegmentKind, Money][] = [

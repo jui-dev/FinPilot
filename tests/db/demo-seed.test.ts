@@ -11,7 +11,7 @@ import { uuidV7Generator } from "@/server/ids";
 import { getAttention } from "@/server/services/attention-service";
 import { getAvailable } from "@/server/services/available-service";
 import { getOccurrences } from "@/server/services/commitment-service";
-import { getAccountBalances, getTransactions } from "@/server/services/ledger-service";
+import { getAccountBalances, getPosition, getTransactions } from "@/server/services/ledger-service";
 import { getItems } from "@/server/services/protected-money-service";
 import { getAccountVerifications } from "@/server/services/reconciliation-service";
 
@@ -84,6 +84,24 @@ describe("demo seed", () => {
     const kinds = new Set((await getAttention(ctx)).map((s) => s.kind));
     expect([...ATTENTION_KINDS].filter((k) => !kinds.has(k))).toEqual([]);
   });
+
+  it.each(DAYS)(
+    "splits what you own into what counts toward Available and what doesn't, relative to %s",
+    async (today) => {
+      const { ctx } = await seeded(today);
+      const available = await getAvailable(ctx);
+      const position = await getPosition(ctx);
+      expect(available.includedAssetBalances + available.excludedAssetBalances).toBe(
+        position.assets,
+      );
+      // Savings holds money outside Available; the card owes, so the pool is the included assets.
+      expect(available.excludedAssetBalances).toBeGreaterThan(0);
+      expect(available.liabilityBalances).toBeLessThan(0);
+      expect(available.pool).toBe(available.includedAssetBalances);
+      expect(available.available).toBeGreaterThan(0);
+      expect(available.available).toBeLessThan(available.pool);
+    },
+  );
 
   it.each(DAYS)("tells one believable story relative to %s", async (today) => {
     const { ctx } = await seeded(today);

@@ -7,6 +7,7 @@ import {
   availableHorizonEnd,
   countsInAvailable,
   type AvailableAccountInput,
+  type AvailableBridge,
   type AvailableEarmarkInput,
   type AvailableInputs,
   type AvailableOccurrenceInput,
@@ -17,7 +18,8 @@ import {
   type OccurrenceState,
 } from "@/domain/commitments/occurrences";
 import { ACCOUNT_TYPES, accountClass, type AccountType } from "@/domain/ledger/accounts";
-import { add, fromMajor, money, subtract, sum, type Money } from "@/domain/money";
+import { summarizePosition } from "@/domain/ledger/position";
+import { add, fromMajor, money, negate, subtract, sum, type Money } from "@/domain/money";
 import { backEarmarks } from "@/domain/protected-money/earmarks";
 
 const taka = fromMajor;
@@ -115,6 +117,9 @@ describe("availableBridge", () => {
       afterCommitments: taka(107_963),
       coveredEarmarks: taka(20_000),
       available: taka(87_963),
+      excludedAssetBalances: taka(90_000),
+      // 6,000 owed + 32,200 due + 20,000 set aside + 87,963 Available.
+      pool: taka(146_163),
     });
     expect(bridge.commitments.map((c) => c.occurrenceId)).toEqual([
       "internet-sep",
@@ -196,8 +201,10 @@ describe("availableBridge", () => {
     );
     expect(bridge).toMatchObject({
       includedAssetBalances: taka(10_000),
+      excludedAssetBalances: taka(90_000),
       coveredEarmarks: taka(0),
       available: taka(10_000),
+      pool: taka(10_000),
     });
     expect(bridge.earmarks).toEqual([
       { itemId: "reserve", accountId: "savings", covered: taka(50_000), deducted: false },
@@ -350,6 +357,127 @@ function build(
   };
 }
 
+describe("excluded asset balances and the pool", () => {
+  /** The parts the bridge divides the pool into; they always add up to it. */
+  const parts = (b: AvailableBridge) => ({
+    owed: b.liabilityBalances < 0 ? negate(b.liabilityBalances) : money(0),
+    due: b.commitmentsDue,
+    setAside: b.coveredEarmarks,
+    available: b.available,
+  });
+
+  it("sums excluded asset accounts by flag, not type, and leaves liabilities out", () => {
+    const bridge = availableBridge(
+      inputs({
+        accounts: [
+          account("bank", "bank", 10_000),
+          account("savings", "savings", 90_000),
+          account("fd", "bank", 25_000, false),
+          account("old", "cash", -300, false),
+          account("visa", "credit_card", 500, false),
+        ],
+      }),
+    );
+    expect(bridge).toMatchObject({
+      includedAssetBalances: taka(10_000),
+      excludedAssetBalances: taka(114_700),
+      liabilityBalances: taka(500),
+    });
+    expect(add(bridge.includedAssetBalances, bridge.excludedAssetBalances)).toBe(
+      summarizePosition(bridge.accounts).assets,
+    );
+  });
+
+  it("with card debt: owed on cards is a part of the pool, which is the included assets", () => {
+    const bridge = availableBridge(
+      inputs({
+        accounts: [account("bank", "bank", 50_000), account("visa", "credit_card", -6_000)],
+        occurrences: [occurrence("rent", "2026-10-01", 20_000)],
+        earmarks: backed("bank", taka(50_000), [["cushion", taka(10_000)]]),
+      }),
+    );
+    expect(bridge.pool).toBe(taka(50_000));
+    expect(parts(bridge)).toEqual({
+      owed: taka(6_000),
+      due: taka(20_000),
+      setAside: taka(10_000),
+      available: taka(14_000),
+    });
+  });
+
+  it("with card credit: the credit joins the pool and nothing is owed", () => {
+    const bridge = availableBridge(
+      inputs({
+        accounts: [account("bank", "bank", 10_000), account("visa", "credit_card", 500)],
+        occurrences: [occurrence("rent", "2026-10-01", 4_000)],
+      }),
+    );
+    expect(bridge.pool).toBe(taka(10_500));
+    expect(parts(bridge)).toEqual({
+      owed: 0,
+      due: taka(4_000),
+      setAside: 0,
+      available: taka(6_500),
+    });
+  });
+
+  it("with zero Available: the spoken-for parts take the whole pool", () => {
+    const bridge = availableBridge(
+      inputs({
+        accounts: [account("bank", "bank", 10_000), account("visa", "credit_card", -4_000)],
+        occurrences: [occurrence("rent", "2026-10-01", 6_000)],
+      }),
+    );
+    expect(bridge).toMatchObject({ pool: taka(10_000), available: 0 });
+  });
+
+  it("with negative Available: the pool is unchanged and the parts still add up to it", () => {
+    const bridge = availableBridge(
+      inputs({
+        accounts: [account("bank", "bank", 20_000), account("visa", "credit_card", -15_000)],
+        occurrences: [occurrence("rent", "2026-10-01", 30_000)],
+      }),
+    );
+    expect(bridge).toMatchObject({ pool: taka(20_000), available: taka(-25_000) });
+    expect(parts(bridge)).toEqual({
+      owed: taka(15_000),
+      due: taka(30_000),
+      setAside: 0,
+      available: taka(-25_000),
+    });
+  });
+
+  it("is zero with nothing in the counted accounts, whatever sits outside them", () => {
+    const bridge = availableBridge(
+      inputs({
+        accounts: [account("bank", "bank", 0), account("savings", "savings", 90_000)],
+        occurrences: [occurrence("rent", "2026-10-01", 1_000)],
+      }),
+    );
+    expect(bridge).toMatchObject({
+      pool: 0,
+      excludedAssetBalances: taka(90_000),
+      available: taka(-1_000),
+    });
+  });
+
+  it("is negative, never clamped, when included asset balances are", () => {
+    const bridge = availableBridge(
+      inputs({
+        accounts: [account("bank", "bank", -5_000), account("visa", "credit_card", -1_000)],
+      }),
+    );
+    expect(bridge).toMatchObject({ pool: taka(-5_000), available: taka(-6_000) });
+    // A card's credit lifts an overdrawn pool, but never hides the overdraft.
+    const lifted = availableBridge(
+      inputs({
+        accounts: [account("bank", "bank", -5_000), account("visa", "credit_card", 2_000)],
+      }),
+    );
+    expect(lifted).toMatchObject({ pool: taka(-3_000), available: taka(-3_000) });
+  });
+});
+
 describe("availableBridge properties", () => {
   it("the bridge terms always add up to Available", () => {
     fc.assert(
@@ -361,6 +489,31 @@ describe("availableBridge properties", () => {
         expect(b.commitmentsDue).toBe(sum(b.commitments.map((c) => c.expectedAmount)));
         expect(b.coveredEarmarks).toBe(
           sum(b.earmarks.filter((s) => s.deducted).map((s) => s.covered)),
+        );
+      }),
+    );
+  });
+
+  it("owed on cards, payments due, set-aside money and Available always add up to the pool", () => {
+    fc.assert(
+      fc.property(fc.array(anyAccount, { maxLength: 6 }), fc.array(occurrenceModel), (m, o) => {
+        const b = availableBridge(build(m, o));
+        const credit = b.liabilityBalances > 0 ? b.liabilityBalances : money(0);
+        const owed = b.liabilityBalances < 0 ? negate(b.liabilityBalances) : money(0);
+        expect(b.pool).toBe(add(b.includedAssetBalances, credit));
+        expect(sum([owed, b.commitmentsDue, b.coveredEarmarks, b.available])).toBe(b.pool);
+        // Every other part is >= 0, so Available never exceeds the pool.
+        expect(b.available).toBeLessThanOrEqual(b.pool);
+      }),
+    );
+  });
+
+  it("included + excluded asset balances are the position's assets", () => {
+    fc.assert(
+      fc.property(fc.array(anyAccount, { maxLength: 6 }), (m) => {
+        const b = availableBridge(build(m));
+        expect(add(b.includedAssetBalances, b.excludedAssetBalances)).toBe(
+          summarizePosition(b.accounts).assets,
         );
       }),
     );
@@ -386,9 +539,15 @@ describe("availableBridge properties", () => {
         accountModel(fc.constantFrom<AccountType>("cash", "bank", "mobile_wallet", "savings")),
         accountModel(fc.constantFrom<AccountType>("cash", "bank", "mobile_wallet", "savings")),
         (models, first, second) => {
-          const excluded = (x: AccountModel) => [...models, { ...x, included: false }];
-          expect(availableBridge(build(excluded(first))).available).toBe(
-            availableBridge(build(excluded(second))).available,
+          const excluded = (x: AccountModel) =>
+            availableBridge(build([...models, { ...x, included: false }]));
+          const [a, b] = [excluded(first), excluded(second)];
+          expect(a.available).toBe(b.available);
+          expect(a.pool).toBe(b.pool);
+          expect(a.includedAssetBalances).toBe(b.includedAssetBalances);
+          // Only the excluded total moves, by exactly the balance difference.
+          expect(subtract(a.excludedAssetBalances, b.excludedAssetBalances)).toBe(
+            subtract(first.balance, second.balance),
           );
         },
       ),

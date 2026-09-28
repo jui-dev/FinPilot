@@ -10,7 +10,11 @@ import {
   payOccurrence,
   skipOccurrence,
 } from "@/server/services/commitment-service";
-import { deleteTransaction, recordTransaction } from "@/server/services/ledger-service";
+import {
+  deleteTransaction,
+  getPosition,
+  recordTransaction,
+} from "@/server/services/ledger-service";
 import { createItem, editItem, getItems, reserve } from "@/server/services/protected-money-service";
 import { archiveAccount, createAccount, createOwner } from "@/server/services/setup-service";
 
@@ -289,6 +293,39 @@ describe("getAvailable", () => {
       { itemId: trip, accountId: spare, covered: taka(3_000), deducted: true },
     ]);
     expect(view.available).toBe(taka(106_000));
+  });
+
+  it("splits the position's assets into included and excluded, archived accounts included", async () => {
+    const s = await ledger();
+    const before = await getAvailable(s.ctx);
+    // Bank 100,000 + bKash 10,000 count; Savings 90,000 is owned but outside Available.
+    expect(before).toMatchObject({
+      includedAssetBalances: taka(110_000),
+      excludedAssetBalances: taka(90_000),
+      pool: taka(110_000),
+    });
+    expect(before.includedAssetBalances + before.excludedAssetBalances).toBe(
+      (await getPosition(s.ctx)).assets,
+    );
+
+    // An excluded account that regains a balance after archiving (the known
+    // Accounts gap): no archive filter, so it moves only the excluded total.
+    const locker = await s.account("Locker", "savings", "2026-08-01", 3_000);
+    const spent = await s.expense(locker, 3_000);
+    ok(await archiveAccount(s.ctx, locker));
+    ok(await deleteTransaction(s.ctx, spent));
+    const after = await getAvailable(s.ctx);
+    expect(after.accounts.find((a) => a.accountId === locker)).toMatchObject({
+      archived: true,
+      counted: false,
+      balance: taka(3_000),
+    });
+    expect(after.excludedAssetBalances).toBe(taka(93_000));
+    expect(after.available).toBe(before.available);
+    expect(after.pool).toBe(before.pool);
+    expect(after.includedAssetBalances + after.excludedAssetBalances).toBe(
+      (await getPosition(s.ctx)).assets,
+    );
   });
 
   it("writes no transaction or earmark when read", async () => {
