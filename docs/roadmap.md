@@ -226,7 +226,7 @@ Built in its conceptual order: what happened → where it went → what changed 
 - **Left for later:**
   - The colours of commitments (Stage 6) and protected money (Stage 7; formerly "goal reserves", Stage 8); no hue is reserved yet.
   - A copy review: a lone increase among the smaller changes reads "100% of the increase" even when spending fell overall; correct by the formula, but it reads oddly.
-  - The side panels (Verify, New account, transaction edit) return focus to the page, not to the button that opened them.
+  - ~~The side panels (Verify, New account, transaction edit) return focus to the page, not to the button that opened them.~~ **Resolved in Stage 10 Slice 5:** every dialog, side panel and sheet returns focus to the control that opened it.
   - Opening a transaction in Activity while a typed search is still settling can lose the opened transaction. Fixing it means row navigation must carry the newest filters, and a product decision on what happens when the newly filtered list no longer contains the open transaction.
 
 ### Milestone C — "Spoken for" — tag `v0.3-spoken-for`
@@ -363,7 +363,7 @@ The two inputs to Available: money already obligated and money deliberately set 
   12. Bank verified and still matching
 
   Available stays positive at about 30–60% of the pool. Over-committed, negative net worth and card credit are proven by tests, not the demo. The seed smoke test asserts that all seven kinds fire, run for several `today`s (the 1st, the 15th, and the 29th–31st for month-end clamping).
-- **V1 UX blockers (from the deferred list):** side panels return focus to the button that opened them; the toast no longer covers phone sheets. The rest stay known V1 limitations: the Activity row-click race, the "100% of the increase" copy, collapsible phone evidence, long evidence lists, account deep links, and Set aside's wording, sort and desktop empty space.
+- **V1 UX blockers (from the deferred list):** side panels return focus to the button that opened them; the toast no longer covers phone sheets. *(Both resolved in Slice 5, 2026-09-29: focus returns to the opener of every overlay; while one is open the toast moves to the top, beside a side panel from 768px, and its Undo no longer closes the overlay.)* The rest stay known V1 limitations: the Activity row-click race, the "100% of the increase" copy, collapsible phone evidence, long evidence lists, account deep links, and Set aside's wording, sort and desktop empty space.
 - **Still open, not owned by Stage 10:** O-4, O-5, O-6, P-1, P-2 (Monthly Plan's placement), P-5 and P-6.
 - **Builds — Overview:**
   - Available, as the entry point to its bridge.
@@ -393,7 +393,7 @@ The two inputs to Available: money already obligated and money deliberately set 
   4. navigation (P-3)
   5. responsive and accessibility review, Playwright flow 4, and the two UX blockers
   6. V1 readiness: README and screenshots, docs closure, then `v1.0` after review
-- **Progress:** Slice 0 `72dcd1f`; Slice 1 `a86b755`; Slice 2 (2026-09-28): the Accounts sign fix `09828bc` (liability standing: a card's credit reads as credit, never owed), then the read model: the Available bridge exposes `excludedAssetBalances` and `pool`, with their invariants, and the spoken-for bar reads `pool` instead of rebuilding it. Slice 3 (2026-09-29): the Overview at `/` — the navy Available band with the free-share ring, Attention's first 3 with Show N more in place, This month as a statement, and Where you stand with the asset rail — composed in the page from `getAvailable`, `getAttention`, `getMonthlyCashFlow` and `getPosition`, with no service of its own; Available's hero sentence is shared with the Available page. Slice 4 (2026-09-29): P-3 navigation — Overview is the first destination on desktop and a phone tab; Cash flow has no phone tab, and no tab is current on `/cash-flow` at phone width.
+- **Progress:** Slice 0 `72dcd1f`; Slice 1 `a86b755`; Slice 2 (2026-09-28): the Accounts sign fix `09828bc` (liability standing: a card's credit reads as credit, never owed), then the read model: the Available bridge exposes `excludedAssetBalances` and `pool`, with their invariants, and the spoken-for bar reads `pool` instead of rebuilding it. Slice 3 (2026-09-29): the Overview at `/` — the navy Available band with the free-share ring, Attention's first 3 with Show N more in place, This month as a statement, and Where you stand with the asset rail — composed in the page from `getAvailable`, `getAttention`, `getMonthlyCashFlow` and `getPosition`, with no service of its own; Available's hero sentence is shared with the Available page. Slice 4 (2026-09-29): P-3 navigation — Overview is the first destination on desktop and a phone tab; Cash flow has no phone tab, and no tab is current on `/cash-flow` at phone width. Slice 5 (2026-09-29): the two V1 UX blockers — overlays return focus to their opener, and toasts stay clear of open overlays with Undo that no longer closes them.
 - **Commits:**
   - `feat(demo): V1 demo situations`
   - `feat(overview): overview composed from existing answers`

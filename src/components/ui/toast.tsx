@@ -20,6 +20,12 @@ interface ToastState extends ToastInput {
 
 const ToastContext = createContext<(toast: ToastInput) => void>(() => {});
 
+const REGION = "data-toast-region";
+
+/** Whether an event target is inside the toast region (overlay.tsx keeps it from dismissing). */
+export const isInToastRegion = (target: EventTarget | null): boolean =>
+  target instanceof Element && target.closest(`[${REGION}]`) !== null;
+
 export const useToast = () => useContext(ToastContext);
 
 export function ToastProvider({ children }: { readonly children: ReactNode }) {
@@ -41,9 +47,16 @@ export function ToastProvider({ children }: { readonly children: ReactNode }) {
   return (
     <ToastContext.Provider value={show}>
       {children}
+      {/* Above the phone tab bar, or near the bottom from 768px. While an overlay
+          is open the region moves to the top, clear of bottom sheets and centred
+          dialogs, and from 768px stops short of the 440px side panel (overlay.tsx). */}
       <div
+        {...{ [REGION]: "" }}
         aria-live="polite"
-        className="pointer-events-none fixed inset-x-0 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] flex justify-center px-4 md:bottom-6"
+        className={
+          "pointer-events-none fixed inset-x-0 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] flex justify-center px-4 md:bottom-6 " +
+          "[body:has([role=dialog])_&]:top-[max(0.5rem,env(safe-area-inset-top))] [body:has([role=dialog])_&]:bottom-auto md:[body:has([role=dialog])_&]:right-[440px]"
+        }
       >
         {toast && (
           <div

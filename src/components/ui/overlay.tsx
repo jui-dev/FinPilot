@@ -2,9 +2,10 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import type { ReactNode } from "react";
+import { useRef, type FocusEvent, type ReactNode } from "react";
 
 import { cn } from "./cn";
+import { isInToastRegion } from "./toast";
 
 /**
  * Overlays built on Radix Dialog (focus trap, Escape, aria wiring); the look is
@@ -12,6 +13,11 @@ import { cn } from "./cn";
  *
  * - Modal: a centred dialog (Quick Add, confirmations).
  * - SidePanel: a right-hand panel for editing without leaving the page.
+ *
+ * Both are opened by their callers' state rather than a Radix Trigger, so each
+ * remembers what had focus when it opened and returns focus there when it
+ * closes (useOverlayFocus). A toast is not "outside" an overlay: using its
+ * Undo never closes the overlay that is open.
  */
 
 interface OverlayProps {
@@ -29,6 +35,41 @@ interface OverlayProps {
 }
 
 const overlayClass = "fixed inset-0 z-40 bg-ink/30 animate-fade-in";
+
+/**
+ * Focus returns to the element that had it when the overlay opened, if that
+ * element is still in the document. Radix returns focus only to a Dialog.Trigger,
+ * which these overlays don't use; without an opener (Quick Add opened with the
+ * N key, say) or once the opener is gone, focus is left where Radix leaves it.
+ *
+ * The opener is the element the first focus inside the overlay came from. That
+ * holds however focus arrives: Radix's own, the caller's onOpenAutoFocus, or a
+ * field's autoFocus (which makes Radix skip its open event altogether).
+ */
+function useOverlayFocus() {
+  // undefined: not yet known for this opening; null: nothing outside had focus.
+  const opener = useRef<HTMLElement | null | undefined>(undefined);
+  return {
+    onFocusCapture: (event: FocusEvent<HTMLElement>) => {
+      if (opener.current !== undefined) return;
+      const from = event.relatedTarget;
+      opener.current =
+        from instanceof HTMLElement && !event.currentTarget.contains(from) ? from : null;
+    },
+    onCloseAutoFocus: (event: Event) => {
+      const element = opener.current;
+      opener.current = undefined;
+      if (element?.isConnected) {
+        event.preventDefault();
+        element.focus();
+      }
+    },
+    // The toast (and its Undo) sits outside the overlay's portal; using it is not dismissing.
+    onInteractOutside: (event: Event) => {
+      if (isInToastRegion(event.target)) event.preventDefault();
+    },
+  };
+}
 
 function Close() {
   return (
@@ -78,11 +119,13 @@ function Frame({
 }
 
 export function Modal({ open, onOpenChange, className, onOpenAutoFocus, ...frame }: OverlayProps) {
+  const focus = useOverlayFocus();
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className={overlayClass} />
         <Dialog.Content
+          {...focus}
           onOpenAutoFocus={onOpenAutoFocus}
           className={cn(
             "fixed z-50 flex max-h-[92dvh] flex-col bg-surface shadow-overlay outline-none",
@@ -106,15 +149,19 @@ export function SidePanel({
   onOpenAutoFocus,
   ...frame
 }: OverlayProps) {
+  const focus = useOverlayFocus();
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className={overlayClass} />
         <Dialog.Content
+          {...focus}
           onOpenAutoFocus={onOpenAutoFocus}
           className={cn(
             "fixed z-50 flex flex-col bg-surface shadow-overlay outline-none",
             "inset-x-0 bottom-0 max-h-[92dvh] animate-slide-in-up rounded-t-2xl",
+            // md:w-[440px]: the toast region stops this far from the right while a
+            // panel is open (toast.tsx); change both together.
             "md:inset-y-0 md:right-0 md:left-auto md:max-h-none md:w-[440px] md:animate-slide-in-right md:rounded-none md:border-l md:border-line",
             className,
           )}
