@@ -29,6 +29,13 @@
       "when": 1790175423152,
       "tag": "0003_reconciliation_checkpoints",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790565698611,
+      "tag": "0004_commitments",
+      "breakpoints": true
     }
   ]
 }

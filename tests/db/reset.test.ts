@@ -9,8 +9,18 @@ import { fixedClock } from "@/domain/clock";
 import { fromMajor } from "@/domain/money";
 import type { ServiceContext } from "@/server/context";
 import { uuidV7Generator } from "@/server/ids";
+import {
+  createCommitment,
+  getOccurrences,
+  payOccurrence,
+} from "@/server/services/commitment-service";
 import { verifyAccountBalance } from "@/server/services/reconciliation-service";
-import { createAccount, createOwner } from "@/server/services/setup-service";
+import {
+  createAccount,
+  createOwner,
+  getAccounts,
+  getCategories,
+} from "@/server/services/setup-service";
 
 import { freshDatabase } from "../support/database";
 
@@ -141,5 +151,33 @@ describe("clearAllData", () => {
       }))
       .filter((t) => t.n > 0);
     expect(remaining).toEqual([]);
+  });
+});
+
+describe("clearAllData with commitments", () => {
+  it("clears commitments and their paid occurrences along with the ledger", async () => {
+    const { ctx, handle: h } = await verifiedLedger();
+    const housing = (await getCategories(ctx)).find((c) => c.name === "Housing")!.id;
+    const cash = (await getAccounts(ctx)).find((a) => a.name === "Cash")!.id;
+    const created = await createCommitment(ctx, {
+      name: "Rent",
+      categoryId: housing,
+      expectedAmount: fromMajor(100),
+      expectedAccountId: cash,
+      frequency: "monthly",
+      interval: 1,
+      anchorOn: calendarDateFromIso("2026-09-01"),
+      endOn: null,
+    });
+    if (!created.ok) throw new Error("could not create the commitment");
+    const [first] = await getOccurrences(ctx);
+    expect((await payOccurrence(ctx, first!.id, { accountId: cash })).ok).toBe(true);
+
+    clearAllData(h);
+
+    for (const table of ["commitment_occurrences", "commitments", "transactions"]) {
+      expect(h.sqlite.prepare(`SELECT count(*) AS n FROM ${table}`).get()).toEqual({ n: 0 });
+    }
+    expect(h.sqlite.pragma("foreign_key_check")).toEqual([]);
   });
 });

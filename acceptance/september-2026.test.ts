@@ -3,7 +3,9 @@ import { afterAll, describe, expect, it } from "vitest";
 import { likeForLikeWindows, type CalendarDate } from "@/domain/calendar-date";
 import { formatPercent, formatShare } from "@/domain/ledger/analytics";
 import { fromMajor, subtract, sum, type Money } from "@/domain/money";
+import { getOccurrences } from "@/server/services/commitment-service";
 import {
+  deleteTransaction,
   getAccountBalances,
   getIncome,
   getPosition,
@@ -80,6 +82,14 @@ const m2 = once(async () => {
   expect(result.ok).toBe(true);
   return s;
 });
+/** M1: the Sep 2 rent payment (row 2) is deleted. */
+const m1 = once(async () => {
+  const s = await buildSeptember2026();
+  built.push(s);
+  const result = await deleteTransaction(s.ctx, s.rows.R2!);
+  expect(result.ok).toBe(true);
+  return s;
+});
 afterAll(() => built.forEach((s) => s.handle.close()));
 
 // ---------------------------------------------------------------------------
@@ -114,6 +124,11 @@ async function spendingByName(s: Scenario, range = SEP_1_22): Promise<Record<str
     ].map((n) => [s.category(n), n]),
   );
   return Object.fromEntries([...byId].map(([id, amount]) => [names.get(id) ?? id, amount]));
+}
+
+/** Occurrences keyed "Name Mon D" (e.g. "Rent 2026-09-01"), as read on 2026-09-22. */
+async function occurrencesByKey(s: Scenario) {
+  return Object.fromEntries((await getOccurrences(s.ctx)).map((o) => [`${o.name} ${o.dueOn}`, o]));
 }
 
 /** The month-over-month explanation shown for September to date (Sep 1–22 vs Aug 1–22). */
@@ -270,6 +285,72 @@ const implemented: Record<string, () => Promise<void>> = {
     expect(byName.Housing!.material).toBe(false);
     expect(byName["Fees & Charges"]!.material).toBe(false);
     expect(explanation.smallerChanges).toEqual({ count: 0, net: taka(0) });
+  },
+
+  "A-30": async () => {
+    const s = await base();
+    const occurrences = await getOccurrences(s.ctx);
+    const byState = (state: string) =>
+      occurrences.filter((o) => o.state === state).map((o) => `${o.name} ${o.dueOn}`);
+
+    expect(byState("paid")).toEqual(["Rent 2026-08-01", "Internet 2026-08-25", "Rent 2026-09-01"]);
+    expect(byState("pending")).toEqual([
+      "Internet 2026-09-25",
+      "Rent 2026-10-01",
+      "Streaming 2026-10-03",
+      "Internet 2026-10-25",
+      "Rent 2026-11-01",
+      "Streaming 2026-11-03",
+    ]);
+    expect(byState("skipped")).toEqual([]);
+    // Materialised through today + 60 = Nov 21, and no Streaming before Oct 3.
+    expect(occurrences.every((o) => o.dueOn <= "2026-11-21")).toBe(true);
+    expect(occurrences.some((o) => o.name === "Streaming" && o.dueOn < "2026-10-03")).toBe(false);
+
+    // Each paid occurrence is linked to the scenario row that paid it.
+    const byKey = await occurrencesByKey(s);
+    expect(byKey["Rent 2026-08-01"]!.transactionId).toBe(s.rows.P2);
+    expect(byKey["Internet 2026-08-25"]!.transactionId).toBe(s.rows.P7);
+    expect(byKey["Rent 2026-09-01"]!.transactionId).toBe(s.rows.R2);
+  },
+
+  "A-31": async () => {
+    const pending = (await getOccurrences((await base()).ctx)).filter(
+      (o) => o.state === "pending" && o.dueOn <= "2026-10-22",
+    );
+    expect(pending.map((o) => [o.name, o.expectedAmount])).toEqual([
+      ["Internet", taka(1_500)],
+      ["Rent", taka(30_000)],
+      ["Streaming", taka(700)],
+    ]);
+    expect(sum(pending.map((o) => o.expectedAmount))).toBe(taka(32_200));
+  },
+
+  "A-32": async () => {
+    const s = await base();
+    const first = await getOccurrences(s.ctx);
+    const second = await getOccurrences(s.ctx);
+    expect(second).toEqual(first);
+    const stored = s.handle.sqlite
+      .prepare(
+        "SELECT count(*) AS n, count(DISTINCT commitment_id || due_on) AS keys FROM commitment_occurrences",
+      )
+      .get() as { n: number; keys: number };
+    expect(stored).toEqual({ n: 9, keys: 9 });
+  },
+
+  "M1-1": async () => {
+    const rent = (await occurrencesByKey(await m1()))["Rent 2026-09-01"]!;
+    expect(rent).toMatchObject({ state: "pending", display: "overdue" });
+    // The pointer to the deleted payment is kept: the occurrence was paid once.
+    expect(rent.transactionId).not.toBeNull();
+  },
+
+  "M1-2": async () => {
+    const s = await m1();
+    expect((await balances(s)).bank).toBe(taka(163_000));
+    expect((await getPosition(s.ctx)).netWorth).toBe(taka(260_163));
+    expect(await getTotalSpending(s.ctx, SEP_1_22)).toBe(taka(36_487));
   },
 
   "M3-1 (ledger)": async () => {

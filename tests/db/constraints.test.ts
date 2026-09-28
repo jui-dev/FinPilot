@@ -385,3 +385,155 @@ describe("reconciliation_checkpoints", () => {
     );
   });
 });
+
+describe("commitments and occurrences", () => {
+  const commitment = (values: Partial<Record<string, unknown>> = {}) => {
+    const row = {
+      id: `c-${seq++}`,
+      owner_id: "o1",
+      name: "Rent",
+      category_id: "o1-shopping",
+      expected_amount_minor: 3_000_000,
+      expected_account_id: "o1-bank",
+      frequency: "monthly",
+      interval_count: 1,
+      anchor_on: "2026-08-01",
+      end_on: null,
+      generate_from: "2026-08-01",
+      ...values,
+    };
+    exec(
+      `INSERT INTO commitments (id, owner_id, name, category_id, expected_amount_minor, expected_account_id,
+         frequency, interval_count, anchor_on, end_on, generate_from, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      row.id,
+      row.owner_id,
+      row.name,
+      row.category_id,
+      row.expected_amount_minor,
+      row.expected_account_id,
+      row.frequency,
+      row.interval_count,
+      row.anchor_on,
+      row.end_on,
+      row.generate_from,
+      NOW,
+      NOW,
+    );
+    return row.id;
+  };
+  const occurrence = (values: Partial<Record<string, unknown>> = {}) => {
+    const row = {
+      id: `oc-${seq++}`,
+      owner_id: "o1",
+      commitment_id: "c-rent",
+      due_on: `2026-${String(1 + (seq % 12)).padStart(2, "0")}-01`,
+      expected_amount_minor: 3_000_000,
+      transaction_id: null,
+      skipped_at: null,
+      ...values,
+    };
+    exec(
+      `INSERT INTO commitment_occurrences (id, owner_id, commitment_id, due_on, expected_amount_minor,
+         transaction_id, skipped_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      row.id,
+      row.owner_id,
+      row.commitment_id,
+      row.due_on,
+      row.expected_amount_minor,
+      row.transaction_id,
+      row.skipped_at,
+      NOW,
+      NOW,
+    );
+    return row.id;
+  };
+
+  beforeEach(() => {
+    commitment({ id: "c-rent" });
+  });
+
+  it("accepts a valid commitment, with or without an expected account and end date", () => {
+    expect(() => commitment({ expected_account_id: null })).not.toThrow();
+    expect(() =>
+      commitment({ frequency: "yearly", interval_count: 2, end_on: "2026-08-01" }),
+    ).not.toThrow();
+  });
+
+  it("supports only monthly and yearly schedules", () => {
+    expect(() => commitment({ frequency: "weekly" })).toThrow(/ck_commitments_frequency/);
+  });
+
+  it("rejects an interval below 1 or not an integer", () => {
+    expect(() => commitment({ interval_count: 0 })).toThrow(/ck_commitments_interval/);
+    expect(() => commitment({ interval_count: 1.5 })).toThrow(/ck_commitments_interval/);
+  });
+
+  it("rejects a non-positive or non-integer expected amount", () => {
+    expect(() => commitment({ expected_amount_minor: 0 })).toThrow(/ck_commitments_amount/);
+    expect(() => commitment({ expected_amount_minor: 10.5 })).toThrow(/ck_commitments_amount/);
+  });
+
+  it("rejects malformed dates and an end before the anchor", () => {
+    expect(() => commitment({ anchor_on: "2026-8-1" })).toThrow(/ck_commitments_anchor_on/);
+    expect(() => commitment({ generate_from: "soon" })).toThrow(/ck_commitments_generate_from/);
+    expect(() => commitment({ end_on: "2026-07-31" })).toThrow(/ck_commitments_end_on/);
+  });
+
+  it("rejects a blank name", () => {
+    expect(() => commitment({ name: "  " })).toThrow(/ck_commitments_name/);
+  });
+
+  it("rejects another owner's category or account", () => {
+    expect(() => commitment({ category_id: "o2-shopping" })).toThrow(/FOREIGN KEY/);
+    expect(() => commitment({ expected_account_id: "o2-bank" })).toThrow(/FOREIGN KEY/);
+  });
+
+  it("holds at most one occurrence per commitment and due date", () => {
+    occurrence({ due_on: "2026-09-01" });
+    expect(() => occurrence({ due_on: "2026-09-01" })).toThrow(/UNIQUE constraint failed/);
+  });
+
+  it("lets one transaction pay at most one occurrence", () => {
+    const paid = insert();
+    occurrence({ transaction_id: paid });
+    expect(() => occurrence({ transaction_id: paid })).toThrow(/UNIQUE constraint failed/);
+  });
+
+  it("rejects an occurrence that is both linked and skipped", () => {
+    expect(() => occurrence({ transaction_id: insert(), skipped_at: NOW })).toThrow(
+      /ck_commitment_occurrences_outcome/,
+    );
+  });
+
+  it("rejects a non-positive snapshot amount and a malformed due date", () => {
+    expect(() => occurrence({ expected_amount_minor: 0 })).toThrow(
+      /ck_commitment_occurrences_amount/,
+    );
+    expect(() => occurrence({ due_on: "2026-9-1" })).toThrow(/ck_commitment_occurrences_due_on/);
+  });
+
+  it("rejects another owner's commitment or transaction", () => {
+    commitment({
+      id: "c-other",
+      owner_id: "o2",
+      category_id: "o2-shopping",
+      expected_account_id: null,
+    });
+    expect(() => occurrence({ commitment_id: "c-other" })).toThrow(/FOREIGN KEY/);
+    const foreign = insert({ owner_id: "o2", account_id: "o2-bank", category_id: "o2-shopping" });
+    expect(() => occurrence({ transaction_id: foreign })).toThrow(/FOREIGN KEY/);
+  });
+
+  it("restricts hard-deleting a linked transaction or a commitment with occurrences", () => {
+    const paid = insert();
+    occurrence({ transaction_id: paid });
+    expect(() => exec("DELETE FROM transactions WHERE id = ?", paid)).toThrow(/FOREIGN KEY/);
+    expect(() => exec("DELETE FROM commitments WHERE id = 'c-rent'")).toThrow(/FOREIGN KEY/);
+  });
+
+  it("restricts hard-deleting a category or account a commitment refers to", () => {
+    expect(() => exec("DELETE FROM accounts WHERE id = 'o1-bank'")).toThrow(/FOREIGN KEY/);
+    expect(() => exec("DELETE FROM categories WHERE id = 'o1-shopping'")).toThrow(/FOREIGN KEY/);
+  });
+});

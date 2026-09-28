@@ -135,3 +135,33 @@ describe("0002_fix_date_checks on a database with data", () => {
     h.close();
   });
 });
+
+describe("0004_commitments on a database with data", () => {
+  it("adds the commitment tables without touching the ledger, and links to existing rows", () => {
+    const h = openDatabase(":memory:");
+    migrateDatabase(h, migrationsUpTo(4));
+    seedLedger((sql) => h.sqlite.exec(sql));
+    const before = {
+      transactions: h.sqlite.prepare("SELECT * FROM transactions ORDER BY id").all(),
+      balances: balances(h),
+    };
+
+    migrateDatabase(h);
+
+    expect(h.sqlite.prepare("SELECT * FROM transactions ORDER BY id").all()).toEqual(
+      before.transactions,
+    );
+    expect(balances(h)).toEqual(before.balances);
+    expect(h.sqlite.pragma("foreign_key_check")).toEqual([]);
+
+    // The new tables accept rows referencing the existing ledger.
+    h.sqlite.exec(`INSERT INTO commitments (id, owner_id, name, category_id, expected_amount_minor,
+        expected_account_id, frequency, interval_count, anchor_on, end_on, generate_from, created_at, updated_at)
+      VALUES ('c', 'o', 'Rent', 'shop', 300000, 'bank', 'monthly', 1, '2026-09-01', NULL, '2026-09-01', '${NOW}', '${NOW}')`);
+    h.sqlite.exec(`INSERT INTO commitment_occurrences (id, owner_id, commitment_id, due_on,
+        expected_amount_minor, transaction_id, skipped_at, created_at, updated_at)
+      VALUES ('oc', 'o', 'c', '2026-09-01', 300000, 't6', NULL, '${NOW}', '${NOW}')`);
+    expect(h.sqlite.pragma("foreign_key_check")).toEqual([]);
+    h.close();
+  });
+});

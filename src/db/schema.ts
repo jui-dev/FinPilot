@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import { COMMITMENT_FREQUENCIES } from "@/domain/commitments/schedule";
 import { ACCOUNT_TYPES } from "@/domain/ledger/accounts";
 import { CATEGORY_KINDS, TRANSACTION_TYPES } from "@/domain/ledger/transactions";
 import {
@@ -279,6 +280,142 @@ export const reconciliationCheckpoints = sqliteTable(
     check(
       "ck_reconciliation_checkpoints_stated_integer",
       sql`typeof(${t.statedBalanceMinor}) = 'integer'`,
+    ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// commitments — the rule of a recurring obligation (docs/domain-model.md §8)
+// ---------------------------------------------------------------------------
+
+export const commitments = sqliteTable(
+  "commitments",
+  {
+    id: text("id").primaryKey(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => owners.id, { onDelete: "restrict" }),
+    name: text("name").notNull(),
+    /** The obligation's purpose, and the category of every expense Pay records. */
+    categoryId: text("category_id").notNull(),
+    expectedAmountMinor: integer("expected_amount_minor").notNull(),
+    /** "Usually paid from": descriptive only, with no funding meaning (open decision O-1). */
+    expectedAccountId: text("expected_account_id"),
+    frequency: text("frequency", { enum: COMMITMENT_FREQUENCIES }).notNull(),
+    intervalCount: integer("interval_count").notNull(),
+    /** The recurrence anchor: its day of month is the day every due date aims for. */
+    anchorOn: text("anchor_on").notNull(),
+    /** The last day a due date may fall on (inclusive), or NULL for no end. */
+    endOn: text("end_on"),
+    /**
+     * The generation boundary: this version of the rule may create occurrences
+     * only for due dates on or after this day. Set to anchor_on on create and
+     * moved forward (never back) by a rule edit, so an edited rule can never
+     * manufacture historical occurrences that the old rule did not have.
+     */
+    generateFrom: text("generate_from").notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    foreignKey({
+      name: "fk_commitments_category",
+      columns: [t.ownerId, t.categoryId],
+      foreignColumns: [categories.ownerId, categories.id],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "fk_commitments_expected_account",
+      columns: [t.ownerId, t.expectedAccountId],
+      foreignColumns: [accounts.ownerId, accounts.id],
+    }).onDelete("restrict"),
+
+    // Parent key for fk_commitment_occurrences_commitment.
+    uniqueIndex("ux_commitments_owner_id").on(t.ownerId, t.id),
+
+    check("ck_commitments_name", sql`length(trim(${t.name})) > 0`),
+    check("ck_commitments_frequency", sql`${t.frequency} IN ('monthly', 'yearly')`),
+    check(
+      "ck_commitments_interval",
+      sql`typeof(${t.intervalCount}) = 'integer' AND ${t.intervalCount} >= 1`,
+    ),
+    check(
+      "ck_commitments_amount",
+      sql`typeof(${t.expectedAmountMinor}) = 'integer' AND ${t.expectedAmountMinor} > 0`,
+    ),
+    // SQLite-only date shape checks (PostgreSQL: DATE).
+    check(
+      "ck_commitments_anchor_on",
+      sql`date(${t.anchorOn}) IS NOT NULL AND ${t.anchorOn} = date(${t.anchorOn})`,
+    ),
+    check(
+      "ck_commitments_end_on",
+      sql`${t.endOn} IS NULL OR (date(${t.endOn}) IS NOT NULL AND ${t.endOn} = date(${t.endOn}) AND ${t.endOn} >= ${t.anchorOn})`,
+    ),
+    check(
+      "ck_commitments_generate_from",
+      sql`date(${t.generateFrom}) IS NOT NULL AND ${t.generateFrom} = date(${t.generateFrom})`,
+    ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// commitment_occurrences — one expected instance of a commitment
+// (docs/domain-model.md §8). Whether it is paid is derived from the linked
+// transaction, never stored.
+// ---------------------------------------------------------------------------
+
+export const commitmentOccurrences = sqliteTable(
+  "commitment_occurrences",
+  {
+    id: text("id").primaryKey(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => owners.id, { onDelete: "restrict" }),
+    commitmentId: text("commitment_id").notNull(),
+    dueOn: text("due_on").notNull(),
+    /** Snapshot of the rule's amount when the occurrence was created. */
+    expectedAmountMinor: integer("expected_amount_minor").notNull(),
+    /**
+     * The payment evidence. The ledger never clears it: a deleted or edited-away
+     * transaction leaves it in place, which records that the occurrence was ever
+     * linked. Only an explicit Pay (replace) or Skip (clear) changes it.
+     */
+    transactionId: text("transaction_id"),
+    /** When the person explicitly skipped it; NULL otherwise. */
+    skippedAt: text("skipped_at"),
+    ...timestamps,
+  },
+  (t) => [
+    foreignKey({
+      name: "fk_commitment_occurrences_commitment",
+      columns: [t.ownerId, t.commitmentId],
+      foreignColumns: [commitments.ownerId, commitments.id],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "fk_commitment_occurrences_transaction",
+      columns: [t.ownerId, t.transactionId],
+      foreignColumns: [transactions.ownerId, transactions.id],
+    }).onDelete("restrict"),
+
+    // Materialisation is idempotent: one occurrence per commitment and date.
+    uniqueIndex("ux_commitment_occurrences_due").on(t.commitmentId, t.dueOn),
+    // One transaction pays at most one occurrence.
+    uniqueIndex("ux_commitment_occurrences_transaction")
+      .on(t.transactionId)
+      .where(sql`${t.transactionId} IS NOT NULL`),
+    // Pending and overdue occurrences, read in due-date order.
+    index("ix_commitment_occurrences_owner_due").on(t.ownerId, t.dueOn),
+
+    check(
+      "ck_commitment_occurrences_outcome",
+      sql`NOT (${t.transactionId} IS NOT NULL AND ${t.skippedAt} IS NOT NULL)`,
+    ),
+    check(
+      "ck_commitment_occurrences_amount",
+      sql`typeof(${t.expectedAmountMinor}) = 'integer' AND ${t.expectedAmountMinor} > 0`,
+    ),
+    check(
+      "ck_commitment_occurrences_due_on",
+      sql`date(${t.dueOn}) IS NOT NULL AND ${t.dueOn} = date(${t.dueOn})`,
     ),
   ],
 );

@@ -9,6 +9,11 @@ import type { ServiceContext } from "@/server/context";
 import type { ServiceResult } from "@/server/errors";
 import { uuidV7Generator } from "@/server/ids";
 import { recordTransaction, recordTransferWithFee } from "@/server/services/ledger-service";
+import {
+  createCommitment,
+  getOccurrences,
+  payOccurrence,
+} from "@/server/services/commitment-service";
 import { verifyAccountBalance } from "@/server/services/reconciliation-service";
 import { createAccount, createOwner, getCategories } from "@/server/services/setup-service";
 
@@ -18,7 +23,8 @@ import { createAccount, createOwner, getCategories } from "@/server/services/set
  *
  * Stage F2 built the August prologue (P0–P7) and September rows 1–9 and 11;
  * Stage 4a adds row 10 (the Cash reconciliation, −350) through the real
- * reconcile service. Commitment links (P2, P7, row 2) arrive in Stage 6.
+ * reconcile service. Stage 6 adds the three commitments, and records the
+ * payments that pay their occurrences (P2, P7, row 2) through Pay.
  * Amounts are whole taka here and stored as integer poisha.
  */
 export const TODAY = calendarDateFromIso("2026-09-22");
@@ -33,6 +39,7 @@ export interface Scenario {
   readonly handle: DatabaseHandle;
   readonly ctx: ServiceContext;
   readonly accounts: Readonly<Record<"bank" | "cash" | "bkash" | "savings" | "visa", string>>;
+  readonly commitments: Readonly<Record<"rent" | "internet" | "streaming", string>>;
   readonly category: (name: string) => string;
   /** Transaction ids by scenario row label (P1…P7, R1…R11). */
   readonly rows: Readonly<Record<string, string>>;
@@ -95,6 +102,34 @@ export async function buildSeptember2026(variant: ScenarioVariant = "base"): Pro
     visa: await open("Visa", "credit_card", -3_200),
   };
 
+  // Commitments (docs/acceptance-scenarios.md §3). Creating them records no
+  // transaction, so the ledger's recording sequence is unchanged.
+  const commit = async (
+    name: string,
+    cat: string,
+    amount: number,
+    anchorOn: string,
+    expectedAccountId: string,
+  ) =>
+    unwrap(
+      `commitment ${name}`,
+      await createCommitment(ctx, {
+        name,
+        categoryId: category(cat),
+        expectedAmount: taka(amount),
+        expectedAccountId,
+        frequency: "monthly",
+        interval: 1,
+        anchorOn: d(anchorOn),
+        endOn: null,
+      }),
+    );
+  const commitments = {
+    rent: await commit("Rent", "Housing", 30_000, "2026-08-01", accounts.bank),
+    internet: await commit("Internet", "Utilities", 1_500, "2026-08-25", accounts.bkash),
+    streaming: await commit("Streaming", "Entertainment", 700, "2026-10-03", accounts.visa),
+  };
+
   const rows: Record<string, string> = {};
   const checkpoints: Record<string, string> = {};
   const record = async (label: string, draft: TransactionDraft) => {
@@ -130,6 +165,23 @@ export async function buildSeptember2026(variant: ScenarioVariant = "base"): Pro
     rows[label] = transferId;
     rows[`${label} fee`] = feeId;
   };
+  /** Records the expense that pays one occurrence, through Pay. */
+  const pay = async (
+    label: string,
+    commitmentId: string,
+    dueOn: string,
+    paidOn: string,
+    account: string,
+  ) => {
+    const occurrence = (await getOccurrences(ctx)).find(
+      (o) => o.commitmentId === commitmentId && o.dueOn === dueOn,
+    );
+    if (!occurrence) throw new Error(`Scenario row ${label}: no occurrence due ${dueOn}`);
+    rows[label] = unwrap(
+      label,
+      await payOccurrence(ctx, occurrence.id, { accountId: account, occurredOn: d(paidOn) }),
+    );
+  };
   const salary = (on: string): TransactionDraft => ({
     type: "income",
     amount: taka(95_000),
@@ -140,16 +192,16 @@ export async function buildSeptember2026(variant: ScenarioVariant = "base"): Pro
 
   // August prologue.
   await record("P1", salary("2026-08-01"));
-  await record("P2", expense("2026-08-02", 30_000, accounts.bank, "Housing"));
+  await pay("P2", commitments.rent, "2026-08-01", "2026-08-02", accounts.bank);
   await record("P3", expense("2026-08-06", 5_000, accounts.visa, "Groceries"));
   await record("P4", expense("2026-08-09", 3_800, accounts.visa, "Shopping"));
   await cashOut("P5", d("2026-08-13"));
   await record("P6", expense("2026-08-15", 1_200, accounts.cash, "Food & Dining"));
-  await record("P7", expense("2026-08-25", 1_500, accounts.bkash, "Utilities"));
+  await pay("P7", commitments.internet, "2026-08-25", "2026-08-25", accounts.bkash);
 
   // September.
   await record("R1", salary("2026-09-01"));
-  await record("R2", expense("2026-09-02", 30_000, accounts.bank, "Housing"));
+  await pay("R2", commitments.rent, "2026-09-01", "2026-09-02", accounts.bank);
   await record("R3", expense("2026-09-05", 4_200, accounts.visa, "Groceries"));
   await record("R4", expense("2026-09-08", 3_000, accounts.visa, "Shopping"));
   await record(
@@ -184,5 +236,5 @@ export async function buildSeptember2026(variant: ScenarioVariant = "base"): Pro
 
   await record("R11", expense("2026-09-21", 30_000, accounts.savings, "Health"));
 
-  return { handle, ctx, accounts, category, rows, checkpoints };
+  return { handle, ctx, accounts, commitments, category, rows, checkpoints };
 }

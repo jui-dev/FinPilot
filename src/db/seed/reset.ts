@@ -15,7 +15,7 @@ export function clearAllData(handle: DatabaseHandle): void {
   handle.sqlite.pragma("foreign_keys = OFF");
   try {
     handle.sqlite.exec(
-      "BEGIN IMMEDIATE; DELETE FROM reconciliation_checkpoints; DELETE FROM transactions; DELETE FROM categories; DELETE FROM accounts; DELETE FROM owners; COMMIT;",
+      "BEGIN IMMEDIATE; DELETE FROM commitment_occurrences; DELETE FROM commitments; DELETE FROM reconciliation_checkpoints; DELETE FROM transactions; DELETE FROM categories; DELETE FROM accounts; DELETE FROM owners; COMMIT;",
     );
   } catch (error) {
     handle.sqlite.exec("ROLLBACK");

@@ -18,7 +18,7 @@ import { CATEGORY_KINDS, type TransactionDraft } from "./transactions";
 // Field schemas
 // ---------------------------------------------------------------------------
 
-const positiveAmount = (message = "Enter an amount above zero.") =>
+export const positiveAmount = (message = "Enter an amount above zero.") =>
   z.string().transform((raw, ctx): Money => {
     const result = parseMoney(raw);
     if (!result.ok || result.value <= 0) {
@@ -38,7 +38,7 @@ const nonNegativeAmount = z.string().transform((raw, ctx): Money => {
   return result.value;
 });
 
-const date = z.string().transform((raw, ctx): CalendarDate => {
+export const date = z.string().transform((raw, ctx): CalendarDate => {
   const result = parseCalendarDate(raw);
   if (!result.ok) {
     ctx.addIssue({ code: "custom", message: "Enter a valid date." });
@@ -47,7 +47,7 @@ const date = z.string().transform((raw, ctx): CalendarDate => {
   return result.value;
 });
 
-const reference = (message: string) => z.string({ error: message }).trim().min(1, message);
+export const reference = (message: string) => z.string({ error: message }).trim().min(1, message);
 
 /** Optional free text: trimmed, empty → null. */
 const optionalText = (max: number) =>
@@ -58,7 +58,7 @@ const optionalText = (max: number) =>
     .optional()
     .transform((v) => (v ? v : null));
 
-const name = (max: number, message: string) =>
+export const name = (max: number, message: string) =>
   z.string().trim().min(1, message).max(max, `Keep it under ${max} characters.`);
 
 // ---------------------------------------------------------------------------

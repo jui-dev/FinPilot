@@ -1,6 +1,12 @@
 import { z } from "zod";
 
 import {
+  commitmentFieldForRule,
+  commitmentInputSchema,
+  payOccurrenceInputSchema,
+  type CommitmentValues,
+} from "@/domain/commitments/input";
+import {
   accountInputSchema,
   categoryInputSchema,
   categoryNameSchema,
@@ -15,6 +21,7 @@ import type { Money } from "@/domain/money";
 import type { ServiceContext } from "@/server/context";
 import type { ServiceResult } from "@/server/errors";
 import { getActivityItem } from "@/server/services/activity-service";
+import * as commitments from "@/server/services/commitment-service";
 import * as ledger from "@/server/services/ledger-service";
 import * as reconciliation from "@/server/services/reconciliation-service";
 import * as setup from "@/server/services/setup-service";
@@ -296,3 +303,63 @@ export const restoreCategory = async (ctx: ServiceContext, id: string) =>
 
 export const deleteCategory = async (ctx: ServiceContext, id: string) =>
   fromService(await setup.deleteCategory(ctx, id));
+
+// ---------------------------------------------------------------------------
+// Commitments
+// ---------------------------------------------------------------------------
+
+function commitmentRejected(error: { code: string; message: string }): CommandResult<never> {
+  const field = commitmentFieldForRule(error.code);
+  return {
+    ok: false,
+    message: error.message,
+    fieldErrors: field ? { [field]: error.message } : {},
+  };
+}
+
+const commitmentDraft = (values: CommitmentValues): commitments.CommitmentDraft => ({
+  name: values.name,
+  categoryId: values.categoryId,
+  expectedAmount: values.expectedAmount,
+  expectedAccountId: values.expectedAccountId,
+  frequency: values.frequency,
+  interval: values.interval,
+  anchorOn: values.anchorOn,
+  endOn: values.endOn,
+});
+
+export async function createCommitment(
+  ctx: ServiceContext,
+  raw: unknown,
+): Promise<CommandResult<string>> {
+  const parsed = commitmentInputSchema.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  const result = await commitments.createCommitment(ctx, commitmentDraft(parsed.data));
+  return result.ok ? done(result.value) : commitmentRejected(result.error);
+}
+
+/** Edits a commitment; a schedule or amount change regenerates only its untouched future. */
+export async function editCommitment(
+  ctx: ServiceContext,
+  id: string,
+  raw: unknown,
+): Promise<CommandResult> {
+  const parsed = commitmentInputSchema.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  const result = await commitments.editCommitment(ctx, id, commitmentDraft(parsed.data));
+  return result.ok ? done(undefined) : commitmentRejected(result.error);
+}
+
+/** Records an occurrence's payment as a real expense. Returns the transaction id. */
+export async function payOccurrence(
+  ctx: ServiceContext,
+  occurrenceId: string,
+  raw: unknown,
+): Promise<CommandResult<string>> {
+  const parsed = payOccurrenceInputSchema.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  return fromService(await commitments.payOccurrence(ctx, occurrenceId, parsed.data));
+}
+
+export const skipOccurrence = async (ctx: ServiceContext, occurrenceId: string) =>
+  fromService(await commitments.skipOccurrence(ctx, occurrenceId));

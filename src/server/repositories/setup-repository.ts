@@ -1,7 +1,14 @@
 import { and, asc, count, eq, or, sql } from "drizzle-orm";
 
 import type { AppDatabase } from "@/db/client";
-import { accounts, categories, owners, reconciliationCheckpoints, transactions } from "@/db/schema";
+import {
+  accounts,
+  categories,
+  commitments,
+  owners,
+  reconciliationCheckpoints,
+  transactions,
+} from "@/db/schema";
 import { accountEntries } from "@/db/views";
 import type { CalendarDate } from "@/domain/calendar-date";
 import type { AccountType } from "@/domain/ledger/accounts";
@@ -212,7 +219,13 @@ function accountReferences(tx: SyncDb, ownerId: string, accountId: string): numb
       ),
     )
     .get();
-  return (rows?.n ?? 0) + (checkpoints?.n ?? 0);
+  // A commitment's "usually paid from" account is a reference too.
+  const expecting = tx
+    .select({ n: count() })
+    .from(commitments)
+    .where(and(eq(commitments.ownerId, ownerId), eq(commitments.expectedAccountId, accountId)))
+    .get();
+  return (rows?.n ?? 0) + (checkpoints?.n ?? 0) + (expecting?.n ?? 0);
 }
 
 export function archiveAccount(db: AppDatabase, ctx: WriteContext, id: string): void {
@@ -248,7 +261,7 @@ export function deleteAccount(db: AppDatabase, ctx: WriteContext, id: string): v
     if (accountReferences(tx, ctx.ownerId, id) > 0) {
       throw new LedgerRuleError(
         "account_in_use",
-        "This account has recorded history, so it can only be archived.",
+        "This account has recorded history or commitments, so it can only be archived.",
       );
     }
     tx.delete(accounts)
@@ -291,6 +304,14 @@ export function accountReferenceCounts(db: AppDatabase, ownerId: string): Map<st
       .groupBy(reconciliationCheckpoints.accountId)
       .all(),
   );
+  tally(
+    db
+      .select({ accountId: commitments.expectedAccountId, n: count() })
+      .from(commitments)
+      .where(eq(commitments.ownerId, ownerId))
+      .groupBy(commitments.expectedAccountId)
+      .all(),
+  );
   return counts;
 }
 
@@ -315,7 +336,12 @@ function categoryReferences(tx: SyncDb, ownerId: string, categoryId: string): nu
     .from(transactions)
     .where(and(eq(transactions.ownerId, ownerId), eq(transactions.categoryId, categoryId)))
     .get();
-  return row?.n ?? 0;
+  const committed = tx
+    .select({ n: count() })
+    .from(commitments)
+    .where(and(eq(commitments.ownerId, ownerId), eq(commitments.categoryId, categoryId)))
+    .get();
+  return (row?.n ?? 0) + (committed?.n ?? 0);
 }
 
 export function renameCategory(db: AppDatabase, ctx: WriteContext, id: string, name: string): void {
@@ -366,7 +392,7 @@ export function deleteCategory(db: AppDatabase, ctx: WriteContext, id: string): 
     if (categoryReferences(tx, ctx.ownerId, id) > 0) {
       throw new LedgerRuleError(
         "category_in_use",
-        "This category is used by transactions, so it can only be archived.",
+        "This category is used by transactions or commitments, so it can only be archived.",
       );
     }
     tx.delete(categories)
@@ -385,5 +411,12 @@ export function categoryReferenceCounts(db: AppDatabase, ownerId: string): Map<s
     .groupBy(transactions.categoryId)
     .all();
   for (const r of rows) if (r.categoryId) counts.set(r.categoryId, r.n);
+  const committed = db
+    .select({ categoryId: commitments.categoryId, n: count() })
+    .from(commitments)
+    .where(eq(commitments.ownerId, ownerId))
+    .groupBy(commitments.categoryId)
+    .all();
+  for (const r of committed) counts.set(r.categoryId, (counts.get(r.categoryId) ?? 0) + r.n);
   return counts;
 }
