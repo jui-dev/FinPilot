@@ -276,6 +276,7 @@ The two inputs to Available: money already obligated and money deliberately set 
 - **What you can see at the end:** protected money backed by real money, with targets where they exist.
 - **Deferred:** **Use** until its reversal semantics are decided (§8.5); Move if it isn't in the minimum slice; user-set priority; the item↔commitment relationship; and, beyond V1 (2026-09-28), a target date, on-track / behind-schedule and a required monthly contribution (planned contributions belong to Monthly Plan, Stage 13).
 - **Commit:** `feat(protected-money): reservations over real money, backing and shortfall`
+- **Done (2026-09-28):** the domain `cab43fb`, persistence `84210b5` and the Set aside page `f90a222`. Milestone C completed at `f90a222`; its tag `v0.3-spoken-for` has not been created.
 
 ### Milestone D — "What is actually free" — tag `v0.4-available`
 
@@ -329,17 +330,46 @@ The two inputs to Available: money already obligated and money deliberately set 
   - **Acceptance:** A-70…A-73, M1-5, M2-3.
 - **What you can see at the end:** "what deserves my attention?" at `/`, with a link from each signal to the page that owns its explanation and action. Stage 10 composes Attention into the Overview. Signals own the selection and ranking of noteworthy conditions; the Overview may surface them but never owns their logic.
 - **Deferred:** persisted signal history, notifications, the V1 demo situations that make each kind visible on a fresh seed (Stage 10).
-- **Done (2026-09-28):** decisions and the signal catalogue `616ebc1`, pure signal derivation `5295ec2`, the Attention read model and minimal dismissal `4f0b7f1`, and the Attention page at `/` `a25bf44` (the logo leads there; still four global destinations and four phone tabs; [design-direction.md §6](design-direction.md)). A-70, A-71, A-72, A-73, M1-5 and M2-3 are green. The milestone tag `v0.4-available` is a separate, later decision.
+- **Done (2026-09-28):** decisions and the signal catalogue `616ebc1`, pure signal derivation `5295ec2`, the Attention read model and minimal dismissal `4f0b7f1`, and the Attention page at `/` `a25bf44` (the logo leads there; still four global destinations and four phone tabs; [design-direction.md §6](design-direction.md)). A-70, A-71, A-72, A-73, M1-5 and M2-3 are green. Milestone D is tagged `v0.4-available` at `598a381` (2026-09-28, before Stage 10).
 - **Commit:** `feat(signals): deterministic signal engine`
 
 ### Milestone E — "Portfolio-ready V1" — tag `v1.0`
 
 #### 10 — Overview + V1 readiness
-- **Question:** *What should I know right now, and what should I do next?* The Overview owns no financial truth; it composes existing answers.
+- **Question:** *What can I use right now, what needs me, and how does that sit against this month and where I stand?* The Overview owns no financial truth; it composes existing answers, and each links to the page that explains it. *(Until 2026-09-28: "What should I know right now, and what should I do next?")*
+- **Decided before implementation (2026-09-28, Slice 0; [product-baseline.md §6](product-baseline.md), [design-direction.md §2, §5](design-direction.md)):**
+  - **Four zones, in one fixed order:** **Available** → **Attention** → **This month** → **Where you stand**. The DOM order and the visual reading order are the same at every width; no zone is reordered with CSS.
+  - **Available is the single headline,** on a deep navy band (the product's one navy surface): the figure, *Before new income*, the over-commitment tag when there is one, and Available's own hero sentence, extracted and shared rather than copied, linking to `/available`. The band carries a **free-share gauge**, FinPilot's only ring: one arc of `available` against the pool the spoken-for bar already draws, with no percentage, score or thresholds; no ring when the pool is ≤ 0, and an empty track when Available is ≤ 0. The Overview never redraws the bridge or the spoken-for bar.
+  - **Attention is second:** the first **3** signals in priority order, in the unchanged row pattern; with more than 3, **Show N more** reveals the rest in place (then **Show fewer**; the state is not stored or put in the URL); with 3 or fewer, no button. With nothing to show, a compact strip ("Nothing needs your attention" and its existing sentence), with no action. There is **no standalone Attention route**, no "View all" page and no new signal. After Hide, the next signal moves up and focus returns to the Attention heading.
+  - **This month is third:** a statement — Came in, Went out, Left over — for the current month so far, linking In and Out to their Activity rows and the section to Cash flow. **No savings rate, no month comparison** (Attention owns a material change, Cash flow every change), no chart and **no month-progress ticks**.
+  - **Where you stand is fourth and secondary:** net worth (never a hero), Own and Owe (a card holding credit reads *Credit on cards*, never Owe), and a two-part rail of what you own — **Counts toward Available** and **Outside Available** — drawn only when both parts are ≥ 0 and assets are above zero, with the outside accounts named.
+  - **Not on the Overview:** an assets-vs-liabilities chart, a savings-rate or month-comparison visual, any time series, separate commitment or set-aside totals, recent activity, and repeated KPI cards.
+  - **Layout:** the band leads at every width; Attention sits beside it from 1280px and under it below that; This month and Where you stand share one split card.
+  - **Architecture:** no Overview service or read model merely for orchestration; the page composes `getAvailable`, `getAttention`, `getMonthlyCashFlow` and `getPosition`. The one additive value is **excluded asset balances** in the Available bridge, owned by the domain with the invariant *included + excluded asset balances = position assets* ([domain-model.md §10](domain-model.md)), so no component adds up balances. Whether the spoken-for pool rule moves from presentation into the bridge is decided in the read-model slice, only if the gauge requires it.
+  - **P-3 resolved** (§8.5): Overview becomes a global destination; the phone bar is Overview · Activity · + · Accounts · Available, and Cash flow stays its own page without a phone tab.
+  - **The existing Accounts sign defect** (Own and Owe written as magnitudes, so a card holding credit reads as owed) is fixed in its own commit, not inside the Overview.
+- **V1 demo situations (approved catalogue).** Dated relative to today and written through the normal commands, on top of the existing five accounts (Savings excluded from Available, Visa owing):
+  1. an Internet commitment 3–5 days past due, unpaid → `commitment_overdue`
+  2. a mobile bill due today → `commitment_due_today`
+  3. rent due in 2–6 days → `commitment_due_soon`
+  4. a commitment due in 8–30 days: it reduces Available without a signal
+  5. commitment history with at least one Paid and one Skipped occurrence
+  6. Set aside *Emergency* on Bank, fully covered (deducted)
+  7. Set aside *Laptop* on bKash, left short by later spending → `set_aside_short`
+  8. set-aside money on Savings ("Not deducted")
+  9. Cash verified about 10 days ago, then a backdated entry before that day → `verification_changed`
+  10. bKash reconciled 1–6 days ago with an adjustment → `unexplained_adjustment` (another account than 9, since a checkpoint gives one signal)
+  11. a large expense this month, with spending on the same days of last month above zero → `spending_up`
+  12. Bank verified and still matching
+
+  Available stays positive at about 30–60% of the pool. Over-committed, negative net worth and card credit are proven by tests, not the demo. The seed smoke test asserts that all seven kinds fire, run for several `today`s (the 1st, the 15th, and the 29th–31st for month-end clamping).
+- **V1 UX blockers (from the deferred list):** side panels return focus to the button that opened them; the toast no longer covers phone sheets. The rest stay known V1 limitations: the Activity row-click race, the "100% of the increase" copy, collapsible phone evidence, long evidence lists, account deep links, and Set aside's wording, sort and desktop empty space.
+- **Still open, not owned by Stage 10:** O-4, O-5, O-6, P-1, P-2 (Monthly Plan's placement), P-5 and P-6.
 - **Builds — Overview:**
   - Available, as the entry point to its bridge.
   - Attention (signals).
   - A concise current-month outcome from Cash flow, linking to it.
+  - Where you stand, as secondary context.
   - `/` grows from the Attention page (Stage 9) into the Overview; home is already `/`.
   - **Not built:** Recent activity (Activity exists), copies of Cash flow's charts, a full commitment list, Overview-only metrics, and protected-money or commitment widgets when Attention already surfaces the shortfall or deadline.
 - **Builds — V1 readiness** (the responsibilities of the former Stage 12 that V1 needs):
@@ -355,9 +385,17 @@ The two inputs to Available: money already obligated and money deliberately set 
 - **What you can see at the end:** the V1.0 candidate. Clone → `npm install` → `npm run db:reset` → `npm run dev`.
 - **Then:** tag `v1.0` after the V1 review.
 - **Deferred:** deployment and the public demo strategy, auth, V1.1 items.
+- **Slices, in order** (decided 2026-09-28; each planned, audited and committed on its own):
+  0. decisions (this entry)
+  1. V1 demo situations, before any Overview UI is tuned
+  2. read model: excluded asset balances; the Accounts sign fix in its own commit
+  3. the Overview at `/`
+  4. navigation (P-3)
+  5. responsive and accessibility review, Playwright flow 4, and the two UX blockers
+  6. V1 readiness: README and screenshots, docs closure, then `v1.0` after review
 - **Commits:**
-  - `feat(overview): overview composed from existing answers`
   - `feat(demo): V1 demo situations`
+  - `feat(overview): overview composed from existing answers`
   - `chore: V1 polish and README`
 
 ### After the V1 candidate — product depth
@@ -475,7 +513,7 @@ The product-responsibility matrix, which gives each feature one primary question
 3. **Available** remains the central derived decision metric, with its full formula. **Liability invariant:** every liability counts regardless of `included_in_available`. The known setup-path gap is closed in Stage 8. Available excludes expected income and Monthly Plan, is never stored and never clamped ([domain-model.md §5, §10](domain-model.md)).
 4. **Sinking funds:** Commitments and Protected money stay independent. The conservative double reservation is kept for V1, with no automatic matching; a future explicit relationship must stay possible.
 5. **Signals** select and rank; the owning feature explains. There is no inbox, no read state, no Insights destination and no duplicate charts. Family 2 must be meaningfully more selective than What changed ([domain-model.md §11](domain-model.md)). *(Resolved in Stage 9 as O-2, §8.5.)*
-6. **Overview** moves before the optional features and is narrowed to Available, Attention and a concise current-month outcome ([product-baseline.md §6](product-baseline.md)).
+6. **Overview** moves before the optional features and is narrowed to Available, Attention and a concise current-month outcome ([product-baseline.md §6](product-baseline.md)). *(2026-09-28, Stage 10 Slice 0: Where you stand is added as secondary context; Available stays the one headline.)*
 7. **Trends** moves after the V1 candidate, over complete periods only, with extended demo history before it.
 8. **Monthly Plan replaces Budgets:** optional, after V1, independent of Available, not envelope budgeting. It carries forward the commitment-aware projection with A-40 and M1-4 ([domain-model.md §7](domain-model.md)).
 9. **Charts:** one visualisation answers one analytical question. Future visuals are recorded only where their owning concept is decided ([design-direction.md §5](design-direction.md)).
@@ -526,7 +564,7 @@ Every item here is **deliberately open, not forgotten**. A stage's plan resolves
 |---|---|---|
 | P-1 | An explicit protected-money ↔ commitment relationship (sinking funds). **Not a V1 blocker:** the conservative double reservation is acceptable for V1 ([domain-model.md §10](domain-model.md)). | if the revisit trigger fires (double reservation seen often) |
 | P-2 | ~~The forward-looking area's final name and its navigation placement~~ **Resolved 2026-09-28 (Stage 8 Slice 2A):** the area is **Available**, the fourth global destination, with `/available` as its landing page and a local switch for Available · Commitments · Set aside (§8.3). **Still open:** Monthly Plan's placement. *(History: in Stage 7, Set aside sat beside Commitments behind a local switch, under the Commitments destination.)* | Monthly Plan's placement by Stage 13 |
-| P-3 | Phone tab-bar capacity once Overview and the forward-looking area join the bar. **Stage 8 part resolved (2026-09-28):** Available replaced the Commitments tab, so the bar still has four destinations around the centred +. **Stage 10 part open:** how the Overview joins the bar is decided when the Overview is designed; no option is chosen or preferred yet. | the Stage 10 plan |
+| P-3 | ~~Phone tab-bar capacity once Overview and the forward-looking area join the bar.~~ **Stage 8 part resolved (2026-09-28):** Available replaced the Commitments tab, so the bar still has four destinations around the centred +. **Stage 10 part resolved (2026-09-28, Slice 0):** the Overview at `/` becomes a global destination. **Desktop:** Overview · Activity · Accounts · Cash flow · Available. **Phone:** Overview · Activity · + · Accounts · Available, still four destinations. **Cash flow** has no persistent phone tab; it is reached from context (This month on the Overview, Attention's "See what changed", Activity's month link) and **stays its own page**: on `/cash-flow` at phone width **no tab is marked current** — not the Overview, not any other destination. On desktop Cash flow is current as before. The logo still leads to `/`. *Why:* on phones the tab bar is the navigation model, so home needs a tab; Cash flow is the least frequent phone task and the one the Overview summarises, while Verify (Accounts) and Pay or Skip (Available) are phone tasks. *Rejected:* logo-only home (weak on phones; no current state on `/`), a desktop-only tab (leaves the phone gap), replacing the Available tab (Home would stand in for a whole area), replacing Accounts (Verify is done on the phone), a fifth phone tab. | closed |
 | P-4 | ~~How Attention is reachable when signals ship, before the Overview composes it.~~ **Resolved 2026-09-28 (Stage 9 Slice 0):** Attention's first home is `/`, inside the application shell; the logo (`HOME_PATH`) leads there from Stage 9; no new global navigation destination or phone tab. Stage 10 grows `/` into the Overview and reuses the same list. Signals own selection and ranking; the Overview only surfaces them. | closed |
 | P-5 | The colours of commitments and protected money ([design-direction.md §2](design-direction.md)). *Protected money resolved for V1 (2026-09-28): no dedicated hue.* | Stages 6 and 7 |
 | P-6 | Signal families 6 (Available low) and 8 (savings-rate change). | a review after V1 |

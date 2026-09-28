@@ -55,7 +55,7 @@ Every major feature must answer a real financial question. No feature is added j
 | **Protected money** (shown as **Set aside**) | deliberate reservation of real asset money | What have I deliberately set aside, and is it still really there? | moving money; separate goals and reserves |
 | **Available** | what is free after applicable obligations and protection (derived) | How much can I use now without touching money already spoken for? | storing a balance; counting expected income or plans |
 | **Signals** | selecting and ranking what deserves attention | Of everything true right now, what deserves my attention? | explaining (the owning feature does); an inbox |
-| **Overview** | composing the most important existing answers | What should I know right now, and what should I do next? | any figure of its own |
+| **Overview** | composing the most important existing answers | What can I use right now, what needs me, and how does that sit against this month and where I stand? | any figure of its own; explaining (the owning page does) |
 | **Trends** *(after V1)* | shape across three or more complete periods | Is this a pattern or a one-off? | a single period's attribution |
 | **Monthly Plan** *(after V1, optional)* | intent vs reality | What do I intend to spend or set aside this month, and how did that go? | feeding Available; re-showing Cash flow |
 
@@ -167,15 +167,18 @@ Deferred to V1.1: expected income (runway), split transactions, CSV import/expor
 
 ## 6. Overview hierarchy (information architecture only, not a design)
 
-**Narrowed 2026-09-27.** The Overview answers *what should I know right now, and what should I do next?* It owns no financial truth and composes existing answers:
+**Narrowed 2026-09-27; completed 2026-09-28 (Stage 10 Slice 0).** The Overview answers *what can I use right now, what needs me, and how does that sit against this month and where I stand?* It owns no financial truth and composes existing answers, each linking to the page that explains it. Four zones, in one fixed order, the same in the DOM and on screen at every width:
 
-1. **Available:** the headline, as the entry point to its bridge. The Overview surfaces Available; it does not own it.
-2. **Attention:** ranked signals. This zone absorbs upcoming and overdue commitments, protected-money shortfalls and verification issues, so they get no widgets of their own.
-3. **This month:** a concise current-month outcome from Cash flow, linking to it.
+1. **Available:** the one headline, as the entry point to its bridge. The Overview surfaces Available; it does not own it, and never redraws its bridge or spoken-for bar.
+2. **Attention:** a preview of the ranked signals. This zone absorbs upcoming and overdue commitments, protected-money shortfalls and verification issues, so they get no widgets of their own.
+3. **This month:** a concise current-month outcome from Cash flow — what came in, what went out, what was left over — as a statement linking to Cash flow and to the rows behind it. No savings rate and no comparison.
+4. **Where you stand:** net worth with Own and Owe, and how much of what you own counts toward Available, as **secondary context**. Net worth is never a second headline.
 
-**Not on the Overview:** recent activity (Activity exists), copies of Cash flow's charts, a full commitment list, protected-money or commitment widgets that repeat Attention, Overview-only metrics, and any card added to fill space.
+**The one headline is still Available** (§3.1).
 
-*(Superseded 2026-09-27: the earlier five zones, which included the cash-flow bridge and month-over-month story, a "Plans" zone of budget health and goal trajectory, and Recent activity.)*
+**Not on the Overview:** recent activity (Activity exists), copies of Cash flow's charts, a full commitment list, protected-money or commitment widgets that repeat Attention, Overview-only metrics, a savings rate, a month comparison, any time series, separate commitment or set-aside totals, an assets-vs-liabilities chart, and any card added to fill space.
+
+*(Superseded 2026-09-27: the earlier five zones, which included the cash-flow bridge and month-over-month story, a "Plans" zone of budget health and goal trajectory, and Recent activity. Until 2026-09-28 the zones were Available, Attention and This month only.)*
 
 Each zone answers a different question. No two charts may communicate the same thing.
 
@@ -290,6 +293,7 @@ FinPilot must immediately read as a serious **money-management** product. It mus
 
 | Date | Change | Reason |
 |---|---|---|
+| 2026-09-28 | **Stage 10 Slice 0: the Overview** (recorded in full in [roadmap.md Stage 10](roadmap.md)). §2.1: the Overview's question becomes "what can I use right now, what needs me, and how does that sit against this month and where I stand?". §6: four zones in a fixed order — Available, Attention, This month, Where you stand — with Where you stand as secondary context; the list of what is not on the Overview grows. §3.1 is unchanged: Available stays the one headline. No acceptance value changed. | The Overview can't answer "where do I stand" without position, and the gap between net worth and Available is the confusion Available exists to resolve; showing it as context, not as a second headline, keeps the thesis intact. |
 | 2026-09-28 | **Stage 8 Slice 0: Available decisions** (recorded in full in [domain-model.md §10](domain-model.md)). §5: the V1 asset eligibility flag is set from the type default, with no user-facing toggle. §7: Available subtracts commitments whatever their expected account (O-1 resolved), and covered set-aside money rather than the nominal reserved amount. Archived accounts follow the same rules. No acceptance value changed. | O-1 had to be resolved before Available froze; "backed" needed to be stated as binding against "reserved". |
 | 2026-09-28 | **Stage 7 product decision.** §2.1, §4.2, §4.3, §5, §7, §8: "Set aside" is the single user-facing term for protected money; there is no separate Goals product (stale present-tense Goals wording corrected, history marked as superseded); V1 keeps an optional target, derived progress, covered, shortfall and still needed = max(target − covered, 0); target date, on-track and required monthly contributions are deferred beyond V1. O-1 and P-1 stay open. No acceptance value changed. | One intention must not be entered twice; target dates would duplicate Monthly Plan's planned contributions. |
 | 2026-09-27 | **Product-architecture decisions** (recorded in full in [roadmap.md §8](roadmap.md)). §1, §2: the product model becomes Record → Verify → Understand → Available, with Commitments and Protected money as its inputs, Notice across every step, and Plan optional; the responsibility matrix is added (§2.1). §3.1, §4.3, §5, §7: Goals → Protected money (optional target); Budgets → the optional Monthly Plan after V1; liabilities always count in Available; the out-of-scope list is added. §6: the Overview is narrowed to Available, Attention and this month. §9: net worth over time rejected for now; the candidate pipeline before every producer. §10: stories 5 and 8 re-scoped. No acceptance value changed. | Every feature must own one distinct question; planning must stay optional; an account preference must not be able to overstate Available. |
