@@ -73,6 +73,22 @@ const mainNav = (page: Page, width: number) => {
   return width < 768 ? navs.last() : navs.first();
 };
 
+/** P-3: five destinations on desktop; four phone tabs around the +, without Cash flow. */
+const DESKTOP = ["Overview", "Activity", "Accounts", "Cash flow", "Available"];
+const PHONE = ["Overview", "Activity", "Accounts", "Available"];
+const destinations = (width: number) => (width < 768 ? PHONE : DESKTOP);
+
+/** Exactly `current` is marked as the current page among the destinations shown. */
+async function expectCurrent(page: Page, width: number, current: string | null) {
+  const nav = mainNav(page, width);
+  await expect(nav.getByRole("link")).toHaveText(destinations(width));
+  for (const name of destinations(width)) {
+    const link = nav.getByRole("link", { name, exact: true });
+    if (name === current) await expect(link).toHaveAttribute("aria-current", "page");
+    else await expect(link).not.toHaveAttribute("aria-current");
+  }
+}
+
 /** Hides every signal that can be hidden, one at a time, as a person would. */
 async function hideEverythingHideable(page: Page) {
   await page.goto("/");
@@ -104,7 +120,7 @@ async function addCommitment(page: Page, name: string, amount: string, inDays: n
 let wallet = "";
 let bill = "";
 
-test("the logo leads to the Overview: four zones in order, and no destination current", async ({
+test("the logo leads to the Overview: four zones in order, and Overview is current", async ({
   page,
 }) => {
   await page.goto("/activity");
@@ -119,18 +135,37 @@ test("the logo leads to the Overview: four zones in order, and no destination cu
     "Where you stand",
   ]);
 
-  // Navigation is unchanged in this slice (P-3 is Slice 4).
-  const nav = mainNav(page, 1280);
-  await expect(nav.getByRole("link")).toHaveText([
-    "Activity",
-    "Accounts",
-    "Cash flow",
-    "Available",
-  ]);
-  for (const name of ["Activity", "Accounts", "Cash flow", "Available"]) {
-    await expect(nav.getByRole("link", { name })).not.toHaveAttribute("aria-current");
-  }
+  await expectCurrent(page, 1280, "Overview");
 });
+
+for (const width of [390, 1280]) {
+  test(`P-3 navigation at ${width}px: each destination current on its page; none on a phone's Cash flow`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const pages: [string, string | null][] = [
+      ["/", "Overview"],
+      ["/activity", "Activity"],
+      ["/accounts", "Accounts"],
+      // Cash flow stays its own page: current on desktop, and with no phone tab, nothing is current there.
+      ["/cash-flow", width < 768 ? null : "Cash flow"],
+      ["/available", "Available"],
+    ];
+    for (const [path, current] of pages) {
+      await page.goto(path);
+      await expectCurrent(page, width, current);
+    }
+
+    // The Overview destination and the logo both lead home.
+    await page.goto("/activity");
+    await mainNav(page, width).getByRole("link", { name: "Overview", exact: true }).click();
+    await expect(page).toHaveURL(/\/$/);
+    await page.goto("/accounts");
+    await page.getByRole("link", { name: "FinPilot", exact: true }).click();
+    await expect(page).toHaveURL(/\/$/);
+    await expectCurrent(page, width, "Overview");
+  });
+}
 
 test("Available leads, with its free share, and opens the Available page", async ({ page }) => {
   await page.goto("/");
@@ -303,7 +338,7 @@ test("a hidden item stays hidden across reloads; what can't be hidden stays", as
   await expect(hideButtons(page)).toHaveCount(0);
 });
 
-for (const width of [390, 820, 1024, 1280, 1920]) {
+for (const width of [390, 768, 820, 1024, 1280, 1920]) {
   test(`the Overview fits ${width}px, in one reading order, with Available in the first view`, async ({
     page,
   }) => {
@@ -349,16 +384,21 @@ for (const width of [390, 820, 1024, 1280, 1920]) {
     const rail = await stand.getByTestId("asset-rail").boundingBox();
     expect(rail!.x + rail!.width).toBeLessThanOrEqual(standBox!.x + standBox!.width);
 
-    // Still four destinations, and none of them is current on "/".
+    // Five destinations on desktop, four phone tabs around the +; Overview is current.
+    await expectCurrent(page, width, "Overview");
     const nav = mainNav(page, width);
-    await expect(nav.getByRole("link")).toHaveText([
-      "Activity",
-      "Accounts",
-      "Cash flow",
-      "Available",
-    ]);
-    for (const name of ["Activity", "Accounts", "Cash flow", "Available"]) {
-      await expect(nav.getByRole("link", { name })).not.toHaveAttribute("aria-current");
+    if (width >= 768) {
+      // Every desktop destination stays on one line ("Cash flow" once wrapped at 820px).
+      const wrapped = await page.evaluate(() =>
+        [...document.querySelectorAll("header nav a")]
+          .filter((a) => {
+            const range = document.createRange();
+            range.selectNodeContents(a);
+            return range.getClientRects().length > 1;
+          })
+          .map((a) => a.textContent),
+      );
+      expect(wrapped, `wrapped destinations at ${width}px`).toEqual([]);
     }
     if (width < 768) {
       const cells = nav.locator(":scope > *");

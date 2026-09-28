@@ -132,8 +132,12 @@ for (const width of [390, 1280]) {
         "aria-current",
         path === "/available" ? "page" : "true",
       );
-      for (const other of ["Activity", "Accounts", "Cash flow"]) {
-        await expect(nav.getByRole("link", { name: other })).not.toHaveAttribute("aria-current");
+      // Cash flow has no phone tab (P-3).
+      const others = ["Overview", "Activity", "Accounts", ...(width < 768 ? [] : ["Cash flow"])];
+      for (const other of others) {
+        await expect(nav.getByRole("link", { name: other, exact: true })).not.toHaveAttribute(
+          "aria-current",
+        );
       }
       const area = page.getByRole("navigation", { name: "Available" });
       for (const [href, name] of Object.entries(PAGE_NAME)) {
@@ -152,12 +156,7 @@ test("the phone tab bar keeps four destinations around the centred Add", async (
   const cells = bar.locator(":scope > *");
   await expect(cells).toHaveCount(5);
   await expect(cells.nth(2)).toHaveAttribute("aria-label", "Add a transaction");
-  await expect(bar.getByRole("link")).toHaveText([
-    "Activity",
-    "Accounts",
-    "Cash flow",
-    "Available",
-  ]);
+  await expect(bar.getByRole("link")).toHaveText(["Overview", "Activity", "Accounts", "Available"]);
 });
 
 for (const width of [390, 820, 1024, 1280, 1920]) {

@@ -1,21 +1,61 @@
 import { describe, expect, it } from "vitest";
 
-import { ariaCurrent, HOME_PATH, navState, PRIMARY_NAV } from "@/components/shell/navigation";
+import {
+  ariaCurrent,
+  HOME_PATH,
+  navState,
+  PHONE_TABS,
+  PRIMARY_NAV,
+} from "@/components/shell/navigation";
 
 /**
- * The global destinations, and the Available area (roadmap §8.3, P-2):
- * Available leads, and Commitments and Set aside are pages of its area.
+ * The global destinations (roadmap §8.5, P-3) and the Available area (§8.3,
+ * P-2): the Overview leads; Available leads its area, where Commitments and
+ * Set aside are its other pages; Cash flow has no phone tab.
  */
 describe("navigation", () => {
   const available = PRIMARY_NAV.find((i) => i.href === "/available")!;
+  const current = (path: string, items: readonly (typeof PRIMARY_NAV)[number][]) =>
+    items.filter((i) => navState(path, i) !== null).map((i) => i.label);
 
-  it("offers Activity, Accounts, Cash flow and Available, in that order", () => {
+  it("offers Overview, Activity, Accounts, Cash flow and Available on desktop, in that order", () => {
     expect(PRIMARY_NAV.map((i) => [i.href, i.label])).toEqual([
+      ["/", "Overview"],
       ["/activity", "Activity"],
       ["/accounts", "Accounts"],
       ["/cash-flow", "Cash flow"],
       ["/available", "Available"],
     ]);
+  });
+
+  it("keeps four phone tabs, Overview · Activity · Accounts · Available, with no Cash flow tab", () => {
+    expect(PHONE_TABS.map((i) => i.label)).toEqual([
+      "Overview",
+      "Activity",
+      "Accounts",
+      "Available",
+    ]);
+  });
+
+  it("marks the Overview current on exactly /, where the logo also leads", () => {
+    expect(HOME_PATH).toBe("/");
+    expect(current("/", PRIMARY_NAV)).toEqual(["Overview"]);
+    expect(current("/", PHONE_TABS)).toEqual(["Overview"]);
+    for (const path of ["/activity", "/accounts", "/cash-flow", "/available", "/settings"]) {
+      expect(navState(path, PRIMARY_NAV[0]!)).toBeNull();
+    }
+  });
+
+  it("marks exactly one destination on each destination's page", () => {
+    expect(current("/activity", PRIMARY_NAV)).toEqual(["Activity"]);
+    expect(current("/accounts", PRIMARY_NAV)).toEqual(["Accounts"]);
+    expect(current("/cash-flow", PRIMARY_NAV)).toEqual(["Cash flow"]);
+    expect(current("/available", PRIMARY_NAV)).toEqual(["Available"]);
+    expect(current("/settings", PRIMARY_NAV)).toEqual([]);
+  });
+
+  it("marks no phone tab on /cash-flow, which stays its own page", () => {
+    expect(current("/cash-flow", PHONE_TABS)).toEqual([]);
   });
 
   it("marks Available as the page on /available and the area on Commitments and Set aside", () => {
@@ -31,14 +71,9 @@ describe("navigation", () => {
   });
 
   it("marks no other destination on any page of the Available area", () => {
-    const others = PRIMARY_NAV.filter((i) => i !== available);
     for (const path of ["/available", "/commitments", "/set-aside"]) {
-      expect(others.map((i) => navState(path, i))).toEqual([null, null, null]);
+      expect(current(path, PRIMARY_NAV)).toEqual(["Available"]);
+      expect(current(path, PHONE_TABS)).toEqual(["Available"]);
     }
-  });
-
-  it("marks no destination on /, Attention's home, which is not itself a destination", () => {
-    expect(HOME_PATH).toBe("/");
-    expect(PRIMARY_NAV.map((i) => navState("/", i))).toEqual([null, null, null, null]);
   });
 });

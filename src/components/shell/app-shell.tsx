@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownUp, CircleGauge, Plus, Receipt, Settings, Wallet } from "lucide-react";
+import { ArrowDownUp, CircleGauge, House, Plus, Receipt, Settings, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -18,12 +18,14 @@ import {
   HOME_PATH,
   isActive,
   navState,
+  PHONE_TABS,
   PRIMARY_NAV,
   SETTINGS_PATH,
   type NavItem,
 } from "./navigation";
 
 const TAB_ICONS = {
+  "/": House,
   "/activity": Receipt,
   "/accounts": Wallet,
   "/cash-flow": ArrowDownUp,
@@ -38,7 +40,7 @@ const TAB_ICONS = {
 const SHELL_WIDTH = "mx-auto w-full max-w-[1360px] px-4 md:px-6 lg:px-8";
 
 /** Tabs before the centred + on phones; the rest follow it. */
-const TABS_BEFORE_ADD = Math.ceil(PRIMARY_NAV.length / 2);
+const TABS_BEFORE_ADD = Math.ceil(PHONE_TABS.length / 2);
 
 /**
  * The application frame: top navigation on desktop, a bottom tab bar with a
@@ -73,7 +75,7 @@ export function AppShell({
     <ToastProvider>
       <div className="flex min-h-dvh flex-col">
         <header className="sticky top-0 z-30 border-b border-line bg-surface">
-          <div className={cn(SHELL_WIDTH, "flex h-14 items-center gap-6")}>
+          <div className={cn(SHELL_WIDTH, "flex h-14 items-center gap-4 lg:gap-6")}>
             <Link href={HOME_PATH} className="flex items-center gap-2.5 font-semibold">
               <span aria-hidden className="grid size-7 place-items-center rounded-[7px] bg-navy">
                 <span className="block h-[3px] w-3.5 rounded-full bg-coral" />
@@ -92,7 +94,8 @@ export function AppShell({
                     href={item.href}
                     aria-current={ariaCurrent(state)}
                     className={cn(
-                      "-mb-px flex items-center border-b-2 px-3.5 text-body font-medium transition-colors",
+                      // Five destinations fit from 768px: tighter until 1024px, never wrapping.
+                      "-mb-px flex items-center border-b-2 px-2 text-body font-medium whitespace-nowrap transition-colors lg:px-3.5",
                       active
                         ? "border-navy text-navy"
                         : "border-transparent text-ink-2 hover:text-ink",
@@ -136,9 +139,9 @@ export function AppShell({
         <nav
           aria-label="Main"
           className="fixed inset-x-0 bottom-0 z-30 grid border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
-          style={{ gridTemplateColumns: `repeat(${PRIMARY_NAV.length + 1}, minmax(0, 1fr))` }}
+          style={{ gridTemplateColumns: `repeat(${PHONE_TABS.length + 1}, minmax(0, 1fr))` }}
         >
-          {PRIMARY_NAV.slice(0, TABS_BEFORE_ADD).map((item) => (
+          {PHONE_TABS.slice(0, TABS_BEFORE_ADD).map((item) => (
             <TabLink key={item.href} item={item} pathname={pathname} />
           ))}
           <button
@@ -151,7 +154,7 @@ export function AppShell({
               <Plus className="size-6" strokeWidth={2.25} />
             </span>
           </button>
-          {PRIMARY_NAV.slice(TABS_BEFORE_ADD).map((item) => (
+          {PHONE_TABS.slice(TABS_BEFORE_ADD).map((item) => (
             <TabLink key={item.href} item={item} pathname={pathname} />
           ))}
         </nav>
