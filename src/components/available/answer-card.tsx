@@ -1,6 +1,4 @@
 import { CircleAlert } from "lucide-react";
-import type { ReactNode } from "react";
-
 import type { Money as MoneyValue } from "@/domain/money";
 import type { AvailableView } from "@/server/services/available-service";
 
@@ -15,10 +13,10 @@ import {
   listOf,
   outcomeOf,
   SET_ASIDE_LABEL,
-  spokenFor,
   spokenForBar,
   type SegmentKind,
 } from "./describe";
+import { AvailableSentence } from "./sentence";
 
 const CARD = "overflow-clip rounded-panel border border-line bg-surface shadow-card";
 
@@ -45,42 +43,6 @@ export function AnswerCard({ view }: { readonly view: AvailableView }) {
 
 function Hero({ view, dueBy }: { readonly view: AvailableView; readonly dueBy: string }) {
   const outcome = outcomeOf(view.available);
-  const parts = spokenFor(view, dueBy);
-  const list = listOf(parts);
-  const List = list.charAt(0).toUpperCase() + list.slice(1);
-  const accounts = (
-    <Money amount={view.includedAssetBalances} sign="none" className="font-semibold text-ink" />
-  );
-  let sentence: ReactNode;
-  if (outcome === "over") {
-    sentence = (
-      <>
-        {List} come to{" "}
-        <Money
-          amount={-view.available as MoneyValue}
-          sign="none"
-          className="font-semibold text-ink"
-        />{" "}
-        more than your accounts hold.
-      </>
-    );
-  } else if (outcome === "zero") {
-    sentence =
-      parts.length > 0 ? (
-        <>{List} take up everything in your accounts.</>
-      ) : (
-        "The accounts that count toward Available hold nothing right now."
-      );
-  } else {
-    sentence =
-      parts.length > 0 ? (
-        <>
-          What&apos;s left of {accounts} in your accounts after {list}.
-        </>
-      ) : (
-        <>Nothing is owed on cards, due by {dueBy} or set aside: all of it is yours to use.</>
-      );
-  }
   return (
     <div className="bg-mist px-5 py-5 md:px-7 md:py-6">
       <h2 id="available-now" className="text-body font-semibold text-navy">
@@ -98,7 +60,9 @@ function Hero({ view, dueBy }: { readonly view: AvailableView; readonly dueBy: s
         )}
         <Tag tone="info">Before new income</Tag>
       </div>
-      <p className="mt-3 max-w-md text-body text-ink-2">{sentence}</p>
+      <p className="mt-3 max-w-md text-body text-ink-2">
+        <AvailableSentence view={view} dueBy={dueBy} figureClassName="font-semibold text-ink" />
+      </p>
     </div>
   );
 }

@@ -12,12 +12,13 @@ import Link from "next/link";
 import type { CalendarDate } from "@/domain/calendar-date";
 import type { AttentionSignal } from "@/domain/signals/signals";
 
-import { buttonClass, linkClass } from "../ui/button";
+import { linkClass } from "../ui/button";
 import { cn } from "../ui/cn";
 import { Money } from "../ui/money";
-import { EmptyState, Tag } from "../ui/panel";
+import { Tag } from "../ui/panel";
 import { describeSignal, type AttentionIcon, type AttentionRow } from "./describe";
 import { HideButton } from "./hide-button";
+import { ShowMoreList } from "./show-more";
 
 const CARD = "overflow-clip rounded-panel border border-line bg-surface shadow-card";
 
@@ -34,45 +35,44 @@ const ICONS: Record<AttentionIcon, typeof CalendarClock> = {
  * "What actually needs my attention right now?" — the Attention signals, in
  * their fixed priority order, as one list. Each row says what happened, why
  * it matters, the figure it is about, and links to the page that owns it; the
- * two kinds nothing else resolves can be hidden. With nothing to show, it
- * says so plainly. The surrounding page supplies the heading (`labelledBy`),
- * so the same list can sit on any page.
+ * two kinds nothing else resolves can be hidden. The first `initial` rows
+ * show, and the rest open in place. With nothing to show, one compact strip
+ * says so plainly. The surrounding page supplies the heading (`labelledBy`).
  */
 export function AttentionList({
   signals,
   today,
   labelledBy,
+  initial = 3,
+  className,
 }: {
   readonly signals: readonly AttentionSignal[];
   readonly today: CalendarDate;
   /** The id of the heading that names the list; it also takes focus after Hide. */
   readonly labelledBy: string;
+  /** How many rows show before **Show N more**. */
+  readonly initial?: number;
+  readonly className?: string;
 }) {
   if (signals.length === 0) {
     return (
-      <section aria-labelledby={labelledBy} className={CARD}>
-        <EmptyState
-          title="Nothing needs your attention"
-          action={
-            <Link href="/available" className={buttonClass("secondary", "sm")}>
-              See what&apos;s available
-            </Link>
-          }
-        >
+      <section aria-labelledby={labelledBy} className={cn(CARD, "px-4 py-4 md:px-5", className)}>
+        <p className="text-body font-semibold text-ink">Nothing needs your attention</p>
+        <p className="mt-0.5 text-meta text-ink-2">
           No payment, money set aside, verified balance or change in spending needs a look right
           now.
-        </EmptyState>
+        </p>
       </section>
     );
   }
 
   return (
-    <section aria-labelledby={labelledBy} className={CARD}>
-      <ul className="divide-y divide-line">
+    <section aria-labelledby={labelledBy} className={cn(CARD, className)}>
+      <ShowMoreList id={`${labelledBy}-list`} initial={initial}>
         {signals.map((signal) => (
           <SignalRow key={signal.key} row={describeSignal(signal, today)} focusId={labelledBy} />
         ))}
-      </ul>
+      </ShowMoreList>
     </section>
   );
 }

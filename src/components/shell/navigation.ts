@@ -1,10 +1,10 @@
 /**
  * Top-level destinations. Each appears in navigation only once its stage
- * exists (docs/roadmap.md): the Overview arrives later.
+ * exists (docs/roadmap.md): the Overview joins them with P-3 (Stage 10 Slice 4).
  *
- * HOME_PATH is where the logo leads: "/", Attention's first home (Stage 9,
- * P-4), which Stage 10 grows into the Overview. "/" is deliberately not a
- * destination in PRIMARY_NAV, so the phone keeps four tabs around the +.
+ * HOME_PATH is where the logo leads: "/", the Overview (Stage 10). Until
+ * Slice 4 "/" is deliberately not a destination in PRIMARY_NAV, so the phone
+ * keeps four tabs around the +.
  */
 export const HOME_PATH = "/";
 

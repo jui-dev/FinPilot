@@ -300,13 +300,53 @@ describe("the count line", () => {
 // ---------------------------------------------------------------------------
 
 describe("AttentionList", () => {
-  it("says plainly when nothing needs attention, with one way on to Available", () => {
+  it("says plainly when nothing needs attention, in one compact strip with no action", () => {
     const html = renderToStaticMarkup(
       <AttentionList signals={[]} today={TODAY} labelledBy="attention-title" />,
     );
     expect(html).toContain("Nothing needs your attention");
-    expect(html).toContain('href="/available"');
+    expect(html).toContain("needs a look right now.");
+    expect(html).not.toContain("<a ");
+    expect(html).not.toContain("<button");
     expect(html).not.toMatch(/safe|healthy|good/i);
+  });
+
+  it("shows the first 3 in order, and the rest behind Show N more", () => {
+    const names = ["Rent", "Internet", "Mobile", "Gym", "Water"];
+    const signals = deriveAttention(
+      facts({
+        occurrences: names.map((name, i) =>
+          occurrence(`o${i}`, `c${i}`, name, `2026-09-2${4 + i}`, 1_000 + i),
+        ),
+      }),
+    );
+    expect(signals).toHaveLength(5);
+    const html = renderToStaticMarkup(
+      <AttentionList signals={signals} today={TODAY} labelledBy="attention-title" />,
+    );
+    expect(html.match(/<li/g)).toHaveLength(3);
+    // The first three, by priority: the nearest due dates first.
+    for (const name of names.slice(0, 3)) expect(html).toContain(`${name} is due`);
+    for (const name of names.slice(3)) expect(html).not.toContain(`${name} is due`);
+    expect(html).toContain("Show 2 more");
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain('aria-controls="attention-title-list"');
+  });
+
+  it("has no Show more button with 3 or fewer", () => {
+    const signals = deriveAttention(
+      facts({
+        occurrences: ["Rent", "Internet", "Mobile"].map((name, i) =>
+          occurrence(`o${i}`, `c${i}`, name, `2026-09-2${4 + i}`, 1_000),
+        ),
+      }),
+    );
+    const html = renderToStaticMarkup(
+      <AttentionList signals={signals} today={TODAY} labelledBy="attention-title" />,
+    );
+    expect(html.match(/<li/g)).toHaveLength(3);
+    expect(html).not.toContain("more</");
+    expect(html).not.toContain("aria-expanded");
   });
 
   it("lists the signals in order, and offers Hide only where a signal can be hidden", () => {

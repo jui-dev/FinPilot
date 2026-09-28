@@ -11,14 +11,15 @@ import { systemClock } from "@/server/clock";
 import { E2E_DATABASE_PATH } from "../playwright.config";
 
 /**
- * Stage 9: Attention at "/". Specs share one database, and earlier ones leave
- * shortfalls, commitments and adjustments behind, so this spec starts from the
- * fresh demo ledger — cleared and reseeded in place, as db:reset does while
- * the server holds the file — and restores it afterwards for the specs that
+ * Stage 10: the Overview at "/" — Available, Attention, This month and Where
+ * you stand. Specs share one database, and earlier ones leave shortfalls,
+ * commitments and adjustments behind, so this spec starts from the fresh
+ * demo ledger — cleared and reseeded in place, as db:reset does while the
+ * server holds the file — and restores it afterwards for the specs that
  * follow. It is the plain ledger, without the demo situations (as in global
  * setup): no commitments, set-aside money or verified balances, so the only
- * thing it can raise is a month's spending increase. Every other situation is
- * built here through the UI.
+ * thing Attention can raise is a month's spending increase. Every other
+ * situation is built here through the UI.
  */
 
 async function resetDemoInPlace() {
@@ -59,11 +60,12 @@ async function openDialog(page: Page, open: () => Promise<void>) {
   }).toPass({ timeout: 20_000 });
 }
 
-/** The Attention list: the region named by the page's heading. */
+/** The Attention list: the region named by its heading. */
 const list = (page: Page) => page.getByRole("region", { name: "Attention" });
 const rows = (page: Page) => list(page).getByRole("listitem");
 const row = (page: Page, text: string) => rows(page).filter({ hasText: text });
 const hideButtons = (page: Page) => list(page).getByRole("button", { name: /^Hide/ });
+const attentionHeading = (page: Page) => page.getByRole("heading", { level: 2, name: "Attention" });
 
 /** The desktop header's navigation, or the phone tab bar (only one is visible at a time). */
 const mainNav = (page: Page, width: number) => {
@@ -74,6 +76,8 @@ const mainNav = (page: Page, width: number) => {
 /** Hides every signal that can be hidden, one at a time, as a person would. */
 async function hideEverythingHideable(page: Page) {
   await page.goto("/");
+  const more = list(page).getByRole("button", { name: /^Show \d+ more/ });
+  if (await more.count()) await more.click();
   while ((await hideButtons(page).count()) > 0) {
     const before = await rows(page).count();
     await expect(async () => {
@@ -83,18 +87,39 @@ async function hideEverythingHideable(page: Page) {
   }
 }
 
+async function addCommitment(page: Page, name: string, amount: string, inDays: number) {
+  await page.goto("/commitments");
+  await openDialog(page, () =>
+    page.getByRole("button", { name: "New commitment" }).first().click(),
+  );
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Name").fill(name);
+  await dialog.getByLabel("Expected amount").fill(amount);
+  await dialog.getByLabel("First due date").fill(dhakaDate(inDays));
+  await dialog.getByLabel("Category").selectOption({ label: "Utilities" });
+  await dialog.getByRole("button", { name: "Add commitment" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+}
+
 let wallet = "";
 let bill = "";
 
-test("the logo leads to /, which is Attention and not a navigation destination", async ({
+test("the logo leads to the Overview: four zones in order, and no destination current", async ({
   page,
 }) => {
   await page.goto("/activity");
   await page.getByRole("link", { name: "FinPilot", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Attention" })).toBeVisible();
-  await expect(page).toHaveTitle(/^Attention · FinPilot$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Overview" })).toBeVisible();
+  await expect(page).toHaveTitle(/^Overview · FinPilot$/);
+  await expect(page.getByRole("heading", { level: 2 })).toHaveText([
+    "Available now",
+    "Attention",
+    "This month",
+    "Where you stand",
+  ]);
 
+  // Navigation is unchanged in this slice (P-3 is Slice 4).
   const nav = mainNav(page, 1280);
   await expect(nav.getByRole("link")).toHaveText([
     "Activity",
@@ -105,25 +130,52 @@ test("the logo leads to /, which is Attention and not a navigation destination",
   for (const name of ["Activity", "Accounts", "Cash flow", "Available"]) {
     await expect(nav.getByRole("link", { name })).not.toHaveAttribute("aria-current");
   }
-  await nav.getByRole("link", { name: "Activity" }).click();
-  await expect(page).toHaveURL(/\/activity$/);
-  await expect(nav.getByRole("link", { name: "Activity" })).toHaveAttribute("aria-current", "page");
 });
 
-test("with nothing left to raise, it says so and leads on to Available", async ({ page }) => {
-  // The fresh demo can raise only a month's spending increase, which can be hidden.
-  await hideEverythingHideable(page);
-  await expect(page.getByText("Nothing needs your attention")).toBeVisible();
-  await expect(page.getByText(/needs? a look$/)).toHaveCount(0);
-
-  await page.reload();
-  await expect(page.getByText("Nothing needs your attention")).toBeVisible();
-  await list(page).getByRole("link", { name: "See what's available" }).click();
+test("Available leads, with its free share, and opens the Available page", async ({ page }) => {
+  await page.goto("/");
+  const band = page.getByRole("region", { name: "Available now" });
+  await expect(band).toContainText("Before new income");
+  await expect(band).toContainText(/Free ৳[\d,]+ of ৳[\d,]+/);
+  await expect(band.getByTestId("free-share-ring")).toBeVisible();
+  await expect(band).not.toContainText("%");
+  await band.getByRole("link", { name: "See how it's worked out" }).click();
   await expect(page).toHaveURL(/\/available$/);
 });
 
+test("This month and Where you stand lead to the rows and pages behind them", async ({ page }) => {
+  await page.goto("/");
+  const month = page.getByRole("region", { name: "This month" });
+  await expect(month).toContainText("so far");
+  await expect(month).toContainText("Left over");
+  await expect(month).not.toContainText("Savings rate");
+  await month.getByRole("link", { name: /^Came in, / }).click();
+  await expect(page).toHaveURL(/\/activity\?type=income&from=\d{4}-\d{2}-01&to=/);
+
+  await page.goto("/");
+  const stand = page.getByRole("region", { name: "Where you stand" });
+  await expect(stand).toContainText("Net worth");
+  // The demo's Visa owes; Savings is outside Available.
+  await expect(stand).toContainText(/Owe\s*৳[\d,]+/);
+  await expect(stand).toContainText(/Outside Available ৳[\d,]+ · Savings/);
+  await expect(stand.getByTestId("asset-rail")).toBeVisible();
+  await stand.getByRole("link", { name: "Your accounts" }).click();
+  await expect(page).toHaveURL(/\/accounts$/);
+});
+
+test("with nothing left to raise, Attention is one compact strip", async ({ page }) => {
+  // The fresh demo can raise only a month's spending increase, which can be hidden.
+  await hideEverythingHideable(page);
+  await expect(list(page)).toContainText("Nothing needs your attention");
+  await expect(list(page).getByRole("link")).toHaveCount(0);
+  await expect(page.getByText(/needs? a look$/)).toHaveCount(0);
+
+  await page.reload();
+  await expect(list(page)).toContainText("Nothing needs your attention");
+});
+
 test("an unexplained adjustment: its evidence, and Hide → empty → Undo", async ({ page }) => {
-  wallet = unique("Wallet AT");
+  wallet = unique("Wallet OV");
   await page.goto("/accounts");
   await openDialog(page, () =>
     page
@@ -158,7 +210,7 @@ test("an unexplained adjustment: its evidence, and Hide → empty → Undo", asy
   );
   await expect(page.getByText("Balance adjustment").first()).toBeVisible();
 
-  // Hiding the last visible item leaves the empty state; Undo brings it back.
+  // Hiding the last visible item leaves the empty strip; Undo brings it back.
   await page.goto("/");
   await expect(async () => {
     await adjusted
@@ -166,9 +218,9 @@ test("an unexplained adjustment: its evidence, and Hide → empty → Undo", asy
       .click();
     await expect(page.getByRole("status")).toContainText("Hidden.", { timeout: 2_000 });
   }).toPass({ timeout: 20_000 });
-  await expect(page.getByText("Nothing needs your attention")).toBeVisible();
+  await expect(list(page)).toContainText("Nothing needs your attention");
   // Focus returns to the heading, since the row that held it is gone.
-  await expect(page.getByRole("heading", { level: 1, name: "Attention" })).toBeFocused();
+  await expect(attentionHeading(page)).toBeFocused();
 
   await page.getByRole("status").getByRole("button", { name: "Undo" }).click();
   await expect(adjusted).toBeVisible();
@@ -177,18 +229,8 @@ test("an unexplained adjustment: its evidence, and Hide → empty → Undo", asy
 });
 
 test("a payment due soon sits above the adjustment and can't be hidden", async ({ page }) => {
-  bill = unique("AT Internet");
-  await page.goto("/commitments");
-  await openDialog(page, () =>
-    page.getByRole("button", { name: "New commitment" }).first().click(),
-  );
-  const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Name").fill(bill);
-  await dialog.getByLabel("Expected amount").fill("1500");
-  await dialog.getByLabel("First due date").fill(dhakaDate(3));
-  await dialog.getByLabel("Category").selectOption({ label: "Utilities" });
-  await dialog.getByRole("button", { name: "Add commitment" }).click();
-  await expect(page.getByRole("dialog")).toBeHidden();
+  bill = unique("OV Internet");
+  await addCommitment(page, bill, "1500", 3);
 
   await page.goto("/");
   await expect(page.getByText("2 things need a look")).toBeVisible();
@@ -204,8 +246,50 @@ test("a payment due soon sits above the adjustment and can't be hidden", async (
   await expect(page).toHaveURL(/\/commitments$/);
 });
 
+test("the first 3 show; Show N more opens the rest in place, and Show fewer closes them", async ({
+  page,
+}) => {
+  await addCommitment(page, unique("OV Water"), "900", 4);
+  await addCommitment(page, unique("OV Gas"), "700", 5);
+
+  await page.goto("/");
+  await expect(page.getByText("4 things need a look")).toBeVisible();
+  await expect(rows(page)).toHaveCount(3);
+  const more = list(page).getByRole("button", { name: "Show 1 more" });
+  await expect(more).toHaveAttribute("aria-expanded", "false");
+  await more.click();
+
+  await expect(page).toHaveURL(/\/$/);
+  await expect(rows(page)).toHaveCount(4);
+  const fewer = list(page).getByRole("button", { name: "Show fewer" });
+  await expect(fewer).toHaveAttribute("aria-expanded", "true");
+  await expect(fewer).toBeFocused();
+  // Still in priority order: the adjustment comes after every payment due.
+  expect((await rows(page).allInnerTexts())[3]).toContain(
+    `${wallet} had an unexplained difference`,
+  );
+
+  // Hide works from the opened rows, and the next one moves up.
+  await expect(async () => {
+    await row(page, `${wallet} had an unexplained difference`)
+      .getByRole("button", { name: /^Hide/ })
+      .click();
+    await expect(rows(page)).toHaveCount(3, { timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
+  await expect(attentionHeading(page)).toBeFocused();
+  await expect(list(page).getByRole("button", { name: /^Show/ })).toHaveCount(0);
+  await page.getByRole("status").getByRole("button", { name: "Undo" }).click();
+  await expect(list(page).getByRole("button", { name: /^Show/ })).toBeVisible();
+  await expect(rows(page)).toHaveCount(4);
+
+  await list(page).getByRole("button", { name: "Show fewer" }).click();
+  await expect(rows(page)).toHaveCount(3);
+  await expect(list(page).getByRole("button", { name: "Show 1 more" })).toBeVisible();
+});
+
 test("a hidden item stays hidden across reloads; what can't be hidden stays", async ({ page }) => {
   await page.goto("/");
+  await list(page).getByRole("button", { name: "Show 1 more" }).click();
   const adjusted = row(page, `${wallet} had an unexplained difference`);
   await expect(async () => {
     await adjusted.getByRole("button", { name: /^Hide/ }).click();
@@ -215,29 +299,55 @@ test("a hidden item stays hidden across reloads; what can't be hidden stays", as
   await page.reload();
   await expect(adjusted).toHaveCount(0);
   await expect(row(page, bill)).toBeVisible();
-  await expect(page.getByText("1 thing needs a look")).toBeVisible();
+  await expect(page.getByText("3 things need a look")).toBeVisible();
   await expect(hideButtons(page)).toHaveCount(0);
 });
 
 for (const width of [390, 820, 1024, 1280, 1920]) {
-  test(`Attention fits ${width}px, with its figures clear of its labels`, async ({ page }) => {
+  test(`the Overview fits ${width}px, in one reading order, with Available in the first view`, async ({
+    page,
+  }) => {
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/");
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
     expect(overflow, `horizontal overflow at ${width}px`).toBe(0);
-    await expect(page.getByRole("heading", { level: 1, name: "Attention" })).toBeInViewport();
 
+    const band = page.getByRole("region", { name: "Available now" });
+    await expect(band.getByRole("heading", { name: "Available now" })).toBeInViewport();
+    await expect(band.getByTestId("free-share-ring")).toBeInViewport();
+
+    // The DOM order is the reading order; on screen, each zone starts after
+    // the one before it (below it, or to its right from 1280px).
+    const zones = ["Available now", "Attention", "This month", "Where you stand"];
+    await expect(page.getByRole("heading", { level: 2 })).toHaveText(zones);
+    const boxes = await Promise.all(
+      zones.map((name) => page.getByRole("heading", { level: 2, name }).boundingBox()),
+    );
+    for (let i = 1; i < boxes.length; i++) {
+      const [prev, next] = [boxes[i - 1]!, boxes[i]!];
+      expect(next.y > prev.y || next.x > prev.x, `${zones[i]} after ${zones[i - 1]}`).toBe(true);
+    }
+    const attentionBeside = boxes[1]!.x > boxes[0]!.x;
+    expect(attentionBeside, "Attention beside the band only from 1280px").toBe(width >= 1280);
+
+    // The first Attention row: its tag stays clear of its figure.
     const first = rows(page).first();
-    const tag = await first.getByText("In 3 days").boundingBox();
-    const amount = await first.getByText("1,500").boundingBox();
+    const tag = await first.locator("span.rounded-full").first().boundingBox();
+    const amount = await first
+      .getByText(/৳[\d,]+/)
+      .first()
+      .boundingBox();
     const box = await first.boundingBox();
     expect(tag!.x + tag!.width, "tag runs into the amount").toBeLessThanOrEqual(amount!.x);
     expect(amount!.x + amount!.width).toBeLessThanOrEqual(box!.x + box!.width);
-    await expect(first.getByRole("link", { name: /^Open Commitments/ })).toBeInViewport();
-    // The list stays a readable width on wide screens.
-    expect(box!.width).toBeLessThanOrEqual(880);
+
+    // The asset rail and its words stay inside the card.
+    const stand = page.getByRole("region", { name: "Where you stand" });
+    const standBox = await stand.boundingBox();
+    const rail = await stand.getByTestId("asset-rail").boundingBox();
+    expect(rail!.x + rail!.width).toBeLessThanOrEqual(standBox!.x + standBox!.width);
 
     // Still four destinations, and none of them is current on "/".
     const nav = mainNav(page, width);

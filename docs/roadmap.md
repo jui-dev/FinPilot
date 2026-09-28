@@ -393,7 +393,7 @@ The two inputs to Available: money already obligated and money deliberately set 
   4. navigation (P-3)
   5. responsive and accessibility review, Playwright flow 4, and the two UX blockers
   6. V1 readiness: README and screenshots, docs closure, then `v1.0` after review
-- **Progress:** Slice 0 `72dcd1f`; Slice 1 `a86b755`; Slice 2 (2026-09-28): the Accounts sign fix `09828bc` (liability standing: a card's credit reads as credit, never owed), then the read model: the Available bridge exposes `excludedAssetBalances` and `pool`, with their invariants, and the spoken-for bar reads `pool` instead of rebuilding it. No Overview UI yet.
+- **Progress:** Slice 0 `72dcd1f`; Slice 1 `a86b755`; Slice 2 (2026-09-28): the Accounts sign fix `09828bc` (liability standing: a card's credit reads as credit, never owed), then the read model: the Available bridge exposes `excludedAssetBalances` and `pool`, with their invariants, and the spoken-for bar reads `pool` instead of rebuilding it. Slice 3 (2026-09-29): the Overview at `/` — the navy Available band with the free-share ring, Attention's first 3 with Show N more in place, This month as a statement, and Where you stand with the asset rail — composed in the page from `getAvailable`, `getAttention`, `getMonthlyCashFlow` and `getPosition`, with no service of its own; Available's hero sentence is shared with the Available page. Navigation is unchanged until Slice 4.
 - **Commits:**
   - `feat(demo): V1 demo situations`
   - `feat(overview): overview composed from existing answers`
