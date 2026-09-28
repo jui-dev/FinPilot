@@ -11,7 +11,6 @@ import {
   summary,
   targetView,
 } from "@/components/set-aside/describe";
-import { ariaCurrent, navState, PRIMARY_NAV } from "@/components/shell/navigation";
 
 const t = fromMajor;
 
@@ -126,25 +125,5 @@ describe("summary across items", () => {
     });
     expect(summary([covers[0]!])).toEqual({ kind: "covered", setAside: t(5_000) as Money });
     expect(summary([cover(null)])).toEqual({ kind: "empty" });
-  });
-});
-
-describe("interim navigation: Set aside belongs to the Commitments destination", () => {
-  const commitments = PRIMARY_NAV.find((i) => i.href === "/commitments")!;
-  it("is the page on /commitments and the area on /set-aside", () => {
-    expect(navState("/commitments", commitments)).toBe("page");
-    expect(navState("/set-aside", commitments)).toBe("area");
-    expect(navState("/accounts", commitments)).toBeNull();
-    expect([ariaCurrent("page"), ariaCurrent("area"), ariaCurrent(null)]).toEqual([
-      "page",
-      "true",
-      undefined,
-    ]);
-  });
-
-  it("marks no other destination on /set-aside", () => {
-    expect(
-      PRIMARY_NAV.filter((i) => i.href !== "/commitments").map((i) => navState("/set-aside", i)),
-    ).toEqual([null, null, null]);
   });
 });

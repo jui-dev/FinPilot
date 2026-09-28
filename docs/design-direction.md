@@ -145,7 +145,7 @@ It has no metric cards.
 
 ### Set aside: "What am I keeping money for, and is it still really there?"
 
-Reached beside Commitments through a local switch until Stage 8 names the forward-looking area (roadmap P-2/P-3). One card of items, no metric cards; a one-line total only when there are two or more.
+A page of the Available area, reached through its local switch (Available · Commitments · Set aside; roadmap §8.3). One card of items, no metric cards; a one-line total only when there are two or more.
 
 1. **Each item:** its name; **one number** ("৳1,20,000 set aside") while everything set aside is covered, or "৳1,10,000 of ৳1,20,000 still covered" with a *short* tag when a balance has fallen.
 2. **A target line and bar only when a target exists:** target, still needed (from what is covered) and progress; *Target reached* when covered meets it.
@@ -206,3 +206,4 @@ Earlier entries are history. Where an entry describes a visual system, the curre
 | 2026-09-27 | **Product-architecture decisions** ([roadmap.md §8](roadmap.md)): §2 colour note renamed to protected money (Stage 7); §5 records the approved future visual directions, each with its one question and owner, and the rejected charts; §9 D1 (Overview panels) and D2 (net-worth trend) resolved. No screen is specified before it is built. | Goals became Protected money and Budgets the optional Monthly Plan; the chart policy was reviewed so that each visual has one analytical question and no duplicate. |
 | 2026-09-28 | **Set aside (Stage 7):** §2 records no dedicated hue for Set aside in V1; §6 adds the Set aside screen. | Built in Stage 7 Slice 3 with the existing visual system. |
 | 2026-09-28 | **Stage 8 Slice 0:** §5's Available visual names its set-aside segment "covered set aside" (a provisional term). | Available subtracts only the covered portion; plain "Set aside" means the nominal amount on the Set aside screen ([domain-model.md §10](domain-model.md)). |
+| 2026-09-28 | **Stage 8 Slice 2A:** §6 Set aside is reached through the Available area's local switch (Available · Commitments · Set aside); Available replaces Commitments as the fourth global destination and phone tab. | Navigation decision P-2 ([roadmap.md §8.3](roadmap.md)). |

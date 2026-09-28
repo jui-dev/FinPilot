@@ -293,7 +293,7 @@ The two inputs to Available: money already obligated and money deliberately set 
   - The **liability invariant** at the domain/write boundary: a liability can't be excluded, which closes the known setup-path gap ([domain-model.md §5](domain-model.md)).
   - ~~The `included_in_available` preference for **asset** accounts.~~ *(2026-09-28: no user-facing preference in Stage 8. The existing stored flag and its domain semantics are enforced, and no new functionality is added for it.)*
   - The over-committed state and the "before new income" label.
-  - **The forward-looking product area**, first built here: it leads with Available, and its bridge terms open Commitments and Protected money. Its working name "Plan" is **provisional**. The final name, its navigation placement and the phone tab-bar capacity are decided in this stage's navigation work, the UI slice (§8.3, §8.5; P-2 and P-3 stay open until then).
+  - **The forward-looking product area**, first built here: it leads with Available, and its bridge terms open Commitments and Protected money. *(Decided 2026-09-28, Slice 2A: the area is named **Available**. It is the fourth global destination (Activity · Accounts · Cash flow · Available), `/available` is its landing page, and a local switch holds Available · Commitments · Set aside, whose URLs are unchanged. The phone keeps four destinations around the centred +. See §8.3 and §8.5 P-2 and P-3.)*
 - **Why here:** it's the first point where all its inputs exist (see §1, decision 2).
 - **Domain concepts:** Available and its bridge; account eligibility.
 - **Tests that must pass:**
@@ -472,13 +472,13 @@ The product-responsibility matrix, which gives each feature one primary question
 9. **Charts:** one visualisation answers one analytical question. Future visuals are recorded only where their owning concept is decided ([design-direction.md §5](design-direction.md)).
 10. **Out of scope** unless deliberately reopened: [product-baseline.md §5](product-baseline.md).
 
-### 8.3 The forward-looking product area (provisional)
+### 8.3 The forward-looking product area
 
 Available, Commitments and Protected money naturally form one forward-looking decision area. The area **leads with Available**, and Available's bridge terms open the other two.
 
-- **"Plan" is a working name only.** It is not a frozen navigation label: a destination called "Plan" could suggest that Available depends on planning, or that planning is expected.
-- **Monthly Plan** is conceptually related but **does not feed Available**. It may or may not live in the same area.
-- The area's final name, its navigation placement and where Monthly Plan sits are decided when the area is designed, by Stage 8's navigation work at the latest (Monthly Plan's placement by Stage 13).
+- **Named "Available" (decided 2026-09-28, Stage 8 Slice 2A).** It is the fourth global destination, after Activity, Accounts and Cash flow: the navigation follows the product model, Record → Verify → Understand → Available. `/available` is the area's landing page, and a local switch holds its three pages, **Available · Commitments · Set aside**; the Commitments and Set aside URLs are unchanged. Commitments is no longer a global destination.
+- *(History: "Plan" was a working name only, never a navigation label, because a destination called "Plan" could suggest that Available depends on planning, or that planning is expected.)*
+- **Monthly Plan** is conceptually related but **does not feed Available**. It may or may not live in the same area; its placement is decided by Stage 13.
 - The **Overview** may surface Available but does not own it. **Accounts** keeps position and balance trust, with no competing headline beside Net worth, Own and Owe. **Cash flow** keeps what happened in a period, and Available is not part of it.
 
 ### 8.4 Stage numbering: old → new
@@ -516,8 +516,8 @@ Every item here is **deliberately open, not forgotten**. A stage's plan resolves
 | # | Question | Resolve when |
 |---|---|---|
 | P-1 | An explicit protected-money ↔ commitment relationship (sinking funds). **Not a V1 blocker:** the conservative double reservation is acceptable for V1 ([domain-model.md §10](domain-model.md)). | if the revisit trigger fires (double reservation seen often) |
-| P-2 | The forward-looking area's final name, its navigation placement, and Monthly Plan's placement (§8.3). *Interim (Stage 7):* Set aside sits beside Commitments behind a local switch, and the Commitments destination is current on both; no destination was added. | when the area is designed, no later than Stage 8's navigation work (Monthly Plan's placement by Stage 13) |
-| P-3 | Phone tab-bar capacity once Overview and the forward-looking area join the bar (three destinations and the centred + today). | before shipping the navigation that expands it (Stage 8 or 10) |
+| P-2 | ~~The forward-looking area's final name and its navigation placement~~ **Resolved 2026-09-28 (Stage 8 Slice 2A):** the area is **Available**, the fourth global destination, with `/available` as its landing page and a local switch for Available · Commitments · Set aside (§8.3). **Still open:** Monthly Plan's placement. *(History: in Stage 7, Set aside sat beside Commitments behind a local switch, under the Commitments destination.)* | Monthly Plan's placement by Stage 13 |
+| P-3 | Phone tab-bar capacity once Overview and the forward-looking area join the bar. **Stage 8 part resolved (2026-09-28):** Available replaced the Commitments tab, so the bar still has four destinations around the centred +. **Stage 10 part open:** how the Overview joins the bar is decided when the Overview is designed; no option is chosen or preferred yet. | the Stage 10 plan |
 | P-4 | How Attention is reachable when signals ship, before the Overview composes it. A direct or temporary surface is acceptable; the final Overview or navigation is not designed early for it. Signals own selection and ranking; the Overview only surfaces them. | the Stage 9 plan |
 | P-5 | The colours of commitments and protected money ([design-direction.md §2](design-direction.md)). *Protected money resolved for V1 (2026-09-28): no dedicated hue.* | Stages 6 and 7 |
 | P-6 | Signal families 6 (Available low) and 8 (savings-rate change). | a review after V1 |

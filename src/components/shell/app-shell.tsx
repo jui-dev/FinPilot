@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownUp, CalendarClock, Plus, Receipt, Settings, Wallet } from "lucide-react";
+import { ArrowDownUp, CircleGauge, Plus, Receipt, Settings, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -27,7 +27,7 @@ const TAB_ICONS = {
   "/activity": Receipt,
   "/accounts": Wallet,
   "/cash-flow": ArrowDownUp,
-  "/commitments": CalendarClock,
+  "/available": CircleGauge,
 } as const;
 
 /**

@@ -185,21 +185,33 @@ test("an archived account is never offered for setting money aside", async ({ pa
   expect(options.some((o) => o.startsWith("Visa card"))).toBe(false);
 });
 
-test("Commitments and Set aside switch between each other", async ({ page }) => {
+test("the Available area switches between Available, Commitments and Set aside", async ({
+  page,
+}) => {
   await page.goto("/commitments");
-  const area = page.getByRole("navigation", { name: "Commitments and Set aside" });
+  const area = page.getByRole("navigation", { name: "Available" });
+  const available = page
+    .getByRole("navigation", { name: "Main" })
+    .first()
+    .getByRole("link", { name: "Available" });
+
   await area.getByRole("link", { name: "Set aside" }).click();
   await expect(page).toHaveURL(/\/set-aside$/);
   await expect(page.getByRole("heading", { level: 1, name: "Set aside" })).toBeVisible();
-  // The global Commitments destination stays current for its whole area.
-  await expect(
-    page
-      .getByRole("navigation", { name: "Main" })
-      .first()
-      .getByRole("link", { name: "Commitments" }),
-  ).toHaveAttribute("aria-current", "true");
+  await expect(area.getByRole("link", { name: "Set aside" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  // The global Available destination stays current for its whole area.
+  await expect(available).toHaveAttribute("aria-current", "true");
+
+  await area.getByRole("link", { name: "Available" }).click();
+  await expect(page).toHaveURL(/\/available$/);
+  await expect(available).toHaveAttribute("aria-current", "page");
+
   await area.getByRole("link", { name: "Commitments" }).click();
   await expect(page).toHaveURL(/\/commitments$/);
+  await expect(available).toHaveAttribute("aria-current", "true");
 });
 
 test("Set aside fits every width with representative data and no horizontal scroll", async ({

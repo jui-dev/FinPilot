@@ -3,20 +3,20 @@ import Link from "next/link";
 import { cn } from "../ui/cn";
 
 /**
- * The interim switch between the two pages of the forward-looking area,
- * Commitments and Set aside, until Stage 8 names the area and decides its
- * navigation (roadmap §8.3, open decisions P-2/P-3). Links, not tabs: each
- * page has its own URL, and the global Commitments destination stays current
- * on both.
+ * The switch between the pages of the Available area (roadmap §8.3, P-2):
+ * Available leads, and Commitments and Set aside are its inputs. Links, not
+ * tabs: each page has its own URL, and the global Available destination stays
+ * current on all three.
  */
 const PAGES = [
+  { href: "/available", label: "Available" },
   { href: "/commitments", label: "Commitments" },
   { href: "/set-aside", label: "Set aside" },
 ] as const;
 
 export function AreaSwitch({ current }: { readonly current: (typeof PAGES)[number]["href"] }) {
   return (
-    <nav aria-label="Commitments and Set aside" className="-mb-1">
+    <nav aria-label="Available" className="-mb-1">
       <ul className="inline-flex rounded-control border border-line bg-surface-subtle p-0.5">
         {PAGES.map((page) => {
           const selected = page.href === current;

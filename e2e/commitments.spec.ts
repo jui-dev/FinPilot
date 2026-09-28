@@ -52,13 +52,18 @@ async function createCommitment(
 
 const section = (page: Page, name: string) => page.getByRole("region", { name });
 
-test("Commitments is reachable from the navigation and explains itself when empty", async ({
+test("Commitments is reachable through the Available area and explains itself when empty", async ({
   page,
 }) => {
   await page.goto("/activity");
   await page
     .getByRole("navigation", { name: "Main" })
     .first()
+    .getByRole("link", { name: "Available" })
+    .click();
+  await expect(page).toHaveURL(/\/available$/);
+  await page
+    .getByRole("navigation", { name: "Available" })
     .getByRole("link", { name: "Commitments" })
     .click();
   await expect(page).toHaveURL(/\/commitments$/);
@@ -210,13 +215,13 @@ for (const width of [390, 820, 1024, 1280, 1920]) {
     await expect(page.getByRole("button", { name: "New commitment" })).toBeInViewport();
     await expect(page.getByRole("heading", { name: "Due now" })).toBeInViewport();
     if (width < 768) {
-      // Phones reach it from the tab bar.
-      await expect(
-        page
-          .getByRole("navigation", { name: "Main" })
-          .last()
-          .getByRole("link", { name: "Commitments" }),
-      ).toBeInViewport();
+      // Phones reach it through the Available tab, current for its whole area.
+      const tab = page
+        .getByRole("navigation", { name: "Main" })
+        .last()
+        .getByRole("link", { name: "Available" });
+      await expect(tab).toBeInViewport();
+      await expect(tab).toHaveAttribute("aria-current", "true");
     }
   });
 }

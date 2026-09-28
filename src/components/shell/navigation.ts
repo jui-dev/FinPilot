@@ -1,7 +1,6 @@
 /**
  * Top-level destinations. Each appears in navigation only once its stage
- * exists (docs/roadmap.md): the forward-looking area (working name "Plan")
- * and the Overview arrive later.
+ * exists (docs/roadmap.md): the Overview arrives later.
  *
  * HOME_PATH is where "/" and the logo lead. It is Activity only until the
  * Overview exists; Stage 10 sets it to "/" and gives "/" its own page. Nothing
@@ -20,10 +19,9 @@ export const PRIMARY_NAV: readonly NavItem[] = [
   { href: "/activity", label: "Activity" },
   { href: "/accounts", label: "Accounts" },
   { href: "/cash-flow", label: "Cash flow" },
-  // Provisional home until the forward-looking area is designed (roadmap §8.3,
-  // open decisions P-2/P-3, no later than Stage 8): the URLs are meant to survive
-  // it. Until then Set aside lives beside Commitments behind a local switch.
-  { href: "/commitments", label: "Commitments", area: ["/set-aside"] },
+  // The forward-looking area (roadmap §8.3, P-2): it leads with Available, and
+  // Commitments and Set aside, its inputs, are its other pages behind a local switch.
+  { href: "/available", label: "Available", area: ["/commitments", "/set-aside"] },
 ];
 
 export const SETTINGS_PATH = "/settings";
