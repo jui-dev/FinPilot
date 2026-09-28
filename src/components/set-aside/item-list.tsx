@@ -61,7 +61,7 @@ function ItemBlock({
             {item.name}
           </h2>
           {state.kind === "short" && (
-            <Tag tone="warning" icon={<CircleAlert aria-hidden className="size-3.5" />}>
+            <Tag tone="negative" icon={<CircleAlert aria-hidden className="size-3.5" />}>
               <Money amount={state.short} sign="none" /> short
             </Tag>
           )}
@@ -108,7 +108,7 @@ function ItemBlock({
                   <span className="min-w-0 truncate text-ink">{h.accountName}</span>
                   <span className="flex shrink-0 items-baseline gap-2">
                     {h.short > 0 && (
-                      <span className="text-meta text-warning">
+                      <span className="text-meta text-negative">
                         <Money amount={h.short} sign="none" /> short
                       </span>
                     )}

@@ -43,8 +43,13 @@
   --color-positive-soft: #e4f1ea;
   --color-warning: #9a5b0b;
   --color-warning-soft: #fbf0dc;
-  --color-negative: #b42318;
-  --color-negative-soft: #fbe9e6;
+  /*
+   * Berry: wrong, broken or being destroyed; never spending or a direction. A
+   * berry rather than a red so it stays apart from coral by hue (about 337° vs 10°).
+   */
+  --color-negative: #a33a62;
+  --color-negative-hover: #8a2f52;
+  --color-negative-soft: #f8eaf0;
 
   /*
    * Seven type steps and no others (docs/design-direction.md §3). Weight stays

@@ -92,7 +92,7 @@ export default async function SetAsidePage() {
                 <>
                   <Money amount={total.covered} sign="none" className="font-semibold text-ink" /> of{" "}
                   <Money amount={total.setAside} sign="none" /> still covered ·{" "}
-                  <span className="text-warning">
+                  <span className="text-negative">
                     <Money amount={total.short} sign="none" /> short
                   </span>
                 </>

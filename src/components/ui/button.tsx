@@ -27,7 +27,7 @@ const variants: Record<Variant, string> = {
   /** An inline destructive action (e.g. a row's Delete). */
   danger: "text-negative hover:bg-negative-soft",
   /** The confirming button of a destructive dialog: filled, never the brand colour. */
-  destructive: "bg-negative text-white hover:bg-negative/90",
+  destructive: "bg-negative text-white hover:bg-negative-hover",
   link: `font-medium text-ink ${linkClass}`,
 };
 

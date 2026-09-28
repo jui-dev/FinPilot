@@ -15,7 +15,7 @@
 2. **Evidence behind important figures.** A figure that summarises transactions opens the rows behind it.
 3. **One visualisation, one analytical question.** No chart repeats what another already says ([product-baseline.md §6](product-baseline.md)).
 4. **Colour carries stable semantics** (§2). It is never assigned to fill space.
-5. **Financial direction is not an error state.** Spending more is not "wrong"; red is kept for what is.
+5. **Financial direction is not an error state.** Spending more is not "wrong"; `negative` (berry) is kept for what is.
 6. **Responsive layouts recompose rather than shrink** (§8).
 7. **Dense ledger information stays scannable:** aligned columns, fixed-width amounts, day grouping.
 8. **No duplicate features, metrics or charts** answering the same question.
@@ -44,18 +44,20 @@ These tokens are the whole palette: the default Tailwind palette is removed ([gl
 | `coral` | `#F06A4E` | the brand and the one global action | the logo stripe, **+ Add** and the phone **+** (ink label, 5.3:1) | spending, higher spending, any financial direction, totals, status, warnings, errors, text |
 | `positive` / `-soft` | `#2B6F4F` / `#E4F1EA` | money arrived / verified | "+" on income and refunds, the Verified tag | "spending went down" |
 | `warning` / `-soft` | `#9A5B0B` / `#FBF0DC` | needs a look | a changed checkpoint | spending increases |
-| `negative` / `-soft` | `#B42318` / `#FBE9E6` | wrong or destructive | errors, Delete, a failed toast, the destructive confirmation | spending, "higher" |
+| `negative` / `-hover` / `-soft` | `#A33A62` / `#8A2F52` / `#F8EAF0` | wrong, broken or destructive (a muted berry) | errors and invalid fields, Delete, a failed toast, the destructive confirmation (hover: `-hover`), a shortfall and its amount | spending or any outflow, a balance or Left over merely below zero, "higher", deterioration, Cancel, decoration |
 
 **Rules:**
-- **Coral is a brand and action accent, never a meaning.** It is not spending, higher spending, a negative direction, a warning or an error. Coral and `negative` are only 2.2:1 apart, so they are kept apart by role, and red always comes with a word and an icon.
+- **Coral is a brand and action accent, never a meaning.** It is not spending, higher spending, a negative direction, a warning or an error. Coral and `negative` are only 2.1:1 apart in lightness; they are kept apart by hue (berry about 337°, coral about 10°) and by role, and `negative` always comes with a word and an icon.
+- **`negative` colours the gap, not the number line.** It marks the amount by which something is short or over-committed ("৳4,000 short"), never an amount just because it is below zero or leaves an account.
+- **In a destructive dialog only the action that destroys is `negative`.** Cancel stays ghost: it is the safe choice, and colouring it would hide which button does the damage. Archive, Release, Skip and Refund are not destructive.
 - **Analytical direction uses the blue family:** navy for higher, ocean for lower. Direction is always carried by the word, the sign and the arrow; colour only repeats it.
 - **Error and destructive semantics stay separate** from direction: `negative` means a plan is broken, data is wrong or something is being deleted.
-- **Spending is never red and never green.**
+- **Spending is never `negative` and never green.**
 - **Navy is identity and emphasis, never status.** The header stays white; navy is not a page background.
 - **One selected state:** `mist` background, `ocean` text, `ocean` edge, for chips, segmented controls and active filters.
 - **Status is always icon + word + colour,** never colour alone.
-- **Contrast (measured):** ink 16.3 and ink-2 7.2 on white; ink-2 6.7 on canvas and 6.2 on mist; navy 11.9 on white and 10.2 on mist; ocean 5.9 on white and 5.0 on mist; ink on coral 5.3. Control edges, focus and the navy tab mark are ≥ 3:1.
-- **Set aside (protected money) has no dedicated hue in V1** (2026-09-28): covered money is navy, the rest of a target is a mist track, and a shortfall is a warning tag plus a red-outlined gap in the target bar. The colour of commitments is not decided; no hue is reserved for it.
+- **Contrast (measured):** ink 16.3 and ink-2 7.2 on white; ink-2 6.7 on canvas and 6.2 on mist; navy 11.9 on white and 10.2 on mist; ocean 5.9 on white and 5.0 on mist; ink on coral 5.3; `negative` 6.3 on white, 5.9 on canvas, 5.4 on `negative-soft` and on mist; white 6.3 on `negative` and 8.1 on `negative-hover`. Control edges, focus and the navy tab mark are ≥ 3:1.
+- **Set aside (protected money) has no dedicated hue in V1** (2026-09-28): covered money is navy, the rest of a target is a mist track, and a shortfall is a `negative` *short* tag, its amount in `negative`, and a `negative`-outlined gap in the target bar. Overdue commitments stay `warning` (a decision is needed; nothing is broken). The colour of commitments is not decided; no hue is reserved for it.
 
 ## 3. Typography and numbers
 
@@ -99,7 +101,8 @@ These tokens are the whole palette: the default Tailwind palette is removed ([gl
   - **Composition strip:** the month's spending as one bar, largest category first. Its tones (navy, ocean, tide) only separate neighbouring segments.
   - **Ranked bars:** one per category, in one blue, drawn against the largest; every spent category is listed.
   - **Change magnitude bars:** one per material driver in What changed, navy for higher and ocean for lower, drawn against the largest change.
-- **Fact vs expectation** (for Commitments, Protected money, Available and Monthly Plan): **filled** = has happened; **soft tint + outline** = spoken for or expected; **empty with a red outline** = missing (shortfall, over-committed). Expected amounts always carry a date or a purpose.
+- **Fact vs expectation** (for Commitments, Protected money, Available and Monthly Plan): **filled** = has happened; **soft tint + outline** = spoken for or expected; **empty with a `negative` outline** = missing (shortfall, over-committed). Expected amounts always carry a date or a purpose.
+- **`negative` in future charts (guidance only; nothing is built):** it marks only the missing part, drawn as a surface or `negative-soft` fill with a 1–1.5px `negative` edge and a word ("Short", "Over-committed"). Never a solid `negative` segment that relies on colour alone: `negative` and ocean are 1.07:1 apart in luminance. On the Available bridge (and the Overview, which reuses it), an over-commitment is an outlined gap while the figure keeps navy and a true minus. On Trends, Income and Spending stay in the blue family and only the gap of a month that spent more than it earned is outlined; the figure stays `ink` with its sign and words. Deterioration and "over plan" are direction (navy/ocean, arrow, word), never `negative`.
 - **Hand-built in CSS (SVG where a shape needs it), with no chart library** ([tech-stack.md](tech-stack.md)). A new chart is added only when its concept exists and its question isn't already answered.
 - **Approved future directions** (2026-09-27; recorded because their owning concepts are now decided, not yet designed):
 
@@ -161,7 +164,7 @@ A page of the Available area, reached through its local switch (Available · Com
 | Active nav | `navy` text + 2px `navy` underline; on phones, a `navy` mark and icon on the tab |
 | Selected (chip, segment, active filter) | `mist` background, `ocean` text, `ocean` edge |
 | Buttons | primary: `navy` fill · the global Add: `coral` fill, `ink` label · secondary: white with a `line-strong` edge · ghost: text only |
-| Destructive | inline: `negative` text; the confirming button of a destructive dialog: a filled `negative` button, never the brand colour |
+| Destructive | inline: `negative` text, `negative-soft` on hover; the confirming button of a destructive dialog: a filled `negative` button (`negative-hover` on hover), never the brand colour; Cancel beside it stays ghost |
 | Evidence link | an `ocean` underline (50%, full on hover) on an amount or phrase that opens the rows behind it; a whole row when the row is the evidence |
 | Disabled | 45% opacity, no pointer |
 | Pending | the control keeps its size and shows a spinner; no layout shift |
@@ -207,3 +210,4 @@ Earlier entries are history. Where an entry describes a visual system, the curre
 | 2026-09-28 | **Set aside (Stage 7):** §2 records no dedicated hue for Set aside in V1; §6 adds the Set aside screen. | Built in Stage 7 Slice 3 with the existing visual system. |
 | 2026-09-28 | **Stage 8 Slice 0:** §5's Available visual names its set-aside segment "covered set aside" (a provisional term). | Available subtracts only the covered portion; plain "Set aside" means the nominal amount on the Set aside screen ([domain-model.md §10](domain-model.md)). |
 | 2026-09-28 | **Stage 8 Slice 2A:** §6 Set aside is reached through the Available area's local switch (Available · Commitments · Set aside); Available replaces Commitments as the fourth global destination and phone tab. | Navigation decision P-2 ([roadmap.md §8.3](roadmap.md)). |
+| 2026-09-28 | **Negative becomes berry:** `negative` `#B42318` → `#A33A62`, `negative-soft` `#FBE9E6` → `#F8EAF0`, new `negative-hover` `#8A2F52` for the destructive confirmation; the Set aside shortfall (tag and amounts) moves from `warning` to `negative`; §2 records where `negative` is never used, and §5 records chart guidance for it (not built). | The red sat on coral's hue (about 4° vs 10°), so errors read as a darker brand accent. A shortfall was two colours for one fact (a warning tag beside a red-outlined gap); set-aside money that is no longer there is a broken plan, which is what `negative` means. |

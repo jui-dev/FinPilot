@@ -109,7 +109,7 @@ export function Tag({
   icon,
 }: {
   readonly children: ReactNode;
-  readonly tone?: "neutral" | "info" | "positive" | "warning";
+  readonly tone?: "neutral" | "info" | "positive" | "warning" | "negative";
   readonly icon?: ReactNode;
 }) {
   const tones = {
@@ -117,6 +117,7 @@ export function Tag({
     info: "bg-mist text-ocean",
     positive: "bg-positive-soft text-positive",
     warning: "bg-warning-soft text-warning",
+    negative: "bg-negative-soft text-negative",
   };
   return (
     <span
