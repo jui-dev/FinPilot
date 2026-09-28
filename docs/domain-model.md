@@ -80,7 +80,7 @@ Every Model S invariant is a **single-row `CHECK`**, which works the same way in
 | **CommitmentOccurrence** | One expected instance of a commitment, and its outcome | stored (materialised lazily, §8) |
 | **Protected-money item** (formerly **Goal**) | Money deliberately set aside (shown to the user as **Set aside**): a name and an **optional** target amount. Stored as `protected_money_items` (O-3, resolved in Stage 7). | stored |
 | **EarmarkEntry** | A change to how much of an account is reserved for a protected-money item (a reservation entry) | stored (append-only) |
-| **SignalDismissal** | The user has dismissed a signal for its period | stored |
+| **SignalDismissal** | The user has hidden a dismissible signal for its episode (its full key, §11) | stored |
 | Balances, net worth, Available, reservation backing, analytics, signals, and (Stage 13) Monthly Plan progress | — | **derived; never stored in V1** |
 
 - **Tenancy:** every stored table carries `owner_id`, even though V1 has a single owner (§12).
@@ -320,33 +320,65 @@ Available = Σ balance(asset accounts with included_in_available)
 
 ## 11. Signal engine
 
-- **Shape:** `rule(context) → Signal[]`. Rules are **pure functions** over one derived **context** built per request. The context includes:
-  - the as-of date and month windows
-  - category spending for the current month-to-date and the like-for-like previous window
-  - 3-month category averages (from Stage 12, Trends, for family 3)
-  - occurrences, protected-money backing, the Available bridge, reconciliation checkpoints, and Monthly Plan statuses only when a plan exists (Stage 13)
+- **Signals select and rank; the owning feature explains** (2026-09-27). *Question: of everything true right now, what deserves my attention?* A signal is one ranked sentence whose evidence opens the feature that owns the explanation: a verification issue opens the entries behind it, a material spending change opens Cash flow's What changed, a commitment deadline opens Commitments, a shortfall opens Set aside. Signals never become a second analytics system: no charts, no inbox, no read/unread state, no separate Insights destination, no notifications, and no generic AI-written observations. The user sees the selection as **Attention** (Stage 9, 2026-09-28).
+- **Selective by rule (2026-09-28, Stage 9; O-2).** Cash flow's What changed says *something changed*; Attention says *this may need you*. A signal exists only when a situation is **actionable, a broken promise, time-bound, or materially unusual for the month as a whole**. Ordinary transactions, small fluctuations and observations that need no decision stay on the page that owns them (verified balances, commitments due in 8–30 days, What changed's category drivers, a target reached).
+- **Shape:** `rule(context) → Signal[]`. Rules are **pure functions** over one derived **context** built per request from the existing read models. They interpret those models' outputs (occurrence states, backing, checkpoint status, the month-over-month explanation) against dates and thresholds, and **never recompute** a balance, backing, occurrence state, checkpoint drift or spending change. The context includes:
+  - the as-of date
+  - pending commitment occurrences and their state (§8)
+  - protected-money backing: reserved / covered / short per earmark (§9)
+  - each account's current checkpoint, its status and drift, and its adjustment (§12)
+  - the current month-to-date spending change against the same days of the previous month (below)
+  - later: a category's "typical" amount (Stage 12, Trends, for family 3; the definition is open decision O-5) and Monthly Plan statuses only when a plan exists (Stage 13)
 - **Signal fields:**
-  - `key`: rule + subject + period; stable, used for dismissal and dedup
-  - `severity`: critical / warning / info / positive
-  - `score`: used for ranking
-  - a message template with integer parameters
-  - **evidence**: a transaction-list filter, so every signal has a drill-down
-- **Computed on read.** Only dismissals are stored, keyed per period, so dismissing September's dining warning doesn't hide October's.
-- **Signals select and rank; the owning feature explains** (2026-09-27). *Question: of everything true right now, what deserves my attention?* A signal is one ranked sentence whose evidence opens the feature that owns the explanation: a verification issue opens Accounts, a material spending change opens Cash flow's What changed, a commitment deadline opens Commitments, an Available concern opens Available's bridge. Signals never become a second analytics system: no charts, no inbox, no read/unread state, no separate Insights destination, no notifications, and no generic AI-written observations.
-- **Rule families** (the numbering is kept; the stage says when each is built):
+  - `kind`: one of the kinds below; it fixes the priority and the presentation tone
+  - `key`: `kind : subject`, plus the episode (a month, an adjustment, a checkpoint date) where the kind has one; built only from ids and dates, never from amounts; stable across reads and used for dismissal and deduplication
+  - subject names and **integer parameters** (money in minor units, dates, day counts); the copy is produced at presentation
+  - **evidence target:** a typed value naming the owning page and its scope (below). Every signal has one; there are no dead ends.
+  - *(There is no `severity` and no `score`; superseded 2026-09-28, below.)*
+- **Computed on read.** Only dismissals are stored (below).
+- **V1 signal kinds** (Stage 9, 2026-09-28), in their **deterministic priority order**. Priority is a property of the kind of situation, never a computed weight:
 
-  | # | Family | Stage |
-  |---|---|---|
-  | 1 | Monthly Plan at risk / committed over / exceeded (formerly "budget") | 13, only when a plan exists |
-  | 2 | Month-over-month change attribution: **trigger under reconsideration** (below) | 9 |
-  | 3 | Category spike vs the 3-month average | 12 (needs Trends' baseline) |
-  | 4 | Commitments due within 7 days / overdue | 9 |
-  | 5 | Protected money under-covered (formerly "goal"). *Behind schedule is deferred with target dates (§9).* | 9 |
-  | 6 | Available low / over-committed | deferred beyond V1 |
-  | 7 | **Reconciliation:** a broken checkpoint, a stale or missing verification, and a recent adjustment (an informational "unexplained difference"; clarification, §18) | 9 |
-  | 8 | Savings-rate change (positive) | deferred beyond V1 |
+  | # | Kind | Fires when | Evidence target | Key | Dismissible |
+  |---|---|---|---|---|---|
+  | 1 | `commitment_overdue` | a commitment has pending occurrences due before today; **one signal per commitment** (count, oldest due date, total) | Commitments | `commitment_overdue:<commitment>` | no |
+  | 2 | `commitment_due_today` | a pending occurrence is due today | Commitments | `commitment_due_today:<occurrence>` | no |
+  | 3 | `set_aside_short` | an active earmark has short > 0; one signal per (item, account) | Set aside | `set_aside_short:<item>:<account>` | no |
+  | 4 | `verification_changed` | an account's current checkpoint no longer matches (§12); the account is not archived | Activity: that account's entries through the checkpoint date | `verification_changed:<account>:<as_of>` | no |
+  | 5 | `commitment_due_soon` | a pending occurrence is due 1–7 days after today | Commitments | `commitment_due_soon:<occurrence>` | no |
+  | 6 | `spending_up` | the month-over-month rule below | Cash flow's What changed for the month | `spending_up:<YYYY-MM>` | **yes, for that month** |
+  | 7 | `unexplained_adjustment` | an account's current checkpoint still matches, carries an active adjustment, is dated within the last 7 days (`as_of ≥ today − 7`), and the account is not archived | Activity: that account on the checkpoint date | `unexplained_adjustment:<adjustment>` | **yes, for that adjustment** |
 
-- **Family 2 must stay selective (decision required before Stage 9).** Cash flow's What changed answers *why did this period change?* The signal must answer *is this change important enough to bring to my attention unasked?* As first defined, family 2 used the same materiality rule that What changed uses to list its drivers, so it would fire for every driver Cash flow already shows. That is a duplicate. Its trigger must be **stricter or otherwise meaningfully selective**; the rule is decided in Stage 9, not here. A-72 and its expected values stand: spending up 26,450 on 40,037 (+66%), with all of the increase from Health (+30,000), passes any sensibly stricter bar.
+  - **Ties within a kind** are broken deterministically: overdue by oldest due date, due today and due soon by earliest due date, short by the larger shortfall, verification changed by the larger drift, then by name, then by key.
+  - **Materiality by kind:** commitments by time only (any amount is an obligation); a shortfall at any amount above zero (protected money was spent, whatever the size); a checkpoint at any drift; an adjustment at any non-zero amount within the 7 days; spending by the rule below.
+  - **One signal per checkpoint:** when a checkpoint no longer matches, only `verification_changed` is produced for it. Its adjustment was computed against a history that has since changed, so `unexplained_adjustment` is not also shown.
+  - **Archived accounts:** checkpoint signals are not produced for them, because Verify is refused on an archived account and the signal would have no action. A shortfall on an archived account is still a signal, because Release from it is allowed (§9).
+  - **Not signals in V1:** a missing or stale verification (every new account would fire, and Accounts already shows it), commitments due in 8–30 days (Available's evidence lists them), a target reached, any category-level change (What changed; later family 3), Available low or over-committed (family 6, open decision P-6), and any positive signal (family 8).
+- **Evidence targets** are a typed union declared in the domain, with **no URLs**: Commitments; Set aside; Activity scoped to an account and a date range; Cash flow's What changed for a month. The presentation layer turns a target into a link with the existing Activity and Cash flow link builders. The target is always the page where the resolving action lives; Attention itself never pays, releases, reserves or verifies.
+- **Lifecycle:** the same condition read again gives the same key; a changed amount keeps the key and refreshes the parameters; a condition that no longer holds produces nothing; one that returns within the same episode returns with the same key; a new month or a new adjustment is a new episode and a new key. A due-soon occurrence becomes due today and then overdue: its kind changes, and so does its key.
+- **Dismissal (Stage 9, minimal).** Only `spending_up` and `unexplained_adjustment` can be dismissed, because nothing in the product resolves them. Every other kind is resolved by acting on its owning page (Pay, Skip, Release, correcting an entry, Verify), and hiding an obligation or a broken promise would make Attention untrue.
+  - **Per period** means per episode: the dismissal is stored against the full key, so hiding September's `spending_up` never hides October's, and hiding one adjustment never hides the next. A dismissed signal that disappears and returns within the same episode stays hidden.
+  - **Interaction:** Hide, then a confirmation with **Undo**, which removes the dismissal. There is no dismissal history, no hidden-items view, no management page, no preferences, no notification centre and no read/unread state.
+  - **Stored** as `SignalDismissal` (§2): owner and key, unique per owner and key. A dismissal is accepted only for a key that is currently produced for that owner and whose kind is dismissible; dismissing twice is idempotent.
+- **Rule families** (internal classification only: the numbering is kept for this document and never appears in the product; the stage says when each is built):
+
+  | # | Family | Kinds | Stage |
+  |---|---|---|---|
+  | 1 | Monthly Plan at risk / committed over / exceeded (formerly "budget") | — | 13, only when a plan exists |
+  | 2 | Month-over-month change (resolved 2026-09-28, below) | `spending_up` | 9 |
+  | 3 | Category spike vs typical | — | 12 (needs Trends' baseline; O-5) |
+  | 4 | Commitments overdue / due today / due within 7 days | `commitment_overdue`, `commitment_due_today`, `commitment_due_soon` | 9 |
+  | 5 | Protected money under-covered (formerly "goal"). *Behind schedule is deferred with target dates (§9).* | `set_aside_short` | 9 |
+  | 6 | Available low / over-committed | — | deferred beyond V1 (P-6) |
+  | 7 | **Reconciliation:** a checkpoint that no longer matches, and a recent unexplained adjustment (clarification, §18). *A missing or stale verification is not a signal (2026-09-28).* | `verification_changed`, `unexplained_adjustment` | 9 |
+  | 8 | Savings-rate change (positive) | — | deferred beyond V1 (P-6) |
+
+- **Family 2: the `spending_up` trigger (O-2, resolved 2026-09-28).** What changed answers *why did this period change?* The signal answers *is this change important enough to bring to my attention unasked?*, so it must be meaningfully more selective than What changed's listing rule. `spending_up` fires when **all** of these hold:
+  - the period is the current month to date, and a same-days comparison exists (the like-for-like window below; no comparison when the previous month predates every account, §18);
+  - the previous same-days total is greater than zero (with a zero base the percentage term vanishes, and an empty window more often reflects when accounts started being used than a change in behaviour);
+  - the net increase is **at least max(৳5,000, 20% × the previous same-days total)**, compared exactly in integers.
+
+  There is at most **one per month**, about **total** spending, and only for an increase. It is more selective than What changed in unit (the month, not a category), in threshold (10× the ৳500 floor and 2× the 10% share), in direction (increases only) and in count (one). The percentage never fires alone, so a large percentage of a small amount stays quiet. There is no day-of-month guard: the same-days comparison already fixes the window, and a genuinely large increase early in the month is not hidden. Timing noise (a bill paid a few days earlier than last month) is a known limitation shared with What changed; the signal can be dismissed for the month.
+  - The signal **carries**, rather than recomputes, What changed's explanation: the net change and both totals, the **material** increases with their share of gross increases, and the **material** offsets. A-72: +26,450 on 40,037 (≥ 8,007), Health all of the increase, offsets Shopping −2,000, Groceries −800, Food & Dining −750.
 - **Month-over-month rules:**
   - **Like for like:** the current month-to-date vs the same days of the previous month (for example Sep 1–22 vs Aug 1–22). The window is clamped to the previous month's length.
   - **Materiality:** a category change is material when |Δ| ≥ max(৳500, 10% of that category's previous-window amount) (clarification, §18). This keeps changes like ৳50 → ৳200 quiet.
@@ -436,7 +468,7 @@ Headline results on 2026-09-22:
 8. The protected-money/commitment double reservation is a deliberate V1 trade-off (§10).
 9. §14 (UI simplicity) and the acceptance scenario (§16) are binding.
 10. *(2026-09-27)* Available excludes expected income and Monthly Plan intentions, is never stored, and is never clamped (§10).
-11. *(2026-09-27)* Signals select and rank; the feature that owns a signal's evidence explains it (§11).
+11. *(2026-09-27)* Signals select and rank; the feature that owns a signal's evidence explains it (§11). *Amended 2026-09-28 (Stage 9):* seven V1 signal kinds in a fixed priority order (no severity or score); `spending_up` fires on a net increase ≥ max(৳5,000, 20% of the previous same-days total) (O-2); only `spending_up` and `unexplained_adjustment` can be dismissed, per episode; one signal per checkpoint; evidence targets are typed, with no URLs in the domain.
 12. *(2026-09-28, before Stage 8)* Available subtracts every pending commitment in the horizon whatever its `expected_account`, which stays descriptive (O-1). It subtracts covered set-aside money on included asset accounts, never the nominal reserved amount. Earmarks never follow transfers, so an included-to-included transfer can raise Available by the shortfall it creates (an accepted V1 trade-off; no Move in Stage 8). There is no archive filter. V1 has no user-facing toggle for the asset preference (§5, §10).
 
 ## 18. Change log
@@ -462,3 +494,4 @@ Headline results on 2026-09-22:
 | 2026-09-28 | **O-3 resolved (Stage 7).** §9.1: append-only signed entries with no stored operation kind (positive = Reserve, negative = Release), grouped by an `earmarks` relationship row; items stored as `protected_money_items`. Archive is final in V1 (no Restore; archived items are read-only). No acceptance value changed. | Slice 2 answered O-3; the archived-item lifecycle was implicit. |
 | 2026-09-28 | **Stage 8 Slice 0: Available semantics decided before implementation.** **§10:** O-1 resolved: every pending commitment in the horizon is subtracted whatever its `expected_account`, which stays descriptive (§8 aligned). The set-aside term is covered (backed) money on included asset accounts, never nominal reserved money, with a worked shortfall example. The transfer consequence (an included-to-included transfer can raise Available by the shortfall it creates) is recorded as an accepted V1 trade-off, with no Move in Stage 8 (§9.1 aligned). There is no archive filter in Available (§5 aligned). "Covered set aside" is the provisional bridge term (§14 aligned). **§5:** V1 has no user-facing toggle for the asset preference; Stage 8 enforces the liability invariant at the write boundary. **§17:** decision 12. The formula is unchanged, and **no acceptance value changed**. | O-1 had to be resolved before Available's semantics froze. The planning pass found that the backed-vs-nominal rule and the transfer and archive consequences were implied but not stated. |
 | 2026-09-28 | **Stage 8 Slice 2B (Available UI).** §10 and §14: the bridge's on-screen wording is recorded, and the covered-earmark deduction is labelled **"Set aside from Available"** (replacing the provisional "Covered set aside"). The read model adds the running total *after upcoming payments* (balances in scope − commitments due) so the screen adds nothing up. **No semantics and no acceptance value changed.** | "Covered set aside" read as jargon; the label names what happens to the money instead, and the explanation keeps covered-only precise. |
+| 2026-09-28 | **Stage 9 Slice 0: Signals decided before implementation.** **§11:** the selectivity rule (actionable, a broken promise, time-bound, or materially unusual for the month); rules interpret existing read models and never recompute them; the seven V1 kinds (`commitment_overdue`, `commitment_due_today`, `set_aside_short`, `verification_changed`, `commitment_due_soon`, `spending_up`, `unexplained_adjustment`) in a fixed priority order with deterministic tie-breakers, replacing `severity` and `score`; keys `kind : subject` (plus the episode where the kind has one) from ids and dates only; one signal per checkpoint; no checkpoint signals on archived accounts; typed evidence targets with no URLs; the lifecycle; minimal dismissal (Hide → Undo) for `spending_up` and `unexplained_adjustment` only, per episode. **O-2 resolved:** `spending_up` fires once per month on a net increase ≥ max(৳5,000, 20% × the previous same-days total), with a previous total above zero and no day-of-month guard, and carries What changed's material increases and offsets. Family 7 narrowed: a missing or stale verification is not a signal. Family numbers stay internal to this document. The context no longer lists the Available bridge (family 6 is deferred) and names "typical" (O-5) instead of a 3-month average. §2 and §17 aligned. **No acceptance value changed.** | O-2 had to be resolved before Stage 9; a computed score would be harder to explain than a written priority order; dismissing an obligation or a broken promise would make Attention untrue; a missing-verification signal would fire for every new account. |

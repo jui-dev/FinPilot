@@ -307,21 +307,28 @@ The two inputs to Available: money already obligated and money deliberately set 
 
 #### 9 — Signals
 - **Question:** *Of everything true right now, what deserves my attention?* Signals select and rank; the owning feature explains ([domain-model.md §11](domain-model.md)).
-- **Scope (Milestone B review):** V1 has rule families 2 (month-over-month attribution), 4 (commitments due / overdue), 5 (protected money under-covered only; behind schedule is deferred with target dates) and 7 (reconciliation), the ones the acceptance scenario asserts. Families 1 and 3 arrive with Stages 13 and 12; 6 and 8 are deferred beyond V1 unless a later review finds a compelling dependency.
-- **Resolve first:** family 2's trigger rule. It must be stricter than, or otherwise meaningfully more selective than, What changed's listing rule, and it must keep A-72 present (§8.5).
+- **Scope (Milestone B review):** V1 has rule families 2 (month-over-month change), 4 (commitments overdue / due), 5 (protected money under-covered only; behind schedule is deferred with target dates) and 7 (reconciliation), the ones the acceptance scenario asserts. Families 1 and 3 arrive with Stages 13 and 12; 6 and 8 are deferred beyond V1 unless a later review finds a compelling dependency (P-6). Family numbers are internal to the domain documentation and never appear in the product.
+- ~~**Resolve first:** family 2's trigger rule.~~ **Decided before implementation (2026-09-28, Slice 0; [domain-model.md §11](domain-model.md)):**
+  - **Selectivity:** a signal exists only when a situation is actionable, a broken promise, time-bound, or materially unusual for the month as a whole. What changed says *something changed*; Attention says *this may need you*.
+  - **O-2:** `spending_up` fires at most once per month, for total spending, when the previous same-days total is above zero and the net increase is at least **max(৳5,000, 20% × the previous same-days total)**. There is no day-of-month guard. It carries What changed's material increases and offsets rather than recomputing them.
+  - **Seven signal kinds, in a fixed priority order:** `commitment_overdue` (one per commitment) → `commitment_due_today` → `set_aside_short` → `verification_changed` → `commitment_due_soon` (1–7 days) → `spending_up` → `unexplained_adjustment` (current checkpoint, within 7 days). Ties are broken deterministically. There is **no severity and no score**: the kind fixes the priority and the tone.
+  - **One signal per checkpoint:** a checkpoint that no longer matches produces only `verification_changed`, never also its adjustment. Checkpoint signals are not produced for archived accounts.
+  - **Not signals in V1:** a missing or stale verification, commitments due in 8–30 days, a target reached, category-level changes, Available low / over-committed (P-6 stays open) and positive signals.
+  - **Keys** are `kind : subject`, plus the episode (a month, an adjustment) where the kind has one, from ids and dates only. **Evidence targets** are a typed union in the domain (Commitments; Set aside; Activity scoped to an account and dates; Cash flow's What changed for a month), turned into links by the presentation layer. No signal is a dead end, and Attention never performs Pay, Release or Verify itself.
+  - **Dismissal, minimal:** only `spending_up` (for its month) and `unexplained_adjustment` (for that adjustment) can be hidden; every other kind is resolved on its owning page. Hide → a confirmation with Undo. A small stored dismissal (owner, key; unique) is the only new persistence. No dismissal history, hidden-items view, management page, preferences, notification centre or read/unread state.
+  - **P-4, Attention's first home is `/`:** the root page becomes the Attention page inside the application shell, and `HOME_PATH` (the logo) moves from Activity to `/` in Stage 9 rather than Stage 10. **No new global navigation destination** and no phone tab are added (P-3 stays open). The page holds only the Attention heading, a short count when there is something to show, the reusable Attention list and a deliberate empty state; the rest of the Overview is not designed early. Stage 10 grows `/` into the Overview and reuses the same list and read model.
 - **Builds:**
-  - The context builder.
-  - Four pure rule families (see Scope).
-  - Keys, severity and ranking; templates.
-  - Evidence links to the owning feature: Accounts, Cash flow's What changed, Commitments, Available.
-  - Per-period dismissals.
-- **Not built:** a Signals inbox, read/unread state, an Insights destination, charts, notifications, AI-written observations.
-- **Domain concepts:** signals, materiality, ranking, evidence.
+  - The signal context, composed from the existing read models (commitments, set-aside backing, reconciliation checkpoints, the month-over-month explanation). It reads the current checkpoint's adjustment, the one additive read it needs.
+  - Pure rules for the seven kinds, the priority order, keys and evidence targets.
+  - Minimal dismissal (Hide → Undo) for the two dismissible kinds.
+  - The Attention page at `/`.
+- **Not built:** a Signals inbox, read/unread state, an Insights destination, charts, notifications, AI-written observations, a navigation destination for Attention, and inline Pay / Release / Verify from Attention.
+- **Domain concepts:** signals, materiality, priority, evidence, episodes.
 - **Tests that must pass:**
-  - Per-rule unit tests with fixtures, including materiality edge cases.
+  - Per-rule unit tests with fixtures, including materiality and date edge cases, and the priority order.
   - **Acceptance:** A-70…A-73, M1-5, M2-3.
-- **What you can see at the end:** "what deserves my attention?", with a link from each signal to its evidence. **Stage 9 decides how Attention is reachable when signals ship**; a direct or temporary surface is acceptable, and the final Overview or navigation is not designed early to give it a home (P-4, §8.5). Stage 10 may then compose Attention into the Overview. Signals own the selection and ranking of noteworthy conditions; the Overview may surface them but never owns their logic.
-- **Deferred:** persisted signal history, notifications.
+- **What you can see at the end:** "what deserves my attention?" at `/`, with a link from each signal to the page that owns its explanation and action. Stage 10 composes Attention into the Overview. Signals own the selection and ranking of noteworthy conditions; the Overview may surface them but never owns their logic.
+- **Deferred:** persisted signal history, notifications, the V1 demo situations that make each kind visible on a fresh seed (Stage 10).
 - **Commit:** `feat(signals): deterministic signal engine`
 
 ### Milestone E — "Portfolio-ready V1" — tag `v1.0`
@@ -332,7 +339,7 @@ The two inputs to Available: money already obligated and money deliberately set 
   - Available, as the entry point to its bridge.
   - Attention (signals).
   - A concise current-month outcome from Cash flow, linking to it.
-  - Home moves to the Overview.
+  - `/` grows from the Attention page (Stage 9) into the Overview; home is already `/`.
   - **Not built:** Recent activity (Activity exists), copies of Cash flow's charts, a full commitment list, Overview-only metrics, and protected-money or commitment widgets when Attention already surfaces the shortfall or deadline.
 - **Builds — V1 readiness** (the responsibilities of the former Stage 12 that V1 needs):
   - Demo seed situations that demonstrate the V1 product, including a **planted situation for every V1 signal family**, on the existing short history. Extended history is Stage 11.
@@ -466,7 +473,7 @@ The product-responsibility matrix, which gives each feature one primary question
 2. **Protected money replaces Goals** as one concept with an optional target and target date *(2026-09-28, before Stage 7: shown to the user as "Set aside"; the target date and on-track are deferred beyond V1; see Stage 7)*. Target reached is derived and releases nothing; Release is deliberate and may be partial; archiving requires nothing reserved; Use and Move are defined semantically and implemented later. Account exclusion and protection stay distinct. `EarmarkEntry` keeps its name ([domain-model.md §9](domain-model.md)).
 3. **Available** remains the central derived decision metric, with its full formula. **Liability invariant:** every liability counts regardless of `included_in_available`. The known setup-path gap is closed in Stage 8. Available excludes expected income and Monthly Plan, is never stored and never clamped ([domain-model.md §5, §10](domain-model.md)).
 4. **Sinking funds:** Commitments and Protected money stay independent. The conservative double reservation is kept for V1, with no automatic matching; a future explicit relationship must stay possible.
-5. **Signals** select and rank; the owning feature explains. There is no inbox, no read state, no Insights destination and no duplicate charts. Family 2 must be meaningfully more selective than What changed ([domain-model.md §11](domain-model.md)).
+5. **Signals** select and rank; the owning feature explains. There is no inbox, no read state, no Insights destination and no duplicate charts. Family 2 must be meaningfully more selective than What changed ([domain-model.md §11](domain-model.md)). *(Resolved in Stage 9 as O-2, §8.5.)*
 6. **Overview** moves before the optional features and is narrowed to Available, Attention and a concise current-month outcome ([product-baseline.md §6](product-baseline.md)).
 7. **Trends** moves after the V1 candidate, over complete periods only, with extended demo history before it.
 8. **Monthly Plan replaces Budgets:** optional, after V1, independent of Available, not envelope budgeting. It carries forward the commitment-aware projection with A-40 and M1-4 ([domain-model.md §7](domain-model.md)).
@@ -506,7 +513,7 @@ Every item here is **deliberately open, not forgotten**. A stage's plan resolves
 | # | Decision | Owning doc | Resolve before |
 |---|---|---|---|
 | ~~O-1~~ | ~~How a pending commitment whose `expected_account` is an asset account **excluded** from Available affects Available.~~ **Resolved 2026-09-28 (before Stage 8):** it reduces Available like every other pending commitment in the horizon. `expected_account` stays descriptive and pre-fill information only, with no funding semantics. | [domain-model.md §10](domain-model.md) | closed |
-| O-2 | Signal family 2's trigger: stricter or otherwise meaningfully more selective than What changed; A-72 must stay present. | [domain-model.md §11](domain-model.md) | **Stage 9** |
+| ~~O-2~~ | ~~Signal family 2's trigger: stricter or otherwise meaningfully more selective than What changed; A-72 must stay present.~~ **Resolved 2026-09-28 (Stage 9 Slice 0):** `spending_up` fires at most once per month, for total spending, when the previous same-days total is above zero and the net increase is at least max(৳5,000, 20% × that total); no day-of-month guard. A-72 stays present. | [domain-model.md §11](domain-model.md) | closed |
 | ~~O-3~~ | ~~Protected money: the container's code name, and the representation of operation kinds.~~ **Resolved 2026-09-28 (Stage 7):** `protected_money_items`; append-only signed earmark entries, positive = Reserve, negative = Release, no operation-kind field. | [domain-model.md §9.1](domain-model.md) | closed |
 | O-4 | **Use:** how much is released when the expense differs from the reservation, and what happens to the release when the Use transaction is edited or deleted. | [domain-model.md §9.1](domain-model.md) | implementing **Use** (not required in the minimum Stage 7 slice) |
 | O-5 | "Typical" for Trends and signal family 3: the window, and mean or median. | this file, Stage 12 | **Stage 12** |
@@ -519,7 +526,7 @@ Every item here is **deliberately open, not forgotten**. A stage's plan resolves
 | P-1 | An explicit protected-money ↔ commitment relationship (sinking funds). **Not a V1 blocker:** the conservative double reservation is acceptable for V1 ([domain-model.md §10](domain-model.md)). | if the revisit trigger fires (double reservation seen often) |
 | P-2 | ~~The forward-looking area's final name and its navigation placement~~ **Resolved 2026-09-28 (Stage 8 Slice 2A):** the area is **Available**, the fourth global destination, with `/available` as its landing page and a local switch for Available · Commitments · Set aside (§8.3). **Still open:** Monthly Plan's placement. *(History: in Stage 7, Set aside sat beside Commitments behind a local switch, under the Commitments destination.)* | Monthly Plan's placement by Stage 13 |
 | P-3 | Phone tab-bar capacity once Overview and the forward-looking area join the bar. **Stage 8 part resolved (2026-09-28):** Available replaced the Commitments tab, so the bar still has four destinations around the centred +. **Stage 10 part open:** how the Overview joins the bar is decided when the Overview is designed; no option is chosen or preferred yet. | the Stage 10 plan |
-| P-4 | How Attention is reachable when signals ship, before the Overview composes it. A direct or temporary surface is acceptable; the final Overview or navigation is not designed early for it. Signals own selection and ranking; the Overview only surfaces them. | the Stage 9 plan |
+| P-4 | ~~How Attention is reachable when signals ship, before the Overview composes it.~~ **Resolved 2026-09-28 (Stage 9 Slice 0):** Attention's first home is `/`, inside the application shell; the logo (`HOME_PATH`) leads there from Stage 9; no new global navigation destination or phone tab. Stage 10 grows `/` into the Overview and reuses the same list. Signals own selection and ranking; the Overview only surfaces them. | closed |
 | P-5 | The colours of commitments and protected money ([design-direction.md §2](design-direction.md)). *Protected money resolved for V1 (2026-09-28): no dedicated hue.* | Stages 6 and 7 |
 | P-6 | Signal families 6 (Available low) and 8 (savings-rate change). | a review after V1 |
 

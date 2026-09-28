@@ -145,7 +145,7 @@ Kept deliberately, with every value unchanged: this is the commitment-aware proj
 |---|---|---|
 | A-70 | Protected money under-covered (family 5) | Laptop, short **10,000**, account Savings |
 | A-71 | Commitment due soon | Internet, due Sep 25, **in 3 days**, 1,500 |
-| A-72 | Month-over-month attribution (family 2; its trigger rule is decided in Stage 9 and must keep this signal present) | Health accounted for **all** of the increase (+30,000); offsets: Shopping −2,000, Groceries −800, Food & Dining −750 |
+| A-72 | Month-over-month attribution (family 2; `spending_up`, whose trigger was decided in Stage 9: a net increase ≥ max(৳5,000, 20% of the previous same-days total), [domain-model.md §11](domain-model.md)) | Health accounted for **all** of the increase (+30,000); offsets: Shopping −2,000, Groceries −800, Food & Dining −750 (the **material** offsets, as What changed lists them; all three are material, A-23) |
 | A-73 | Reconciliation adjustment (info) | Cash, unexplained difference **350**, Sep 20 |
 
 ## 6. Mutations (each applied independently to the base scenario)
@@ -164,7 +164,7 @@ Kept deliberately, with every value unchanged: this is the commitment-aware proj
 |---|---|---|
 | M2-1 | Checkpoint | Cash as of Sep 20 = 3,000 + 2,000 − 350 = **4,650** against the stated 4,200 → status **broken**, difference **450** |
 | M2-2 | Balances | Cash **4,650**; bKash **8,513**; net worth **230,163** (unchanged); spending **66,487** (unchanged); Available **87,963** (unchanged) |
-| M2-3 | Signal | Cash verification on Sep 20 **no longer matches**, **450** |
+| M2-3 | Signal | Cash verification on Sep 20 **no longer matches**, **450**. It replaces the A-73 adjustment signal for that checkpoint (one signal per checkpoint, [domain-model.md §11](domain-model.md)). |
 
 ### M3 — the card payment (row 5) wrongly entered as an expense, then corrected
 | ID | Assertion | Expected |
@@ -217,3 +217,4 @@ Stage numbers changed on 2026-09-27 ([roadmap.md §8](roadmap.md) maps old → n
 | 2026-09-27 | **§8: Stage 5d dropped and 5e (evidence & trust close-out) added** at the Milestone B review. No expected value changed, and no assertion moved. | 5d had no assertions; charts are now built within the stages that own their concepts. Recorded here so §8 matches [roadmap.md](roadmap.md). |
 | 2026-09-27 | **Product-architecture decisions: language and stage mapping only. No expected value changed, and every assertion ID is kept.** §3 and §5.4–§5.7: *Budget* → Monthly Plan intention, *Goal* → Protected money. §8: A-50/A-51 → Stage 7, Available → Stage 8, signals → Stage 9, **A-40 and M1-4 → Stage 13 (Monthly Plan)**, deferred beyond the V1 candidate but not weakened; the V1 exit criterion becomes "all green except A-40 and M1-4". A-72 is kept while family 2's trigger is reconsidered for Stage 9. Visa's `included_in_available` is now required rather than chosen (the liability invariant); its value was already *yes*. A-23: the pipes in `\|Δ\|` are escaped so the table parses (Markdown only; wording and values unchanged). | Budgets are superseded by the optional Monthly Plan and Goals by Protected money ([domain-model.md §7, §9](domain-model.md)); the stages were re-sequenced ([roadmap.md §8](roadmap.md)). |
 | 2026-09-28 | **A-60 wording (Stage 8 Slice 0). No expected value changed.** The last bridge term read "protected money **reserved** on included accounts"; it now reads "covered set aside (protected money backed)". It is still **20,000**, and Available is still **87,963**. | Available subtracts covered (backed) set-aside money, never the nominal reserved amount ([domain-model.md §10](domain-model.md)). In the fixture the Bank earmark is fully covered, so the two readings give the same number, but "reserved" named the wrong rule. |
+| 2026-09-28 | **Stage 9 Slice 0: clarifications only. No expected value changed, and no assertion was added or removed.** A-72: names the signal and records its trigger, decided in Stage 9 (O-2); its offsets are the **material** offsets, which are all three listed (A-23). M2-3: under M2 the checkpoint signal replaces the A-73 adjustment signal on the same checkpoint (one signal per checkpoint). | O-2 was resolved; "offsets" could have meant every offset, and M2's effect on A-73 was implicit. |
