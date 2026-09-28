@@ -52,7 +52,7 @@ Every major feature must answer a real financial question. No feature is added j
 | **Activity** | exact ledger evidence | What exactly happened in the ledger? | metrics or summaries |
 | **Cash flow** | a period, and attribution between two periods | What happened to my money this month, and why did it change? | patterns across many months (Trends), intentions (Monthly Plan) |
 | **Commitments** | scheduled obligations | What money am I already obligated to pay, and when? | recording payments without an action; subscriptions as a feature |
-| **Protected money** | deliberate reservation of real asset money | What have I deliberately set aside, and is it still really there? | moving money; separate goals and reserves |
+| **Protected money** (shown as **Set aside**) | deliberate reservation of real asset money | What have I deliberately set aside, and is it still really there? | moving money; separate goals and reserves |
 | **Available** | what is free after applicable obligations and protection (derived) | How much can I use now without touching money already spoken for? | storing a balance; counting expected income or plans |
 | **Signals** | selecting and ranking what deserves attention | Of everything true right now, what deserves my attention? | explaining (the owning feature does); an inbox |
 | **Overview** | composing the most important existing answers | What should I know right now, and what should I do next? | any figure of its own |
@@ -105,7 +105,7 @@ Avoid "Safe-to-Spend": "safe" implies a guarantee the system can't give. Use **"
 - **Deferring auth, and choosing SQLite for V1** (with caveats; see [tech-stack.md](tech-stack.md)).
 
 ### 4.2 What still felt like a generic tracker, and how it changed
-- A category donut, a transaction list, budget progress bars and goals with a typed-in "current amount" are the standard tracker set. **Goals are now backed by earmarks** (derived progress). Charts are chosen so each answers a different question.
+- A category donut, a transaction list, budget progress bars and goals with a typed-in "current amount" are the standard tracker set. **There is no Goals product:** money set aside is backed by earmarks over real money, and progress toward an optional target is derived (§4.3). Charts are chosen so each answers a different question.
 - Several proposed "insights" only restated numbers ("upcoming commitments total ৳21,850"; "91% of dining budget used"). **A signal must make a comparison, a projection or an attribution, and it must carry evidence.**
 - A 3-bar waterfall (Income → Expenses → Net) is three numbers dressed up as a chart. **The cash-flow bridge breaks expenses down by category**, or the numbers are shown as a plain statement.
 - The original concept only looked backward. **Available adds the forward view**: what is free now.
@@ -114,9 +114,9 @@ Avoid "Safe-to-Spend": "safe" implies a guarantee the system can't give. Use **"
 
 | Item | Problem | Decision |
 |---|---|---|
-| Goals with a manual "current progress" | Breaks the derived-state rule; drifts | Goals are backed by **earmarks**, and progress is derived |
+| Goals with a manual "current progress" | Breaks the derived-state rule; drifts | Backed by **earmarks**, with derived progress. *(Superseded 2026-09-27 by the row below: Goals are no longer a separate concept.)* |
 | "Subscriptions" category | Describes *how* you pay, not what the money was for; overlaps with Commitments | **Removed.** Subscriptions are derived from commitments |
-| Goals and a separate "reserves" idea (2026-09-27) | Two products solving the same problem; a required target that doesn't fit an emergency reserve | **One concept: Protected money**, with an optional target and date ([domain-model.md §9](domain-model.md)) |
+| Goals and a separate "reserves" idea (2026-09-27) | Two products solving the same problem; a required target that doesn't fit an emergency reserve | **One concept: Protected money**, shown to the user as **Set aside**, with an optional target ([domain-model.md §9](domain-model.md)). A target date is deferred beyond V1 (2026-09-28). |
 | Budgets alongside a monthly plan (2026-09-27) | Two ways to state intent vs actual | **Monthly Plan replaces Budgets**: optional, after V1, never an input to Available ([domain-model.md §7](domain-model.md)) |
 | A 9-section dashboard | Exactly the "collection of cards" to avoid | **4–5 zones** (§6) |
 | Signals ranked near the bottom | Things that deserve attention shouldn't sit below the charts | Signals form the **Attention** zone near the top |
@@ -143,7 +143,7 @@ Deferred to V1.1: expected income (runway), split transactions, CSV import/expor
 - **Quick Add:** keyboard-first with sensible defaults, and usable at phone width.
 - Transaction list with search and filters.
 - Recurring commitments (outflows only), with occurrence states and a Pay action. Match suggestions and weekly schedules are deferred beyond V1 (§12).
-- Protected money backed by earmarks (optional target and date), with shortfall detection.
+- Protected money, shown as **Set aside**: backed by earmarks, with an optional target (progress and still needed only when one exists) and shortfall detection. No target date or on-track in V1 (§12).
 - Derived position: net worth, assets/liabilities and **Available** (with its bridge).
 - Cash flow and composition, with evidence behind every figure. No category bridge chart (§12).
 - Like-for-like month-over-month contribution.
@@ -185,7 +185,7 @@ Each zone answers a different question. No two charts may communicate the same t
 |---|---|
 | Positioning | Truth + explanation + planning. The headline is **Available**: eligible asset balances, minus all credit owed, minus commitments due within 30 days (including overdue), minus backed protected-money earmarks on eligible accounts. No expected income and no Monthly Plan. Runway is V1.1, built as an extension of the same formula. |
 | Available eligibility | Stored **per account** (`included_in_available`). The default comes from the account type: cash, bank, mobile wallet and credit on; savings off. **Asset** accounts can be configured, and eligibility is never permanently inferred from the type. **Liabilities always count** and can't be excluded (2026-09-27; [domain-model.md §5](domain-model.md)). |
-| Protected money (formerly Goals) | One concept with an **optional** target and target date, backed by **earmarks** over real money. An earmark never creates money or changes a balance. Invariants prevent double allocation, and a shortfall is shown when the backing balance falls. Target reached releases nothing; Release is deliberate. This is not an envelope-budgeting system. |
+| Protected money (formerly Goals) | One concept, shown to the user as **Set aside** (2026-09-28): a goal-like use has a target, a reserve-like use has none. There is no separate Goals product. An **optional** target is intention only; the money set aside is **earmarks** over real money, and only backed earmarks affect Available. An earmark never creates money or changes a balance. Invariants prevent double allocation, and a shortfall is shown when the backing balance falls. Still needed = max(target − covered, 0). Target reached releases nothing; Release is deliberate. A Savings account is not automatically set aside: account exclusion and protection stay distinct. Target dates, on-track and required monthly contributions are deferred beyond V1; planned contributions belong to Monthly Plan. This is not an envelope-budgeting system. |
 | Credit accounts | In V1 as **liabilities**, kept narrow: a purchase is an expense that increases the liability; a payment is an asset→liability transfer and never a second expense. **No** interest, minimum payments, amortisation, statement reconciliation or credit forecasting. |
 | Monthly Plan (replaces Budgets) | **Optional**, after V1, calendar month only. No rollover, no custom periods, never an input to Available. |
 | Demo | V1 is optimised for local development: a deterministic seed and an easy reset. No demo infrastructure. The public demo strategy is decided at deployment by comparing a per-visitor disposable sandbox, a resettable shared demo, a read-only demo, and any simpler option, against: hosting platform, SQLite/Postgres compatibility, isolation, cost, complexity, abuse prevention and recruiter experience. |
@@ -201,7 +201,7 @@ Each zone answers a different question. No two charts may communicate the same t
 - **SQLite and deployment.** Hosts with ephemeral filesystems break SQLite, and the demo must be tamper-proof. This is decided at deployment (§7). It is not allowed to shape V1.
 - **Gmail → n8n as the automation story.** In Bangladesh, bank and mobile-wallet notifications likely arrive by **SMS** far more often than by email. The durable, portable piece is FinPilot's **ingestion endpoint + draft inbox + idempotency keys**. n8n is just one client of it.
 - **Credit accounts** are kept only with correct liability semantics. A half-modelled credit card is worse than none.
-- **Protected money "target date → on track"** is only meaningful when the required monthly contribution is compared with the actual contribution rate. It's shown only when a target date exists.
+- **Protected money "target date → on track"** is only meaningful when the required monthly contribution is compared with the actual contribution rate. *Deferred beyond V1 (2026-09-28):* it would duplicate Monthly Plan's planned contributions, so V1 has no target date.
 
 ## 9. Evolution roadmap beyond V1
 
@@ -290,6 +290,7 @@ FinPilot must immediately read as a serious **money-management** product. It mus
 
 | Date | Change | Reason |
 |---|---|---|
+| 2026-09-28 | **Stage 7 product decision.** §2.1, §4.2, §4.3, §5, §7, §8: "Set aside" is the single user-facing term for protected money; there is no separate Goals product (stale present-tense Goals wording corrected, history marked as superseded); V1 keeps an optional target, derived progress, covered, shortfall and still needed = max(target − covered, 0); target date, on-track and required monthly contributions are deferred beyond V1. O-1 and P-1 stay open. No acceptance value changed. | One intention must not be entered twice; target dates would duplicate Monthly Plan's planned contributions. |
 | 2026-09-27 | **Product-architecture decisions** (recorded in full in [roadmap.md §8](roadmap.md)). §1, §2: the product model becomes Record → Verify → Understand → Available, with Commitments and Protected money as its inputs, Notice across every step, and Plan optional; the responsibility matrix is added (§2.1). §3.1, §4.3, §5, §7: Goals → Protected money (optional target); Budgets → the optional Monthly Plan after V1; liabilities always count in Available; the out-of-scope list is added. §6: the Overview is narrowed to Available, Attention and this month. §9: net worth over time rejected for now; the candidate pipeline before every producer. §10: stories 5 and 8 re-scoped. No acceptance value changed. | Every feature must own one distinct question; planning must stay optional; an account preference must not be able to overstate Available. |
 | 2026-09-27 | **Palette direction updated** (§11) to the implemented visual system: the reference palette, coral as the brand and global Add accent only, financial direction in the blue family. | The navy/cream freeze below was superseded when the palette and the Cash flow, Activity and Accounts redesigns were built against the approved reference ([design-direction.md §10](design-direction.md)). |
 | 2026-09-27 | *(Superseded by the entry above.)* **Palette frozen** (§11): navy and cream replace burgundy/wine; coral is only a rare brand accent. | Visual-system boundary: the direction approved at the Milestone B review was tested against the real product and recorded as tokens in [design-direction.md](design-direction.md). |

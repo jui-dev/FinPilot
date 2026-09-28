@@ -259,12 +259,13 @@ The two inputs to Available: money already obligated and money deliberately set 
 
 #### 7 — Protected money
 - **Question:** *What money have I deliberately set aside, and is it still really there?* ([domain-model.md §9](domain-model.md)). It replaces the former Goals stage; there are no separate Goals and Reserves features.
+- **User-facing term (2026-09-28):** **Set aside** is the one concept the user sees (with a target it is goal-like, without one reserve-like). "Protected money" and `EarmarkEntry` remain the domain names.
 - **Builds:**
-  - Protected-money items with an **optional** target and target date, and append-only earmark entries.
+  - Protected-money items with an **optional** target amount, and append-only earmark entries.
   - Write-time invariants inside synchronous transaction scripts.
-  - Oldest-first backing and shortfall (Reserved / Covered / Short); progress only when a target exists; on-track only with a target and a date.
+  - Oldest-first backing and shortfall (set aside / covered / short); progress and still needed = max(target − covered, 0) only when a target exists.
   - **Reserve** and **Release** (full or partial, never a transaction). Archive only when nothing remains reserved. Target reached is derived and releases nothing.
-  - The simple UI: "Reserve ৳X from …", with a shortfall line only when there is one.
+  - The simple UI: "Set aside ৳X from …", with a shortfall line only when there is one.
 - **Decided in the Stage 7 plan, not earlier:** the container's code name; how operation kinds are represented (the semantics in [domain-model.md §9.1](domain-model.md) are fixed; the storage is not); whether **Move** is in the minimum slice; the protected-money colour.
 - **Must not be precluded:** **Use** (through the normal ledger boundary) and **Move**, and a future explicit item↔commitment relationship.
 - **Domain concepts:** earmarks, backing, shortfall, target vs reservation, release.
@@ -272,7 +273,7 @@ The two inputs to Available: money already obligated and money deliberately set 
   - **Property tests:** covered ≤ max(balance, 0); Σ covered per account ≤ balance; reaching a target never changes what is reserved.
   - **Acceptance:** A-50, and A-51 (the rollback test).
 - **What you can see at the end:** protected money backed by real money, with targets where they exist.
-- **Deferred:** **Use** until its reversal semantics are decided (§8.5); Move if it isn't in the minimum slice; user-set priority; the item↔commitment relationship.
+- **Deferred:** **Use** until its reversal semantics are decided (§8.5); Move if it isn't in the minimum slice; user-set priority; the item↔commitment relationship; and, beyond V1 (2026-09-28), a target date, on-track / behind-schedule and a required monthly contribution (planned contributions belong to Monthly Plan, Stage 13).
 - **Commit:** `feat(protected-money): reservations over real money, backing and shortfall`
 
 ### Milestone D — "What is actually free" — tag `v0.4-available`
@@ -298,7 +299,7 @@ The two inputs to Available: money already obligated and money deliberately set 
 
 #### 9 — Signals
 - **Question:** *Of everything true right now, what deserves my attention?* Signals select and rank; the owning feature explains ([domain-model.md §11](domain-model.md)).
-- **Scope (Milestone B review):** V1 has rule families 2 (month-over-month attribution), 4 (commitments due / overdue), 5 (protected money under-covered) and 7 (reconciliation), the ones the acceptance scenario asserts. Families 1 and 3 arrive with Stages 13 and 12; 6 and 8 are deferred beyond V1 unless a later review finds a compelling dependency.
+- **Scope (Milestone B review):** V1 has rule families 2 (month-over-month attribution), 4 (commitments due / overdue), 5 (protected money under-covered only; behind schedule is deferred with target dates) and 7 (reconciliation), the ones the acceptance scenario asserts. Families 1 and 3 arrive with Stages 13 and 12; 6 and 8 are deferred beyond V1 unless a later review finds a compelling dependency.
 - **Resolve first:** family 2's trigger rule. It must be stricter than, or otherwise meaningfully more selective than, What changed's listing rule, and it must keep A-72 present (§8.5).
 - **Builds:**
   - The context builder.
@@ -454,7 +455,7 @@ The product-responsibility matrix, which gives each feature one primary question
 ### 8.2 Decisions
 
 1. **Commitments** own scheduled obligations. A commitment is not a transaction. Recurrence is infrastructure. There is no Subscriptions feature and no transaction without explicit action ([domain-model.md §8](domain-model.md)).
-2. **Protected money replaces Goals** as one concept with an optional target and target date. Target reached is derived and releases nothing; Release is deliberate and may be partial; archiving requires nothing reserved; Use and Move are defined semantically and implemented later. Account exclusion and protection stay distinct. `EarmarkEntry` keeps its name ([domain-model.md §9](domain-model.md)).
+2. **Protected money replaces Goals** as one concept with an optional target and target date *(2026-09-28, before Stage 7: shown to the user as "Set aside"; the target date and on-track are deferred beyond V1; see Stage 7)*. Target reached is derived and releases nothing; Release is deliberate and may be partial; archiving requires nothing reserved; Use and Move are defined semantically and implemented later. Account exclusion and protection stay distinct. `EarmarkEntry` keeps its name ([domain-model.md §9](domain-model.md)).
 3. **Available** remains the central derived decision metric, with its full formula. **Liability invariant:** every liability counts regardless of `included_in_available`. The known setup-path gap is closed in Stage 8. Available excludes expected income and Monthly Plan, is never stored and never clamped ([domain-model.md §5, §10](domain-model.md)).
 4. **Sinking funds:** Commitments and Protected money stay independent. The conservative double reservation is kept for V1, with no automatic matching; a future explicit relationship must stay possible.
 5. **Signals** select and rank; the owning feature explains. There is no inbox, no read state, no Insights destination and no duplicate charts. Family 2 must be meaningfully more selective than What changed ([domain-model.md §11](domain-model.md)).

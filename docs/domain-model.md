@@ -78,7 +78,7 @@ Every Model S invariant is a **single-row `CHECK`**, which works the same way in
 | ~~**BudgetLimit**~~ | *(Superseded 2026-09-27 by the optional Monthly Plan, Stage 13; §7.)* A planned monthly spending intention per category | stored (Stage 13; representation open) |
 | **Commitment** | The rule for an expected recurring outflow | stored |
 | **CommitmentOccurrence** | One expected instance of a commitment, and its outcome | stored (materialised lazily, §8) |
-| **Protected-money item** (formerly **Goal**) | Money deliberately set aside: a name, an **optional** target amount and an **optional** target date. Its code name is chosen in Stage 7. | stored |
+| **Protected-money item** (formerly **Goal**) | Money deliberately set aside (shown to the user as **Set aside**): a name and an **optional** target amount. Its code name is chosen in Stage 7. | stored |
 | **EarmarkEntry** | A change to how much of an account is reserved for a protected-money item (a reservation entry) | stored (append-only) |
 | **SignalDismissal** | The user has dismissed a signal for its period | stored |
 | Balances, net worth, Available, reservation backing, analytics, signals, and (Stage 13) Monthly Plan progress | — | **derived; never stored in V1** |
@@ -226,8 +226,10 @@ The frozen model is kept below as the record. Its **commitment-aware projection,
 
 **Decision (2026-09-27):** the product concept **Goals** is replaced by **Protected money**, one concept for both goal-like and reserve-like set-asides. FinPilot does not build separate Goals and Reserves features. *Question: what money have I deliberately set aside, and is it still really there?*
 
+**User-facing term (2026-09-28): "Set aside."** The product shows one concept, *Set aside*: a goal-like use is a set-aside item with a target, a reserve-like use is one without. "Protected money" remains the domain concept in these documents, and `EarmarkEntry` and the earmark/backing semantics keep their names; domain terms are not renamed to match UI copy unless implementation gives a concrete reason (§14).
+
 - **Two concepts, kept apart internally:**
-  - the **protected-money item**, the container and intention: a name, an **optional** target amount, an **optional** target date, and a lifecycle status. Its code name is chosen in Stage 7.
+  - the **protected-money item**, the container and intention: a name, an **optional** target amount, and a lifecycle status. Its code name is chosen in Stage 7. *(A target date is deferred beyond V1; see "Deferred" below.)*
   - **earmark entries**, the actual reservations over real account money. `EarmarkEntry` keeps its name: a product-language change does not justify a technical rename.
 
   A target is intent; an earmark is an allocation of money that exists. **Only backed earmarks ever enter Available; a target never does.**
@@ -245,8 +247,9 @@ The frozen model is kept below as the record. Its **commitment-aware projection,
   - `shortfall_i = earmark_i − backed_i`
   - Every item shows **Reserved / Covered**, and **Short** when there is a shortfall, so a shortfall is never reported as funded. What is nominally reserved and what real money backs are not necessarily equal.
   - Oldest-first is simple and explainable. Proportional splitting was rejected because it produces odd fractions. User-set priority is V1.1 if ever needed.
-- **Progress** = Σ backed / target, **only when a target exists**. An item without a target has no percentage and no "on track".
-- **On track** (only when both a target and a target date exist): the required amount per month, (target − backed) / months left, is compared with the actual amount per month, the net earmark entries over the last 3 months. A Move (below) nets to zero for its item by construction.
+- **Progress** = Σ backed / target, **only when a target exists**. An item without a target has no percentage.
+- **Still needed** = max(target − Σ backed, 0), **only when a target exists**. It is computed from what is covered, not from what is nominally reserved, so a shortfall never makes an item look closer to its target than real money allows (in the acceptance scenario, Laptop: 150,000 − 110,000 = 40,000, not 150,000 − 120,000).
+- **Deferred beyond V1 (2026-09-28):** a target date, on-track / behind-schedule status, and a required monthly contribution toward a target. Planned contributions belong to the optional Monthly Plan (§7), which would otherwise duplicate them. *(History: the frozen model compared the required amount per month, (target − backed) / months left, with the net earmark entries over the last 3 months.)*
 - **Excluded accounts:** *account exclusion* means "this whole asset account is outside my spendable-money scope"; *protection* means "this part of otherwise spendable money is deliberately set aside". An earmark on an account excluded from Available still tracks progress and backing, but causes **no Available deduction**, because that money is already outside the pool (A-61).
 
 ### 9.1 Lifecycle operations (semantics; the representation is decided in Stage 7)
@@ -322,7 +325,7 @@ Available = Σ balance(asset accounts with included_in_available)
   | 2 | Month-over-month change attribution: **trigger under reconsideration** (below) | 9 |
   | 3 | Category spike vs the 3-month average | 12 (needs Trends' baseline) |
   | 4 | Commitments due within 7 days / overdue | 9 |
-  | 5 | Protected money under-covered / behind schedule (formerly "goal") | 9 |
+  | 5 | Protected money under-covered (formerly "goal"). *Behind schedule is deferred with target dates (§9).* | 9 |
   | 6 | Available low / over-committed | deferred beyond V1 |
   | 7 | **Reconciliation:** a broken checkpoint, a stale or missing verification, and a recent adjustment (an informational "unexplained difference"; clarification, §18) | 9 |
   | 8 | Savings-rate change (positive) | deferred beyond V1 |
@@ -369,7 +372,7 @@ Available = Σ balance(asset accounts with included_in_available)
 |---|---|
 | Signed amounts, 6 types | Positive amounts, and "Expense / Income / Transfer" in Quick Add. Refund is an action on an expense. Adjustments appear only through "Reconcile". |
 | `account_entries` view | Nothing; balances just add up. |
-| Earmark entries, backing order | Protected money: "Reserve ৳X from Savings for Laptop". A shortfall line appears **only when there is one**; a percentage only when there is a target. (Exact copy is decided in Stage 7.) |
+| Protected money, earmark entries, backing order | **Set aside**, the one user-facing term, including Available's bridge: "Set aside ৳X from Savings for Laptop". A shortfall line appears **only when there is one**; a percentage and "still needed" only when there is a target. "Protected money" is not shown as a second name. (Exact copy is decided in Stage 7.) |
 | Occurrence states, matching | An "Upcoming" list with a **Pay** button; "Looks like this pays *Internet (Sep 25)* — link?" (match suggestions are deferred beyond V1) |
 | Monthly Plan projection maths (Stage 13) | "On pace to go ৳455 over" or "On track". |
 | Checkpoints | "Balance verified Sep 20 ✓" / "Changed since verified". |
@@ -411,7 +414,7 @@ Headline results on 2026-09-22:
 2. Signed amounts relative to `account_id`; 6 types; per-row CHECKs; no future-dated transactions.
 3. Lazily materialised occurrences keyed `(commitment_id, due_on)`; user-confirmed matching.
 4. ~~Effective-dated, calendar-month budget limits; commitment-aware projection.~~ *Superseded 2026-09-27:* Budgets are replaced by the optional Monthly Plan (Stage 13), which keeps the commitment-aware projection; effective-dated vs month-specific intentions is open until Stage 13 (§7).
-5. Append-only earmark entries; oldest-first backing. ~~Completing a goal releases its earmarks.~~ *Amended 2026-09-27:* Protected money with an optional target; target reached is derived and releases nothing; Release is deliberate and may be partial; archiving requires nothing reserved (§9).
+5. Append-only earmark entries; oldest-first backing. ~~Completing a goal releases its earmarks.~~ *Amended 2026-09-27:* Protected money with an optional target; target reached is derived and releases nothing; Release is deliberate and may be partial; archiving requires nothing reserved (§9). *Amended 2026-09-28:* shown to the user as "Set aside"; the target date and on-track are deferred beyond V1.
 6. Soft-deleted transactions; reconciliation checkpoints as the history-integrity mechanism; no revision log in V1.
 7. Owner scoping on every table; a per-account `included_in_available` flag with type-based defaults. *Amended 2026-09-27:* the flag is a preference for asset accounts only; every liability balance always counts in Available (§5).
 8. The protected-money/commitment double reservation is a deliberate V1 trade-off (§10).
@@ -437,3 +440,4 @@ Headline results on 2026-09-22:
 | 2026-09-24 | **Clarification (5b):** when the comparison month predates every account (the first selectable month), there is **no comparison**, rather than a comparison with zero. A comparison month only partly covered by account history is still compared (a known limitation). | Comparing with an empty month would describe everything in the first month as an increase. |
 | 2026-09-24 | **Clarification (5b):** materiality uses the **magnitude** of the previous amount: \|Δ\| ≥ max(৳500, 10% × \|previous\|). | A refund-heavy category can have a negative previous amount, which would otherwise turn the 10% term negative. No acceptance value changes. |
 | 2026-09-27 | **Product-architecture decisions** (recorded in full in [roadmap.md §8](roadmap.md)). **§7:** Budgets superseded by the optional Monthly Plan (Stage 13); the old budget model is kept as §7.2, and its projection is the intent Monthly Plan carries forward. **§9:** Goals become Protected money; target and target date optional; target reached derived and releasing nothing; Release (partial allowed), Archive-at-zero, and the future Use and Move operations defined semantically, with their representation left to Stage 7; the distinction between account exclusion and protection made explicit; `EarmarkEntry` keeps its name. **§5/§10:** liabilities always count in Available regardless of `included_in_available`; the known setup-path gap is left for Stage 8. **§10:** Monthly Plan excluded from Available; open decision O-1 (commitments expected from an excluded account) recorded without choosing a rule; sinking-fund double reservation documented and kept for V1. **§11:** signals select and rank; the family table is staged, and family 2's trigger is under reconsideration. **Every acceptance value is unchanged.** | Product-architecture review after the visual-system boundary: every feature must own one distinct question, planning must stay optional, and Available must not be overstated by an account preference. |
+| 2026-09-28 | **Stage 7 product decision (before implementation).** **§9:** "Set aside" is the single user-facing term for protected money (goal-like = with a target, reserve-like = without); "Protected money", `EarmarkEntry` and the backing semantics keep their names. The V1 item has an optional target amount only; **still needed** = max(target − covered, 0) is defined; a target date, on-track / behind-schedule and a required monthly contribution are **deferred beyond V1**, with planned contributions left to Monthly Plan (§7). **§2, §14, §17:** aligned. **§11:** family 5 is under-covered only in V1. O-1, O-3 and P-1 stay open. **Every acceptance value is unchanged** (the fixture's Laptop already has no target date, and A-50's 73% progress is target-based). | Showing Goals and Protected money separately would duplicate one intention; target dates and on-track would duplicate Monthly Plan's planned contributions. |
