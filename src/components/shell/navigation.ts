@@ -2,11 +2,11 @@
  * Top-level destinations. Each appears in navigation only once its stage
  * exists (docs/roadmap.md): the Overview arrives later.
  *
- * HOME_PATH is where "/" and the logo lead. It is Activity only until the
- * Overview exists; Stage 10 sets it to "/" and gives "/" its own page. Nothing
- * else treats Activity as the home concept.
+ * HOME_PATH is where the logo leads: "/", Attention's first home (Stage 9,
+ * P-4), which Stage 10 grows into the Overview. "/" is deliberately not a
+ * destination in PRIMARY_NAV, so the phone keeps four tabs around the +.
  */
-export const HOME_PATH = "/activity";
+export const HOME_PATH = "/";
 
 export interface NavItem {
   readonly href: string;

@@ -151,3 +151,15 @@ export async function releaseProtectedMoneyAction(
 ): Promise<CommandResult> {
   return run((ctx) => commands.releaseProtectedMoney(ctx, idOf(itemId), input));
 }
+
+// Attention
+
+/** Hides a dismissible signal for its episode; the command checks it is one. */
+export async function dismissSignalAction(key: unknown): Promise<CommandResult> {
+  return run((ctx) => commands.dismissSignal(ctx, key));
+}
+
+/** Shows a hidden signal again (Undo). */
+export async function undismissSignalAction(key: unknown): Promise<CommandResult> {
+  return run((ctx) => commands.undismissSignal(ctx, key));
+}

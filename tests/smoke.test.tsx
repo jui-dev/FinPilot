@@ -1,21 +1,13 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import Root from "@/app/page";
 import { SetupRequired } from "@/components/shell/setup-required";
-import { HOME_PATH } from "@/components/shell/navigation";
-
-const redirects: string[] = [];
-vi.mock("next/navigation", () => ({
-  redirect: (path: string) => {
-    redirects.push(path);
-  },
-}));
+import { HOME_PATH, PRIMARY_NAV } from "@/components/shell/navigation";
 
 describe("smoke", () => {
-  it("sends / to the current home destination (the Overview takes over in Stage 10)", () => {
-    Root();
-    expect(redirects).toEqual([HOME_PATH]);
+  it("makes / home (Attention, and later the Overview) without making it a destination", () => {
+    expect(HOME_PATH).toBe("/");
+    expect(PRIMARY_NAV.map((i) => i.href)).not.toContain("/");
   });
 
   it("resolves the @/ alias and renders a page that needs no database", () => {

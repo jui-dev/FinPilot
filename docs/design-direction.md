@@ -164,6 +164,16 @@ A page of the Available area, reached through its local switch (Available · Com
 3. **Held in:** the accounts behind it, with any shortfall named on its account.
 4. **Actions:** Set aside (more), Release (explicit, never pre-filled), Edit; Archive lives in Edit, final, and refused with its reason while money is set aside. Archived items are listed read-only.
 
+### Attention: "What actually needs my attention right now?"
+
+The page at `/`, where the logo leads (roadmap Stage 9, P-4). It is not a navigation destination: no tab and no header link, so no destination is current on it. It holds only the heading **Attention**, a count line when there is something to show ("3 things need a look"), and one card: the Attention list, which the Overview (Stage 10) reuses under its own heading. The page keeps the card to a readable 880px; the list itself is fluid. No metric cards, charts, filters, tabs or history.
+
+1. **One list, one row pattern for every kind,** in the fixed priority order ([domain-model.md §11](domain-model.md)). Each row reads, top to bottom: a **tag** (icon + word) with the **figure** it is about on the right; the **title** (what happened, `body` 600); one **sentence** (why it matters, `meta`, `ink-2`); then the **evidence link** (`ocean`, with an arrow) to the page that owns the explanation and the action, and **Hide** on the right only where a signal can be hidden. Internal names (kind, key, occurrence, checkpoint, earmark) never appear.
+2. **Tags use the shared Tag tones, never a new colour:** *Overdue* and *Due today* `warning`; *Short* `negative` (berry), with its amount in `negative` and "short"; *Doesn't match* `warning`, with "৳450 off"; *In 3 days* / *Tomorrow* `ocean` on `mist`; *Spending up* and *Adjusted* neutral. Spending more is direction, not a problem: its tag and "+৳26,450" stay neutral. Coral never marks attention.
+3. **Evidence links name where they lead:** "Pay or skip in Commitments", "Open Commitments", "Refill or release in Set aside", "Review entries through 20 Sep" (Activity, that account through that day), "See the adjustment" (Activity, that account on that day), "See what changed" (Cash flow's What changed for the month). Each link's accessible name adds the row's title, after the visible label, because rows can share a label.
+4. **Hide** (only on a month's spending increase and an unexplained adjustment) is a ghost button beside the link, never competing with it. It hides the row at once and says "Hidden for September." or "Hidden." in a toast with **Undo**; focus returns to the heading. There is no confirmation, no hidden-items view and no history.
+5. **Empty:** "Nothing needs your attention", one sentence ("No payment, money set aside, verified balance or change in spending needs a look right now.") and one action, **See what's available**. It never says the finances are good, safe or healthy.
+
 ## 7. Interaction states
 
 | State | Treatment |
@@ -191,9 +201,10 @@ A page of the Available area, reached through its local switch (Available · Com
   - **Activity:** phones show two-line rows (description and details, amount); tablets add a Category column and move the account under the description; desktops show all four columns.
   - **Available:** the answer leads at every width; the bridge sits beside it from 1024px and under it below that; the bar spans the card; Behind the numbers is three columns from 1024px and stacked below.
   - **Accounts:** Net worth leads at every width, Own and Owe beside or under it; on desktop the ledger aligns balances, verifications and Verify in shared columns; on phones a row's actions wrap onto its own lines, keep their words and a 40px touch height.
+  - **Attention:** one row pattern at every width: tag and figure on one line, the title and sentence under them (long names wrap), then the link and Hide; on phones both keep a 40px touch height. From 880px the card stops growing.
 - **Navigation:** top navigation from 768px; below it, a bottom tab bar with a centred coral **+**.
 - **Editing:** side panels on desktop; Quick Add as a bottom sheet with the keypad first on phones.
-- **The first viewport states the page's primary answer** (Left over on Cash flow, Net worth on Accounts, Available on Available).
+- **The first viewport states the page's primary answer** (Left over on Cash flow, Net worth on Accounts, Available on Available, the first thing that needs a look on Attention).
 - **No horizontal page scroll at 390px.** Checked at 390, 820 and 1280px for every change to the core pages and their overlays.
 
 ## 9. Open decisions (raised by the reference images)
@@ -222,3 +233,4 @@ Earlier entries are history. Where an entry describes a visual system, the curre
 | 2026-09-28 | **Stage 8 Slice 2A:** §6 Set aside is reached through the Available area's local switch (Available · Commitments · Set aside); Available replaces Commitments as the fourth global destination and phone tab. | Navigation decision P-2 ([roadmap.md §8.3](roadmap.md)). |
 | 2026-09-28 | **Negative becomes berry:** `negative` `#B42318` → `#A33A62`, `negative-soft` `#FBE9E6` → `#F8EAF0`, new `negative-hover` `#8A2F52` for the destructive confirmation; the Set aside shortfall (tag and amounts) moves from `warning` to `negative`; §2 records where `negative` is never used, and §5 records chart guidance for it (not built). | The red sat on coral's hue (about 4° vs 10°), so errors read as a darker brand accent. A shortfall was two colours for one fact (a warning tag beside a red-outlined gap); set-aside money that is no longer there is a broken plan, which is what `negative` means. |
 | 2026-09-28 | **Stage 8 Slice 2B:** §6 adds the Available screen; §5's Available visual names its segments (owed, payments due, set aside from Available, Available) and the set-aside deduction reads "Set aside from Available"; §8 adds Available's responsive order. | Built in Stage 8 Slice 2B; "Covered set aside" was provisional and read as jargon. |
+| 2026-09-28 | **Stage 9 (Attention UI):** §6 adds the Attention screen at `/` — one list with one row pattern (tag and figure, title, sentence, evidence link, Hide where a signal can be hidden), tags in the shared tones (warning; berry only for *Short*; ocean on mist for payments coming up; neutral for spending up and an adjustment), evidence links named for where they lead, Hide → toast with Undo, and a plain empty state; §8 adds its responsive order and first-viewport answer. | Built in Stage 9; the list is reused by the Overview in Stage 10. |

@@ -329,6 +329,7 @@ The two inputs to Available: money already obligated and money deliberately set 
   - **Acceptance:** A-70…A-73, M1-5, M2-3.
 - **What you can see at the end:** "what deserves my attention?" at `/`, with a link from each signal to the page that owns its explanation and action. Stage 10 composes Attention into the Overview. Signals own the selection and ranking of noteworthy conditions; the Overview may surface them but never owns their logic.
 - **Deferred:** persisted signal history, notifications, the V1 demo situations that make each kind visible on a fresh seed (Stage 10).
+- **Progress (2026-09-28; not yet complete):** decisions `616ebc1`; pure rules `5295ec2`; the read model and minimal dismissal `4f0b7f1` (A-70…A-73, M1-5 and M2-3 green); then the Attention page at `/`, the logo (`HOME_PATH`) leading there, still four global destinations and four phone tabs, and Hide → Undo ([design-direction.md §6](design-direction.md)). A closure audit comes before Stage 9 is marked complete and `v0.4-available` is tagged.
 - **Commit:** `feat(signals): deterministic signal engine`
 
 ### Milestone E — "Portfolio-ready V1" — tag `v1.0`

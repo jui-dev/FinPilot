@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ariaCurrent, navState, PRIMARY_NAV } from "@/components/shell/navigation";
+import { ariaCurrent, HOME_PATH, navState, PRIMARY_NAV } from "@/components/shell/navigation";
 
 /**
  * The global destinations, and the Available area (roadmap §8.3, P-2):
@@ -35,5 +35,10 @@ describe("navigation", () => {
     for (const path of ["/available", "/commitments", "/set-aside"]) {
       expect(others.map((i) => navState(path, i))).toEqual([null, null, null]);
     }
+  });
+
+  it("marks no destination on /, Attention's home, which is not itself a destination", () => {
+    expect(HOME_PATH).toBe("/");
+    expect(PRIMARY_NAV.map((i) => navState("/", i))).toEqual([null, null, null, null]);
   });
 });
