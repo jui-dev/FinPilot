@@ -13,7 +13,15 @@ import { buttonClass } from "../ui/button";
 import { cn } from "../ui/cn";
 import { Tag } from "../ui/panel";
 import { ToastProvider } from "../ui/toast";
-import { HOME_PATH, isActive, PRIMARY_NAV, SETTINGS_PATH } from "./navigation";
+import {
+  ariaCurrent,
+  HOME_PATH,
+  isActive,
+  navState,
+  PRIMARY_NAV,
+  SETTINGS_PATH,
+  type NavItem,
+} from "./navigation";
 
 const TAB_ICONS = {
   "/activity": Receipt,
@@ -76,12 +84,13 @@ export function AppShell({
 
             <nav aria-label="Main" className="hidden h-full items-stretch md:flex">
               {PRIMARY_NAV.map((item) => {
-                const active = isActive(pathname, item.href);
+                const state = navState(pathname, item);
+                const active = state !== null;
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    aria-current={active ? "page" : undefined}
+                    aria-current={ariaCurrent(state)}
                     className={cn(
                       "-mb-px flex items-center border-b-2 px-3.5 text-body font-medium transition-colors",
                       active
@@ -130,7 +139,7 @@ export function AppShell({
           style={{ gridTemplateColumns: `repeat(${PRIMARY_NAV.length + 1}, minmax(0, 1fr))` }}
         >
           {PRIMARY_NAV.slice(0, TABS_BEFORE_ADD).map((item) => (
-            <TabLink key={item.href} href={item.href} label={item.label} pathname={pathname} />
+            <TabLink key={item.href} item={item} pathname={pathname} />
           ))}
           <button
             type="button"
@@ -143,7 +152,7 @@ export function AppShell({
             </span>
           </button>
           {PRIMARY_NAV.slice(TABS_BEFORE_ADD).map((item) => (
-            <TabLink key={item.href} href={item.href} label={item.label} pathname={pathname} />
+            <TabLink key={item.href} item={item} pathname={pathname} />
           ))}
         </nav>
       </div>
@@ -154,21 +163,15 @@ export function AppShell({
   );
 }
 
-function TabLink({
-  href,
-  label,
-  pathname,
-}: {
-  readonly href: string;
-  readonly label: string;
-  readonly pathname: string;
-}) {
-  const active = isActive(pathname, href);
+function TabLink({ item, pathname }: { readonly item: NavItem; readonly pathname: string }) {
+  const { href, label } = item;
+  const state = navState(pathname, item);
+  const active = state !== null;
   const Icon = TAB_ICONS[href as keyof typeof TAB_ICONS] ?? Receipt;
   return (
     <Link
       href={href}
-      aria-current={active ? "page" : undefined}
+      aria-current={ariaCurrent(state)}
       className={cn(
         "relative flex flex-col items-center gap-0.5 py-2 text-micro font-medium transition-colors",
         active ? "text-ink" : "text-ink-2",

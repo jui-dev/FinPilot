@@ -5,6 +5,7 @@ import { fromMajor, money, ZERO, type Money } from "@/domain/money";
 import {
   backEarmarks,
   checkEarmarkEntry,
+  reservable,
   type EarmarkEntryFacts,
 } from "@/domain/protected-money/earmarks";
 
@@ -246,5 +247,31 @@ describe("A-51: rejected earmarks on the scenario accounts (Sep 22)", () => {
         accountBalance: t(-6_000),
       }),
     ).toBe("account_not_asset");
+  });
+});
+
+describe("reservable: what Reserve would accept", () => {
+  it("is the balance beyond what is already set aside, never below zero", () => {
+    expect(reservable(t(10_000), t(6_000))).toBe(t(4_000));
+    expect(reservable(t(10_000), ZERO)).toBe(t(10_000));
+    expect(reservable(t(5_000), t(5_000))).toBe(ZERO);
+    expect(reservable(t(90_000), t(100_000))).toBe(ZERO);
+    expect(reservable(t(-500), ZERO)).toBe(ZERO);
+  });
+
+  it("agrees exactly with the Reserve rule at its boundary, for any balance", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: -1_000_000, max: 1_000_000 }).map(money),
+        fc.integer({ min: 0, max: 1_000_000 }).map(money),
+        (balance, reserved) => {
+          const free = reservable(balance, reserved);
+          const verdict = (amount: Money) =>
+            code(amount, { accountBalance: balance, reservedOnAccount: reserved });
+          if (free > 0) expect(verdict(free)).toBeUndefined();
+          expect(verdict(money(free + 1))).toBe("exceeds_balance");
+        },
+      ),
+    );
   });
 });

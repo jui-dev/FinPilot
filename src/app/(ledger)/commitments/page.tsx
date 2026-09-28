@@ -12,6 +12,7 @@ import { CommitmentsSummary } from "@/components/commitments/commitments-summary
 import { pluralPayments } from "@/components/commitments/describe";
 import { CARD, OccurrenceList, type PendingRow } from "@/components/commitments/occurrence-list";
 import { shortDate } from "@/components/format";
+import { AreaSwitch } from "@/components/shell/area-switch";
 import { EmptyState } from "@/components/ui/panel";
 import { materialisedThrough } from "@/domain/commitments/occurrences";
 import { sum } from "@/domain/money";
@@ -60,15 +61,18 @@ export default async function CommitmentsPage() {
   };
 
   const header = (
-    <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1">
-      <h1 className="text-title font-bold text-navy">Commitments</h1>
-      <div className="md:row-span-2">
-        <NewCommitmentButton {...formChoices} emphasized={commitments.length === 0} />
-      </div>
-      <p className="col-span-2 text-body text-ink-2 md:col-span-1">
-        What you owe on a schedule, and when each payment is due.
-      </p>
-    </header>
+    <>
+      <AreaSwitch current="/commitments" />
+      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1">
+        <h1 className="text-title font-bold text-navy">Commitments</h1>
+        <div className="md:row-span-2">
+          <NewCommitmentButton {...formChoices} emphasized={commitments.length === 0} />
+        </div>
+        <p className="col-span-2 text-body text-ink-2 md:col-span-1">
+          What you owe on a schedule, and when each payment is due.
+        </p>
+      </header>
+    </>
   );
 
   if (commitments.length === 0) {

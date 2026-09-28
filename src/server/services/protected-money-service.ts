@@ -1,11 +1,13 @@
-import { money, type Money } from "@/domain/money";
-import { backEarmarks } from "@/domain/protected-money/earmarks";
+import { accountClass, type AccountType } from "@/domain/ledger/accounts";
+import { add, money, ZERO, type Money } from "@/domain/money";
+import { backEarmarks, reservable } from "@/domain/protected-money/earmarks";
 import { itemCover, type ItemCover } from "@/domain/protected-money/items";
 import { writeContext, type ServiceContext } from "@/server/context";
 import { runScript, type ServiceResult } from "@/server/errors";
 import { accountBalances } from "@/server/repositories/ledger-queries";
 import * as queries from "@/server/repositories/protected-money-queries";
 import * as repository from "@/server/repositories/protected-money-repository";
+import { listAccounts } from "@/server/repositories/setup-repository";
 import type {
   EarmarkDraft,
   ProtectedMoneyItemDraft,
@@ -117,6 +119,38 @@ export async function getItems(ctx: ServiceContext): Promise<ProtectedMoneyItemV
       earmarks: own,
     };
   });
+}
+
+/** An account money can be set aside from, and how much more of it may be. */
+export interface ReserveSource {
+  readonly accountId: string;
+  readonly name: string;
+  readonly type: AccountType;
+  /** reservable(balance, Σ set aside on it): exactly what Reserve would accept. */
+  readonly reservable: Money;
+}
+
+/**
+ * The accounts Reserve accepts — active asset accounts — each with how much
+ * more of it may be set aside, in account-name order. Accounts with nothing
+ * free are included (at zero) so a form can say why they cannot be used.
+ */
+export async function getReserveSources(ctx: ServiceContext): Promise<ReserveSource[]> {
+  const balances = new Map(
+    accountBalances(ctx.db, ctx.ownerId).map((b) => [b.accountId, money(b.balanceMinor)]),
+  );
+  const reserved = new Map<string, Money>();
+  for (const e of queries.listActiveEarmarks(ctx.db, ctx.ownerId)) {
+    reserved.set(e.accountId, add(reserved.get(e.accountId) ?? ZERO, money(e.reservedMinor)));
+  }
+  return listAccounts(ctx.db, ctx.ownerId)
+    .filter((a) => a.archivedAt === null && accountClass(a.type) === "asset")
+    .map((a) => ({
+      accountId: a.id,
+      name: a.name,
+      type: a.type,
+      reservable: reservable(balances.get(a.id) ?? ZERO, reserved.get(a.id) ?? ZERO),
+    }));
 }
 
 export type { EarmarkDraft, ProtectedMoneyItemDraft };

@@ -55,7 +55,7 @@ These tokens are the whole palette: the default Tailwind palette is removed ([gl
 - **One selected state:** `mist` background, `ocean` text, `ocean` edge, for chips, segmented controls and active filters.
 - **Status is always icon + word + colour,** never colour alone.
 - **Contrast (measured):** ink 16.3 and ink-2 7.2 on white; ink-2 6.7 on canvas and 6.2 on mist; navy 11.9 on white and 10.2 on mist; ocean 5.9 on white and 5.0 on mist; ink on coral 5.3. Control edges, focus and the navy tab mark are ≥ 3:1.
-- **Not decided yet:** the colours of commitments (Stage 6) and protected money (Stage 7). No hue is reserved for them.
+- **Set aside (protected money) has no dedicated hue in V1** (2026-09-28): covered money is navy, the rest of a target is a mist track, and a shortfall is a warning tag plus a red-outlined gap in the target bar. The colour of commitments is not decided; no hue is reserved for it.
 
 ## 3. Typography and numbers
 
@@ -143,6 +143,15 @@ It has no metric cards.
 3. **Verification is a first-class trust state:** *Not verified yet* (neutral), *Verified* (positive), *Changed since* a checkpoint (warning), with evidence written neutrally: what the ledger records for that day, what was verified, and a link to the entries through that day. It never claims which entry changed.
 4. **Verify** sits beside the state it resolves; **Archive / Restore / Delete** are management actions at the row's end, shown only when allowed.
 
+### Set aside: "What am I keeping money for, and is it still really there?"
+
+Reached beside Commitments through a local switch until Stage 8 names the forward-looking area (roadmap P-2/P-3). One card of items, no metric cards; a one-line total only when there are two or more.
+
+1. **Each item:** its name; **one number** ("৳1,20,000 set aside") while everything set aside is covered, or "৳1,10,000 of ৳1,20,000 still covered" with a *short* tag when a balance has fallen.
+2. **A target line and bar only when a target exists:** target, still needed (from what is covered) and progress; *Target reached* when covered meets it.
+3. **Held in:** the accounts behind it, with any shortfall named on its account.
+4. **Actions:** Set aside (more), Release (explicit, never pre-filled), Edit; Archive lives in Edit, final, and refused with its reason while money is set aside. Archived items are listed read-only.
+
 ## 7. Interaction states
 
 | State | Treatment |
@@ -195,3 +204,4 @@ Earlier entries are history. Where an entry describes a visual system, the curre
 | 2026-09-27 | *(Superseded by the next entry.)* Navy and cream palette (wine, blush and sky retired; coral kept only as the logo accent); seven type steps; one selected state; ocean focus; a filled destructive confirmation; `PanelHeader` and `PanelBand`; composition bars in "Where it went"; page width 1120px; responsive checks at 390/820/1280 | Milestone B review: the navy direction was approved conceptually, then frozen against the real product in the visual-system boundary. The wine identity read as a neutral template with an accent; 13px panel titles left no tier between the page title and metadata; readable text used `ink-3` (about 3:1); control edges were 1.6:1. |
 | 2026-09-27 | **Implemented visual system recorded (§1–§8):** the reference palette (navy `#1F385A`, ocean, light-cyan mist, tide, a warm off-white canvas); coral as the brand and global Add accent only; navy higher / ocean lower in What changed; a Source Serif 4 wordmark; a 1360px workspace; soft card surfaces; the Cash flow, Activity and Accounts compositions (§6); the Kept/Spent bar removed; principles and responsive recomposition made explicit | The palette and the three page redesigns were built against the approved reference after the navy/cream freeze, and the file had fallen behind the committed UI. Coral had briefly marked higher spending, which let an increase read like an error; direction moved to the blue family. The Kept/Spent bar redrew the savings rate printed beside it. |
 | 2026-09-27 | **Product-architecture decisions** ([roadmap.md §8](roadmap.md)): §2 colour note renamed to protected money (Stage 7); §5 records the approved future visual directions, each with its one question and owner, and the rejected charts; §9 D1 (Overview panels) and D2 (net-worth trend) resolved. No screen is specified before it is built. | Goals became Protected money and Budgets the optional Monthly Plan; the chart policy was reviewed so that each visual has one analytical question and no duplicate. |
+| 2026-09-28 | **Set aside (Stage 7):** §2 records no dedicated hue for Set aside in V1; §6 adds the Set aside screen. | Built in Stage 7 Slice 3 with the existing visual system. |

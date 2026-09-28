@@ -118,3 +118,36 @@ export async function payOccurrenceAction(
 export async function skipOccurrenceAction(occurrenceId: unknown): Promise<CommandResult> {
   return run((ctx) => commands.skipOccurrence(ctx, idOf(occurrenceId)));
 }
+
+// Set aside (protected money)
+
+export async function createProtectedMoneyItemAction(
+  input: unknown,
+): Promise<CommandResult<string>> {
+  return run((ctx) => commands.createProtectedMoneyItem(ctx, input));
+}
+
+export async function editProtectedMoneyItemAction(
+  id: unknown,
+  input: unknown,
+): Promise<CommandResult> {
+  return run((ctx) => commands.editProtectedMoneyItem(ctx, idOf(id), input));
+}
+
+export async function archiveProtectedMoneyItemAction(id: unknown): Promise<CommandResult> {
+  return run((ctx) => commands.archiveProtectedMoneyItem(ctx, idOf(id)));
+}
+
+export async function reserveProtectedMoneyAction(
+  itemId: unknown,
+  input: unknown,
+): Promise<CommandResult> {
+  return run((ctx) => commands.reserveProtectedMoney(ctx, idOf(itemId), input));
+}
+
+export async function releaseProtectedMoneyAction(
+  itemId: unknown,
+  input: unknown,
+): Promise<CommandResult> {
+  return run((ctx) => commands.releaseProtectedMoney(ctx, idOf(itemId), input));
+}

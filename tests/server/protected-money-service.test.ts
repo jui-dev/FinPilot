@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { DatabaseHandle } from "@/db/client";
 import type { EntityId, IdGenerator } from "@/domain/ids";
-import { ZERO, type Money } from "@/domain/money";
+import { money, ZERO, type Money } from "@/domain/money";
 import {
   createProtectedMoneyItem,
   releaseProtectedMoney,
@@ -10,13 +10,18 @@ import {
 } from "@/server/commands";
 import type { ServiceContext } from "@/server/context";
 import { uuidV7Generator } from "@/server/ids";
-import { deleteTransaction, recordTransaction } from "@/server/services/ledger-service";
+import {
+  deleteTransaction,
+  getAccountBalances,
+  recordTransaction,
+} from "@/server/services/ledger-service";
 import {
   archiveItem,
   createItem,
   editItem,
   getEarmarkBacking,
   getItems,
+  getReserveSources,
   release,
   reserve,
 } from "@/server/services/protected-money-service";
@@ -513,5 +518,99 @@ describe("commands", () => {
     ok(await reserveProtectedMoney(s.ctx, fund, { accountId: s.bank, amount: "2,500" }));
     ok(await releaseProtectedMoney(s.ctx, fund, { accountId: s.bank, amount: "500" }));
     expect((await view(s.ctx, fund)).cover.reserved).toBe(taka(2_000));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reserve sources (what the Set aside form offers)
+// ---------------------------------------------------------------------------
+
+describe("getReserveSources", () => {
+  it("offers active asset accounts only, with exactly what Reserve would accept", async () => {
+    const s = await ledger();
+    const spare = await s.account("Spare", "cash", "2026-08-01", 0);
+    ok(await archiveAccount(s.ctx, spare));
+    const laptop = await item(s.ctx, "Laptop");
+    const fund = await item(s.ctx, "Emergency fund");
+    ok(await reserve(s.ctx, laptop, { accountId: s.bank, amount: taka(3_000) }));
+    ok(await reserve(s.ctx, fund, { accountId: s.bank, amount: taka(2_000) }));
+
+    const sources = await getReserveSources(s.ctx);
+    expect(sources.map((x) => ({ name: x.name, reservable: x.reservable }))).toEqual([
+      { name: "Bank", reservable: taka(5_000) },
+      { name: "Savings", reservable: taka(50_000) },
+    ]);
+
+    const bank = sources.find((x) => x.accountId === s.bank)!;
+    expect(
+      errorCode(
+        await reserve(s.ctx, fund, { accountId: s.bank, amount: money(bank.reservable + 1) }),
+      ),
+    ).toBe("exceeds_balance");
+    ok(await reserve(s.ctx, fund, { accountId: s.bank, amount: bank.reservable }));
+    expect((await getReserveSources(s.ctx)).find((x) => x.accountId === s.bank)!.reservable).toBe(
+      ZERO,
+    );
+  });
+
+  it("never offers an archived account, even after it regains a positive balance", async () => {
+    const s = await ledger();
+    const spare = await s.account("Spare", "cash", "2026-08-01", 1_000);
+    const transferId = ok(
+      await recordTransaction(s.ctx, {
+        type: "transfer",
+        amount: taka(1_000),
+        accountId: spare,
+        counterAccountId: s.bank,
+        occurredOn: d("2026-09-10"),
+      }),
+    );
+    ok(await archiveAccount(s.ctx, spare));
+    ok(await deleteTransaction(s.ctx, transferId)); // Spare: archived, and ৳1,000 again
+
+    expect((await getReserveSources(s.ctx)).map((x) => x.accountId)).not.toContain(spare);
+  });
+
+  it("offers nothing when the owner has no asset account", async () => {
+    const setup = await setupLedger();
+    handle = setup.handle;
+    await setup.account("Visa", "credit_card", "2026-08-01", -1_000);
+    expect(await getReserveSources(setup.ctx)).toEqual([]);
+  });
+
+  it("shows nothing free when the balance has fallen below what is set aside", async () => {
+    const s = await ledger();
+    const laptop = await item(s.ctx, "Laptop");
+    ok(await reserve(s.ctx, laptop, { accountId: s.bank, amount: taka(8_000) }));
+    await spend(s, s.bank, 5_000); // Bank 5,000 against 8,000 set aside
+    expect((await getReserveSources(s.ctx)).find((x) => x.accountId === s.bank)!.reservable).toBe(
+      ZERO,
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Set aside never touches the ledger
+// ---------------------------------------------------------------------------
+
+describe("no Set aside operation records a transaction or changes a balance", () => {
+  it("create, edit, Reserve, Release and Archive leave the ledger exactly as it was", async () => {
+    const s = await ledger();
+    const ledgerState = async () => ({
+      rows: s.handle.sqlite.prepare("SELECT * FROM transactions ORDER BY sequence").all(),
+      balances: await getAccountBalances(s.ctx),
+    });
+    const before = await ledgerState();
+
+    const laptop = await item(s.ctx, "Laptop", 20_000);
+    ok(await editItem(s.ctx, laptop, { name: "New laptop", target: taka(25_000) }));
+    ok(await reserve(s.ctx, laptop, { accountId: s.bank, amount: taka(4_000) }));
+    ok(await reserve(s.ctx, laptop, { accountId: s.savings, amount: taka(10_000) }));
+    ok(await release(s.ctx, laptop, { accountId: s.bank, amount: taka(1_000) }));
+    ok(await release(s.ctx, laptop, { accountId: s.bank, amount: taka(3_000) }));
+    ok(await release(s.ctx, laptop, { accountId: s.savings, amount: taka(10_000) }));
+    ok(await archiveItem(s.ctx, laptop));
+
+    expect(await ledgerState()).toEqual(before);
   });
 });

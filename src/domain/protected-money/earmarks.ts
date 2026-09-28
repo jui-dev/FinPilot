@@ -43,6 +43,17 @@ export interface EarmarkEntryFacts {
   readonly itemReservedOnAccount: Money;
 }
 
+/**
+ * How much more of an account may be set aside: what its current balance
+ * holds beyond everything already set aside on it, never below zero. The one
+ * interpretation of invariant 3, shared by the write rule and every read that
+ * offers an amount, so a form's hint cannot disagree with Reserve.
+ */
+export function reservable(balance: Money, reservedOnAccount: Money): Money {
+  const free = subtract(balance, reservedOnAccount);
+  return free > 0 ? free : ZERO;
+}
+
 const violation = (code: EarmarkRuleCode, message: string): EarmarkRuleViolation => ({
   code,
   message,
@@ -86,7 +97,7 @@ export function checkEarmarkEntry(
     if (facts.account.archived) {
       return violation("account_archived", "The account is archived.");
     }
-    if (add(facts.reservedOnAccount, amount) > facts.accountBalance) {
+    if (amount > reservable(facts.accountBalance, facts.reservedOnAccount)) {
       return violation(
         "exceeds_balance",
         "That is more than this account has left that is not already set aside.",

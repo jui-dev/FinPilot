@@ -510,10 +510,10 @@ Every item here is **deliberately open, not forgotten**. A stage's plan resolves
 | # | Question | Resolve when |
 |---|---|---|
 | P-1 | An explicit protected-money ↔ commitment relationship (sinking funds). **Not a V1 blocker:** the conservative double reservation is acceptable for V1 ([domain-model.md §10](domain-model.md)). | if the revisit trigger fires (double reservation seen often) |
-| P-2 | The forward-looking area's final name, its navigation placement, and Monthly Plan's placement (§8.3). | when the area is designed, no later than Stage 8's navigation work (Monthly Plan's placement by Stage 13) |
+| P-2 | The forward-looking area's final name, its navigation placement, and Monthly Plan's placement (§8.3). *Interim (Stage 7):* Set aside sits beside Commitments behind a local switch, and the Commitments destination is current on both; no destination was added. | when the area is designed, no later than Stage 8's navigation work (Monthly Plan's placement by Stage 13) |
 | P-3 | Phone tab-bar capacity once Overview and the forward-looking area join the bar (three destinations and the centred + today). | before shipping the navigation that expands it (Stage 8 or 10) |
 | P-4 | How Attention is reachable when signals ship, before the Overview composes it. A direct or temporary surface is acceptable; the final Overview or navigation is not designed early for it. Signals own selection and ranking; the Overview only surfaces them. | the Stage 9 plan |
-| P-5 | The colours of commitments and protected money ([design-direction.md §2](design-direction.md)). | Stages 6 and 7 |
+| P-5 | The colours of commitments and protected money ([design-direction.md §2](design-direction.md)). *Protected money resolved for V1 (2026-09-28): no dedicated hue.* | Stages 6 and 7 |
 | P-6 | Signal families 6 (Available low) and 8 (savings-rate change). | a review after V1 |
 
 **Known gaps, not open questions:**
