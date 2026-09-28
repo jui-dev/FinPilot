@@ -6,7 +6,7 @@ import {
   type OccurrenceState,
 } from "@/domain/commitments/occurrences";
 import type { CommitmentFrequency } from "@/domain/commitments/schedule";
-import { money, type Money } from "@/domain/money";
+import { abs, money, type Money } from "@/domain/money";
 import { writeContext, type ServiceContext } from "@/server/context";
 import { runScript, type ServiceResult } from "@/server/errors";
 import * as queries from "@/server/repositories/commitment-queries";
@@ -102,6 +102,12 @@ export interface OccurrenceView {
   readonly display: OccurrenceDisplayState;
   /** The payment evidence pointer, kept even after that transaction stops paying. */
   readonly transactionId: string | null;
+  /** The ledger payment, only while it pays the occurrence (state "paid"). */
+  readonly payment: {
+    readonly amount: Money;
+    readonly paidOn: CalendarDate;
+    readonly accountId: string;
+  } | null;
 }
 
 /** Every occurrence through today + 60 days, in due order, materialising first. */
@@ -128,6 +134,14 @@ export async function getOccurrences(ctx: ServiceContext): Promise<OccurrenceVie
       state,
       display: displayState(state, dueOn, write.today),
       transactionId: r.transactionId,
+      payment:
+        state === "paid" && r.linkAmountMinor !== null && r.linkAccountId !== null
+          ? {
+              amount: abs(money(r.linkAmountMinor)),
+              paidOn: r.linkOccurredOn as CalendarDate,
+              accountId: r.linkAccountId,
+            }
+          : null,
     };
   });
 }

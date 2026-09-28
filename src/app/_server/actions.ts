@@ -98,3 +98,23 @@ export async function restoreCategoryAction(id: unknown): Promise<CommandResult>
 export async function deleteCategoryAction(id: unknown): Promise<CommandResult> {
   return run((ctx) => commands.deleteCategory(ctx, idOf(id)));
 }
+
+export async function createCommitmentAction(input: unknown): Promise<CommandResult<string>> {
+  return run((ctx) => commands.createCommitment(ctx, input));
+}
+
+export async function editCommitmentAction(id: unknown, input: unknown): Promise<CommandResult> {
+  return run((ctx) => commands.editCommitment(ctx, idOf(id), input));
+}
+
+/** Records the occurrence's payment as a real expense. Returns the transaction id (for Undo). */
+export async function payOccurrenceAction(
+  occurrenceId: unknown,
+  input: unknown,
+): Promise<CommandResult<string>> {
+  return run((ctx) => commands.payOccurrence(ctx, idOf(occurrenceId), input));
+}
+
+export async function skipOccurrenceAction(occurrenceId: unknown): Promise<CommandResult> {
+  return run((ctx) => commands.skipOccurrence(ctx, idOf(occurrenceId)));
+}

@@ -33,6 +33,9 @@ export function listOccurrences(db: AppDatabase, ownerId: string) {
       skippedAt: commitmentOccurrences.skippedAt,
       linkType: transactions.type,
       linkDeletedAt: transactions.deletedAt,
+      linkAmountMinor: transactions.amountMinor,
+      linkOccurredOn: transactions.occurredOn,
+      linkAccountId: transactions.accountId,
     })
     .from(commitmentOccurrences)
     .innerJoin(
