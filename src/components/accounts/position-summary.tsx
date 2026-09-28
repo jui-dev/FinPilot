@@ -29,8 +29,14 @@ export function PositionSummary({ position }: { readonly position: Position }) {
       </div>
       {/* Phones: the two parts side by side under net worth. md and up: stacked beside it. */}
       <dl className="grid grid-cols-2 divide-x divide-line border-t border-line md:grid-cols-1 md:divide-x-0 md:divide-y md:border-t-0 md:border-l">
-        <Part term="Own" icon={Wallet} amount={position.assets} />
-        <Part term="Owe" icon={HandCoins} amount={position.liabilities} />
+        <Part term="Own" icon={Wallet} amount={position.assets} sign="negative" />
+        {/* A card paid past zero holds credit: it is never shown as owed. */}
+        <Part
+          term={position.liabilityStanding.kind === "credit" ? "Credit on cards" : "Owe"}
+          icon={HandCoins}
+          amount={position.liabilityStanding.amount}
+          sign="none"
+        />
       </dl>
     </section>
   );
@@ -40,11 +46,13 @@ function Part({
   term,
   icon: Icon,
   amount,
+  sign,
 }: {
   readonly term: string;
   readonly icon: LucideIcon;
-  /** A magnitude: assets, or the amount owed as a positive number. */
   readonly amount: MoneyValue;
+  /** Assets keep a true minus; the owed or credit magnitude takes its direction from the term. */
+  readonly sign: "negative" | "none";
 }) {
   return (
     <div
@@ -63,7 +71,7 @@ function Part({
         {term}
       </dt>
       <dd className="text-figure font-bold text-navy">
-        <Money amount={amount} sign="none" />
+        <Money amount={amount} sign={sign} />
       </dd>
     </div>
   );

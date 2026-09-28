@@ -1,7 +1,6 @@
 import type { CalendarDate } from "@/domain/calendar-date";
-import { accountClass, type AccountType } from "@/domain/ledger/accounts";
 import type { Verification } from "@/domain/ledger/verification";
-import { abs, negate, type Money } from "@/domain/money";
+import { abs, type Money } from "@/domain/money";
 
 /**
  * How an account's verification reads on Accounts. Every amount comes from the
@@ -22,25 +21,14 @@ export type VerificationView =
       readonly asOf: CalendarDate;
       /** |recorded − stated|. */
       readonly off: Money;
-      /** Shown as a liability's amount owed (positive) or an asset's signed balance. */
+      /** Signed as stored; `balanceReading` decides how each reads (owed, credit). */
       readonly recorded: Money;
       readonly verified: Money;
-      readonly owed: boolean;
     };
 
-export function verificationView(verification: Verification, type: AccountType): VerificationView {
+export function verificationView(verification: Verification): VerificationView {
   const { status, asOf, stated, recorded, drift } = verification;
   if (status === "never_verified" || asOf === null) return { status: "never_verified" };
   if (status === "verified") return { status, asOf };
-  // A liability's balance is ≤ 0 when money is owed; it reads as an amount owed.
-  const owed = accountClass(type) === "liability";
-  const shown = (amount: Money) => (owed ? negate(amount) : amount);
-  return {
-    status,
-    asOf,
-    off: abs(drift!),
-    recorded: shown(recorded!),
-    verified: shown(stated!),
-    owed,
-  };
+  return { status, asOf, off: abs(drift!), recorded: recorded!, verified: stated! };
 }

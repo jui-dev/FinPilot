@@ -14,11 +14,34 @@ export interface AccountBalance {
   readonly balance: Money;
 }
 
+/**
+ * Which way a liability balance points: money owed, a credit balance (a card
+ * paid past zero), or neither. `amount` is the magnitude; the kind carries the
+ * direction, so no reader has to correct a sign.
+ */
+export interface LiabilityStanding {
+  readonly kind: "owed" | "credit" | "clear";
+  /** The amount owed, or the credit held; zero when clear. */
+  readonly amount: Money;
+}
+
+/** Classifies a liability balance, signed as stored (≤ 0 when owed). */
+export function liabilityStanding(signedBalance: Money): LiabilityStanding {
+  if (signedBalance < 0) return { kind: "owed", amount: negate(signedBalance) };
+  if (signedBalance > 0) return { kind: "credit", amount: signedBalance };
+  return { kind: "clear", amount: ZERO };
+}
+
 export interface Position {
   readonly netWorth: Money;
   readonly assets: Money;
-  /** Amount owed, as a positive number (−Σ liability balances). */
+  /**
+   * Net amount owed across liabilities (−Σ liability balances): positive when
+   * owed, negative when cards hold more credit than is owed on them.
+   */
   readonly liabilities: Money;
+  /** The same total read as owed, credit or clear. */
+  readonly liabilityStanding: LiabilityStanding;
 }
 
 export function summarizePosition(balances: readonly AccountBalance[]): Position {
@@ -32,5 +55,5 @@ export function summarizePosition(balances: readonly AccountBalance[]): Position
   const liabilities = negate(liabilityBalances);
   // Invariant: net worth = assets − liabilities.
   if (subtract(assets, liabilities) !== netWorth) throw new Error("position invariant violated");
-  return { netWorth, assets, liabilities };
+  return { netWorth, assets, liabilities, liabilityStanding: liabilityStanding(liabilityBalances) };
 }

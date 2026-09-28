@@ -185,6 +185,11 @@ describe("how each signal reads", () => {
       "The ledger now records ৳9,000 owed for that day; you verified ৳6,000 owed.",
     );
     expect(visa.amount.value).toBe(taka(3_000));
+    // A card paid past zero reads as credit, never as owed; a clear card reads as ৳0.
+    const credit = row({
+      checkpoints: [checkpoint("Visa", "credit_card", "2026-09-19", 0, 500)],
+    });
+    expect(credit.detail).toBe("The ledger now records ৳500 credit for that day; you verified ৳0.");
   });
 
   it("spending up: the month's increase, what accounts for it, and what was lower", () => {

@@ -2,9 +2,9 @@ import { CheckCircle2, CircleAlert, CircleDashed } from "lucide-react";
 import Link from "next/link";
 
 import { addDays, type CalendarDate } from "@/domain/calendar-date";
-import { accountClass, type AccountType } from "@/domain/ledger/accounts";
+import type { AccountType } from "@/domain/ledger/accounts";
 import type { Verification } from "@/domain/ledger/verification";
-import { negate, type Money as MoneyValue } from "@/domain/money";
+import type { Money as MoneyValue } from "@/domain/money";
 
 import { activityHref } from "../activity/links";
 import { shortDate } from "../format";
@@ -14,6 +14,7 @@ import { cn } from "../ui/cn";
 import { Money } from "../ui/money";
 import { EmptyState, Tag } from "../ui/panel";
 import { AccountActions } from "./account-actions";
+import { balanceReading } from "./balance-reading";
 import { verificationView } from "./verification-view";
 import { VerifyBalanceButton } from "./verify-balance-panel";
 
@@ -179,9 +180,8 @@ function AccountRow({
   readonly showType: boolean;
   readonly today: CalendarDate;
 }) {
-  const owed = accountClass(account.type) === "liability";
-  const shown = owed ? (negate(account.balance) as MoneyValue) : account.balance;
-  const view = verificationView(account.verification, account.type);
+  const reading = balanceReading(account.type, account.balance);
+  const view = verificationView(account.verification);
   const changed = view.status === "changed";
   // An archived account cannot be verified: it shows only a verification it already has.
   const marked = !(account.archived && view.status === "never_verified");
@@ -225,12 +225,10 @@ function AccountRow({
           account.archived ? "text-ink-2" : "text-navy",
         )}
       >
-        <Money
-          amount={shown}
-          sign={owed ? "none" : "negative"}
-          className="text-heading font-bold"
-        />
-        {owed && <span className="ml-1 text-meta font-medium text-ink-2">owed</span>}
+        <Money amount={reading.amount} sign={reading.sign} className="text-heading font-bold" />
+        {reading.note && (
+          <span className="ml-1 text-meta font-medium text-ink-2">{reading.note}</span>
+        )}
       </p>
 
       {marked && (
@@ -353,12 +351,15 @@ function ChangedEvidence({
   readonly className?: string;
 }) {
   const day = shortDate(view.asOf, today);
-  const amount = (value: MoneyValue) => (
-    <>
-      <Money amount={value} sign={view.owed ? "none" : "negative"} className="text-ink" />
-      {view.owed && " owed"}
-    </>
-  );
+  const amount = (value: MoneyValue) => {
+    const reading = balanceReading(account.type, value);
+    return (
+      <>
+        <Money amount={reading.amount} sign={reading.sign} className="text-ink" />
+        {reading.note && ` ${reading.note}`}
+      </>
+    );
+  };
   // A checkpoint cannot predate its account (the reconcile service rejects
   // it); should one ever exist, there is no valid range to link to.
   const evidence =

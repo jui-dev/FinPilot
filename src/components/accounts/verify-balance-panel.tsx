@@ -6,7 +6,7 @@ import { useState } from "react";
 import { verifyBalanceAction } from "@/app/_server/actions";
 import type { CalendarDate } from "@/domain/calendar-date";
 import { accountClass, type AccountType } from "@/domain/ledger/accounts";
-import { formatMoney, negate, type Money as MoneyValue } from "@/domain/money";
+import { formatMoney, type Money as MoneyValue } from "@/domain/money";
 import type { FieldErrors } from "@/server/commands";
 
 import { Button } from "../ui/button";
@@ -15,6 +15,7 @@ import { Money } from "../ui/money";
 import { MoneyInput } from "../ui/money-input";
 import { SidePanel } from "../ui/overlay";
 import { useToast } from "../ui/toast";
+import { balanceReading } from "./balance-reading";
 
 /** Account row actions keep a 40px touch height on phones; 32px from md up. */
 export const ROW_ACTION = "max-md:h-10";
@@ -52,8 +53,17 @@ export function VerifyBalanceButton({
 
   const owed = accountClass(type) === "liability";
   // A liability's balance is negative when money is owed; the person states the
-  // amount owed as a positive number, and the ledger re-applies the sign.
-  const shown = owed ? (negate(balance) as MoneyValue) : balance;
+  // amount owed as a positive number, and the ledger re-applies the sign. The
+  // recorded balance reads as owed or as credit; the question still asks for
+  // an amount owed, so a card's credit cannot be stated here (a known V1
+  // limitation, docs/roadmap.md §8.5).
+  const recorded = balanceReading(type, balance);
+  const recordedLabel =
+    recorded.note === "owed"
+      ? "Recorded as owed"
+      : recorded.note === "credit"
+        ? "Recorded as credit"
+        : "Recorded";
 
   const submit = async () => {
     setPending(true);
@@ -109,9 +119,9 @@ export function VerifyBalanceButton({
           }}
         >
           <div className="flex items-baseline justify-between gap-3 rounded-control bg-surface-hover px-3 py-2.5">
-            <span className="text-meta text-ink-2">{owed ? "Recorded as owed" : "Recorded"}</span>
+            <span className="text-meta text-ink-2">{recordedLabel}</span>
             <span className="text-body font-semibold">
-              <Money amount={shown} sign={owed ? "none" : "negative"} />
+              <Money amount={recorded.amount} sign={recorded.sign} />
             </span>
           </div>
 

@@ -9,7 +9,7 @@ import {
 } from "@/domain/ledger/accounts";
 import { formatPercent, savingsRate } from "@/domain/ledger/analytics";
 import { compareLedgerOrder } from "@/domain/ledger/ordering";
-import { summarizePosition } from "@/domain/ledger/position";
+import { liabilityStanding, summarizePosition } from "@/domain/ledger/position";
 import {
   countsAsIncome,
   countsAsSpending,
@@ -206,14 +206,49 @@ describe("position", () => {
       netWorth: fromMajor(127_000),
       assets: fromMajor(133_000),
       liabilities: fromMajor(6_000),
+      liabilityStanding: { kind: "owed", amount: fromMajor(6_000) },
     });
   });
 
-  it("an overpaid card is a negative liability, not an asset", () => {
+  it("an overpaid card is a negative liability, not an asset, and reads as credit", () => {
     const position = summarizePosition([
       { accountId: "visa", type: "credit_card", balance: fromMajor(500) },
     ]);
-    expect(position).toEqual({ netWorth: fromMajor(500), assets: 0, liabilities: fromMajor(-500) });
+    expect(position).toEqual({
+      netWorth: fromMajor(500),
+      assets: 0,
+      liabilities: fromMajor(-500),
+      liabilityStanding: { kind: "credit", amount: fromMajor(500) },
+    });
+  });
+
+  it("reads the net of all cards: owed on one, credit on another", () => {
+    const card = (accountId: string, major: number) =>
+      ({ accountId, type: "credit_card", balance: fromMajor(major) }) as const;
+    expect(summarizePosition([card("a", -6_000), card("b", 500)]).liabilityStanding).toEqual({
+      kind: "owed",
+      amount: fromMajor(5_500),
+    });
+    expect(summarizePosition([card("a", -500), card("b", 2_000)]).liabilityStanding).toEqual({
+      kind: "credit",
+      amount: fromMajor(1_500),
+    });
+    expect(summarizePosition([card("a", -500), card("b", 500)]).liabilityStanding).toEqual({
+      kind: "clear",
+      amount: 0,
+    });
+    expect(summarizePosition([]).liabilityStanding).toEqual({ kind: "clear", amount: 0 });
+  });
+
+  it("classifies a liability balance, signed as stored", () => {
+    expect(liabilityStanding(fromMajor(-3_200))).toEqual({
+      kind: "owed",
+      amount: fromMajor(3_200),
+    });
+    expect(liabilityStanding(fromMajor(250))).toEqual({ kind: "credit", amount: fromMajor(250) });
+    expect(liabilityStanding(money(0))).toEqual({ kind: "clear", amount: 0 });
+    // The magnitude is exact to the paisa.
+    expect(liabilityStanding(money(-1))).toEqual({ kind: "owed", amount: money(1) });
   });
 });
 

@@ -500,6 +500,7 @@ describe("position", () => {
       netWorth: taka(85_000 + 3_000 - 12_000),
       assets: taka(88_000),
       liabilities: taka(12_000),
+      liabilityStanding: { kind: "owed", amount: taka(12_000) },
     });
   });
 

@@ -4,6 +4,7 @@ import { accountClass } from "@/domain/ledger/accounts";
 import { abs, formatMoney, type Money } from "@/domain/money";
 import type { AttentionEvidence, AttentionSignal } from "@/domain/signals/signals";
 
+import { balanceReading } from "../accounts/balance-reading";
 import { verificationView } from "../accounts/verification-view";
 import { activityHref, cashFlowHref } from "../activity/links";
 import { dayLabel, monthLabel, shortDate } from "../format";
@@ -125,19 +126,19 @@ export function describeSignal(signal: AttentionSignal, today: CalendarDate): At
 
     case "verification_changed": {
       // Worded exactly as Accounts words a changed verification: a card's
-      // balance reads as an amount owed.
-      const view = verificationView(
-        {
-          status: "changed",
-          asOf: signal.asOf,
-          stated: signal.stated,
-          recorded: signal.recorded,
-          drift: signal.drift,
-        },
-        signal.accountType,
-      );
+      // balance reads as an amount owed, or as credit.
+      const view = verificationView({
+        status: "changed",
+        asOf: signal.asOf,
+        stated: signal.stated,
+        recorded: signal.recorded,
+        drift: signal.drift,
+      });
       if (view.status !== "changed") throw new Error("A changed verification has drift.");
-      const shown = (value: Money) => `${formatMoney(value)}${view.owed ? " owed" : ""}`;
+      const shown = (value: Money) => {
+        const { amount, note } = balanceReading(signal.accountType, value);
+        return `${formatMoney(amount)}${note ? ` ${note}` : ""}`;
+      };
       return {
         key: signal.key,
         tag: { label: "Doesn't match", tone: "warning", icon: "mismatch" },
