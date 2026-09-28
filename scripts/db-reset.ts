@@ -6,6 +6,9 @@
  * The file is replaced outright when possible. If another process is holding
  * it (a dev server, an end-to-end run), the data is cleared in place instead,
  * so the demo can be reset without stopping anything.
+ *
+ * `--ledger-only` leaves out the demo situations (commitments, set-aside
+ * money, verifications): the plain ledger the end-to-end suite builds on.
  */
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
@@ -47,7 +50,9 @@ async function main() {
     migrateDatabase(handle);
     if (!replaced) clearAllData(handle);
     const today = systemClock(DEMO_TIME_ZONE).today();
-    const result = await seedDemo(handle, today);
+    const result = await seedDemo(handle, today, {
+      situations: !process.argv.includes("--ledger-only"),
+    });
     const how = replaced ? "Reset" : "Reset in place (the file was in use)";
     console.log(
       `${how} ${databasePath()}: ${result.transactions} transactions, ${result.from} → ${result.to}.`,

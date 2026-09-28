@@ -3,6 +3,7 @@ import {
   addDays,
   addMonths,
   calendarDate,
+  dayOfMonth,
   daysInYearMonth,
   firstDayOf,
   toParts,
@@ -12,20 +13,41 @@ import {
 } from "@/domain/calendar-date";
 import { fixedClock } from "@/domain/clock";
 import type { AccountType } from "@/domain/ledger/accounts";
-import { openAccount, recordEntry, refundExpense } from "@/server/commands";
+import {
+  createCommitment,
+  createProtectedMoneyItem,
+  openAccount,
+  payOccurrence,
+  recordEntry,
+  refundExpense,
+  reserveProtectedMoney,
+  skipOccurrence,
+  verifyBalance,
+} from "@/server/commands";
 import type { ServiceContext } from "@/server/context";
 import { uuidV7Generator } from "@/server/ids";
+import { getOccurrences } from "@/server/services/commitment-service";
+import { getAccountBalances } from "@/server/services/ledger-service";
 import { createOwner, getCategories } from "@/server/services/setup-service";
 
 /**
- * Demo seed v1 (roadmap Stage 3): five accounts and about three months of
- * ordinary Bangladeshi household activity, dated relative to `today` so the
+ * The demo: one salaried person in Dhaka, with five accounts and about three
+ * months of ordinary household activity, dated relative to `today` so the
  * demo never looks stale. Deterministic for a given `today` (seeded PRNG).
  *
  * Every row goes through the same commands as the UI, so the seed can never
- * contain a ledger the rules would reject. V1 demo situations (one planted
- * for every V1 signal family) come in Stage 10; the extended 9–12 month
- * history comes in Stage 11.
+ * contain a ledger the rules would reject.
+ *
+ * With `situations` (the default; roadmap Stage 10) the same person also has
+ * what the V1 product exists to show: rent, internet, the phone bill and the
+ * gym as commitments paid through Pay (one month of the gym skipped); money
+ * set aside, covered, short, and on Savings outside Available; verified
+ * balances, one that no longer matches and one recently adjusted; and a
+ * one-off expense that makes this month's spending stand out. Each is dated
+ * from `today`, so every V1 Attention kind is there on any day.
+ *
+ * Without `situations` it is the plain ledger (demo seed v1), on which the
+ * end-to-end suite builds its own states. The 9–12 month history is Stage 11.
  */
 
 export const DEMO_TIME_ZONE = "Asia/Dhaka";
@@ -68,6 +90,34 @@ interface PlannedEntry {
   readonly input: Record<string, string>;
   /** Names an entry that a later refund refers to. */
   readonly label?: string;
+  /** Recorded by paying this commitment occurrence rather than as a plain expense. */
+  readonly occurrenceId?: string;
+}
+
+/**
+ * The first due date of a monthly commitment that must fall due on `target`:
+ * that day in the earliest month from `from` that has it. Later due dates aim
+ * for the anchor's day, so `target` is always one of them.
+ */
+function monthlyAnchor(target: CalendarDate, from: YearMonth): CalendarDate {
+  const day = dayOfMonth(target);
+  for (let month = from; month < yearMonthOf(target); month = addMonths(month, 1)) {
+    if (daysInYearMonth(month) >= day) {
+      const { year, month: m } = toParts(firstDayOf(month));
+      return calendarDate(year, m, day);
+    }
+  }
+  return target;
+}
+
+/** Whole taka from a balance in minor units, rounded down. */
+const taka = (minor: number) => Math.floor(minor / 100);
+
+export interface DemoSeedOptions {
+  /** The PRNG seed. */
+  readonly seed?: number;
+  /** Commitments, set-aside money, verifications and this month's one-off (default true). */
+  readonly situations?: boolean;
 }
 
 export interface DemoSeedResult {
@@ -80,7 +130,7 @@ export interface DemoSeedResult {
 export async function seedDemo(
   handle: DatabaseHandle,
   today: CalendarDate,
-  seed = 2026,
+  { seed = 2026, situations = true }: DemoSeedOptions = {},
 ): Promise<DemoSeedResult> {
   const random = prng(seed);
   let tick = Date.UTC(toParts(today).year, toParts(today).month - 1, toParts(today).day, 3);
@@ -182,17 +232,18 @@ export async function seedDemo(
         description: "Salary",
       },
     });
-    expense(day(2), 30_000, "Housing", "bank", "Rent");
+    // With situations, rent, internet and the phone bill are commitments, paid through Pay.
+    if (!situations) expense(day(2), 30_000, "Housing", "bank", "Rent");
     transfer(day(2), 10_000, "bank", "bkash", "bKash top-up");
     transfer(day(3), 10_000, "bank", "savings", "Monthly savings");
     // bKash charges about 1.85% to cash out (৳37 per ৳2,000).
     transfer(day(3), 5_000, "bkash", "cash", "bKash cash-out", 93);
     expense(day(8), random.amount(1_700, 2_600), "Utilities", "bkash", "DESCO electricity");
     expense(day(10), 1_080, "Utilities", "bkash", "Titas gas");
-    expense(day(12), 499, "Utilities", "bkash", "Grameenphone recharge");
+    if (!situations) expense(day(12), 499, "Utilities", "bkash", "Grameenphone recharge");
     transfer(day(16), 8_000, "bank", "bkash", "bKash top-up");
     transfer(day(17), 4_000, "bkash", "cash", "bKash cash-out", 74);
-    expense(day(25), 1_500, "Utilities", "bkash", "Link3 internet");
+    if (!situations) expense(day(25), 1_500, "Utilities", "bkash", "Link3 internet");
     expense(day(random.between(15, 27)), 850, "Entertainment", "visa", "Star Cineplex");
 
     for (let week = 0; week < 4; week++) {
@@ -243,6 +294,79 @@ export async function seedDemo(
         "Lazz Pharma",
       );
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Situations: commitments, dated from today so each current occurrence is in
+  // the state the story needs — internet overdue, the phone bill due today,
+  // rent due soon, the gym later in the month. Every earlier occurrence was
+  // paid on its due date through Pay, except the gym's last month, skipped.
+  // ---------------------------------------------------------------------------
+  let skippedGym: string | null = null;
+  if (situations) {
+    const commitments = [
+      { name: "Rent", amount: 30_000, category: "Housing", from: "bank", due: addDays(today, 4) },
+      {
+        name: "Link3 internet",
+        amount: 1_500,
+        category: "Utilities",
+        from: "bkash",
+        due: addDays(today, -4),
+      },
+      {
+        name: "Grameenphone bill",
+        amount: 1_200,
+        category: "Utilities",
+        from: "bkash",
+        due: today,
+      },
+      {
+        name: "Gym membership",
+        amount: 3_000,
+        category: "Health",
+        from: "bank",
+        due: addDays(today, 16),
+      },
+    ] as const;
+    const byId = new Map<string, (typeof commitments)[number]>();
+    for (const c of commitments) {
+      const result = await createCommitment(ctx, {
+        name: c.name,
+        categoryId: category(c.category),
+        expectedAmount: String(c.amount),
+        expectedAccountId: account[c.from],
+        frequency: "monthly",
+        interval: "1",
+        anchorOn: monthlyAnchor(c.due, firstMonth),
+      });
+      if (!result.ok) throw new Error(`Demo commitment ${c.name}: ${result.message}`);
+      byId.set(result.value, c);
+    }
+    const past = (await getOccurrences(ctx))
+      .filter((o) => o.dueOn < byId.get(o.commitmentId)!.due && o.dueOn <= today)
+      .sort((a, b) => (a.dueOn < b.dueOn ? -1 : a.dueOn > b.dueOn ? 1 : 0));
+    skippedGym =
+      past.findLast((o) => byId.get(o.commitmentId)!.name === "Gym membership")?.id ?? null;
+    for (const o of past) {
+      if (o.id === skippedGym) continue;
+      const c = byId.get(o.commitmentId)!;
+      plan.push({
+        on: o.dueOn,
+        occurrenceId: o.id,
+        input: {
+          type: "expense",
+          amount: String(c.amount),
+          accountId: account[c.from],
+          occurredOn: o.dueOn,
+        },
+      });
+    }
+
+    // This month's one-off: a dental treatment on the card two days ago (at
+    // the earliest the 1st), which makes this month's spending stand out.
+    const firstOfMonth = firstDayOf(yearMonthOf(today));
+    const treatedOn = addDays(today, -2) < firstOfMonth ? firstOfMonth : addDays(today, -2);
+    expense(treatedOn, 18_500, "Health", "visa", "Square Hospital");
   }
 
   // The card is paid off from the bank each month (a transfer, never an expense).
@@ -297,6 +421,16 @@ export async function seedDemo(
       running[keyOf.get(entry.input.counterAccountId!)!] += amount;
     }
 
+    if (entry.occurrenceId) {
+      const paid = await payOccurrence(ctx, entry.occurrenceId, {
+        accountId: entry.input.accountId,
+        amount: entry.input.amount,
+        occurredOn: entry.on,
+      });
+      if (!paid.ok) throw new Error(`Demo seed could not pay on ${entry.on}: ${paid.message}`);
+      count += 1;
+      continue;
+    }
     const result = await recordEntry(ctx, entry.input);
     if (!result.ok) {
       throw new Error(
@@ -330,5 +464,128 @@ export async function seedDemo(
     }
   }
 
+  if (situations) count += await plantSituations(ctx, today, account, category, skippedGym);
+
   return { ownerId: ctx.ownerId, transactions: count, from, to: today };
+}
+
+/**
+ * What happened after the ledger above, as the person would have done it:
+ * skipping a month of the gym, verifying balances, setting money aside, and
+ * the entries that came after. Returns the number of transactions it adds.
+ */
+async function plantSituations(
+  ctx: ServiceContext,
+  today: CalendarDate,
+  account: Record<AccountKey, string>,
+  category: (name: string) => string,
+  skippedGym: string | null,
+): Promise<number> {
+  const must = <T extends { ok: boolean; message?: string }>(
+    what: string,
+    result: T,
+  ): Extract<T, { ok: true }> => {
+    if (!result.ok) throw new Error(`Demo ${what}: ${result.message}`);
+    return result as Extract<T, { ok: true }>;
+  };
+  const balanceOf = async (key: AccountKey, asOf?: CalendarDate) =>
+    taka((await getAccountBalances(ctx, asOf)).find((b) => b.accountId === account[key])!.balance);
+  const verify = async (key: AccountKey, asOf: CalendarDate, counted: number) =>
+    must(
+      `verification of ${key}`,
+      await verifyBalance(ctx, { accountId: account[key], asOf, countedAmount: String(counted) }),
+    );
+  const spend = async (
+    key: AccountKey,
+    on: CalendarDate,
+    amount: number,
+    name: string,
+    what: string,
+  ) =>
+    must(
+      what,
+      await recordEntry(ctx, {
+        type: "expense",
+        amount: String(amount),
+        accountId: account[key],
+        categoryId: category(name),
+        occurredOn: on,
+        description: what,
+      }),
+    );
+  let added = 0;
+
+  // Away that month: the gym was skipped, not paid.
+  if (skippedGym) must("skip", await skipOccurrence(ctx, skippedGym));
+
+  // Bank, checked against the statement five days ago: it matches.
+  const bankOn = addDays(today, -5);
+  await verify("bank", bankOn, await balanceOf("bank", bankOn));
+
+  // Cash, counted ten days ago and matching then. Money from an old phone sold
+  // two days before that was entered only afterwards, so it no longer matches.
+  const cashOn = addDays(today, -10);
+  await verify("cash", cashOn, await balanceOf("cash", cashOn));
+  must(
+    "late entry",
+    await recordEntry(ctx, {
+      type: "income",
+      amount: "2500",
+      accountId: account.cash,
+      categoryId: category("Other Income"),
+      occurredOn: addDays(cashOn, -2),
+      description: "Sold old phone",
+    }),
+  );
+  added += 1;
+
+  // bKash, checked two days ago: ৳180 less than recorded, an unrecorded
+  // cash-out charge, so an adjustment is posted.
+  const walletOn = addDays(today, -2);
+  const wallet = await balanceOf("bkash", walletOn);
+  const gap = Math.min(180, wallet);
+  await verify("bkash", walletOn, wallet - gap);
+  if (gap > 0) added += 1;
+
+  // Money set aside. An emergency cushion in Bank, fully covered; a laptop
+  // fund mostly in Savings (outside Available) with a little in bKash.
+  const emergency = must(
+    "set-aside item",
+    await createProtectedMoneyItem(ctx, { name: "Emergency cushion" }),
+  ).value!;
+  const cushion = Math.min(20_000, Math.floor((await balanceOf("bank")) / 2 / 1_000) * 1_000);
+  if (cushion > 0) {
+    must(
+      "reserve",
+      await reserveProtectedMoney(ctx, emergency, {
+        accountId: account.bank,
+        amount: String(cushion),
+      }),
+    );
+  }
+  const laptop = must(
+    "set-aside item",
+    await createProtectedMoneyItem(ctx, { name: "New laptop", target: "95000" }),
+  ).value!;
+  must(
+    "reserve",
+    await reserveProtectedMoney(ctx, laptop, { accountId: account.savings, amount: "50000" }),
+  );
+  const inWallet = await balanceOf("bkash");
+  const fund = Math.min(4_000, Math.floor(inWallet / 500) * 500);
+  if (fund > 0) {
+    must(
+      "reserve",
+      await reserveProtectedMoney(ctx, laptop, { accountId: account.bkash, amount: String(fund) }),
+    );
+    // Then a Daraz order from bKash (to the ৳50, like other shopping) left
+    // about ৳1,200 less there than is set aside, never overdrawing it.
+    const order = Math.min(
+      inWallet,
+      Math.ceil((inWallet - fund + Math.min(1_200, fund)) / 50) * 50,
+    );
+    await spend("bkash", today, order, "Shopping", "Daraz");
+    added += 1;
+  }
+  return added;
 }

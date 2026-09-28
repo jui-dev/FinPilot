@@ -13,11 +13,12 @@ import { E2E_DATABASE_PATH } from "../playwright.config";
 /**
  * Stage 9: Attention at "/". Specs share one database, and earlier ones leave
  * shortfalls, commitments and adjustments behind, so this spec starts from the
- * fresh demo — cleared and reseeded in place, as db:reset does while the
- * server holds the file — and restores it afterwards for the specs that
- * follow. The fresh demo has no commitments, set-aside money or verified
- * balances, so the only thing it can raise is a month's spending increase.
- * Every other situation is built here through the UI.
+ * fresh demo ledger — cleared and reseeded in place, as db:reset does while
+ * the server holds the file — and restores it afterwards for the specs that
+ * follow. It is the plain ledger, without the demo situations (as in global
+ * setup): no commitments, set-aside money or verified balances, so the only
+ * thing it can raise is a month's spending increase. Every other situation is
+ * built here through the UI.
  */
 
 async function resetDemoInPlace() {
@@ -25,7 +26,7 @@ async function resetDemoInPlace() {
   try {
     migrateDatabase(handle);
     clearAllData(handle);
-    await seedDemo(handle, systemClock(DEMO_TIME_ZONE).today());
+    await seedDemo(handle, systemClock(DEMO_TIME_ZONE).today(), { situations: false });
   } finally {
     handle.close();
   }

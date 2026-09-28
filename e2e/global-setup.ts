@@ -2,12 +2,16 @@ import { spawnSync } from "node:child_process";
 
 import { E2E_DATABASE_PATH } from "../playwright.config";
 
-/** A fresh demo ledger for every end-to-end run. */
+/**
+ * A fresh demo ledger for every end-to-end run: the plain ledger, without the
+ * demo situations, since the specs build commitments, set-aside money and
+ * verifications themselves, through the UI.
+ */
 export default function globalSetup() {
   // Node + tsx directly (not the npm shim), so this behaves the same on every platform.
   const result = spawnSync(
     process.execPath,
-    ["node_modules/tsx/dist/cli.mjs", "scripts/db-reset.ts"],
+    ["node_modules/tsx/dist/cli.mjs", "scripts/db-reset.ts", "--ledger-only"],
     {
       stdio: "inherit",
       env: { ...process.env, DATABASE_PATH: E2E_DATABASE_PATH },
