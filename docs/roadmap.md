@@ -303,6 +303,7 @@ The two inputs to Available: money already obligated and money deliberately set 
 - **What you can see at the end:** the headline number, fully explainable.
 - **Deferred:** runway / expected income (V1.1).
 - **Commit:** `feat(available): Available with explainable bridge`
+- **Done (2026-09-28):** semantics `a31ef92`, read model `19166ca`, liability rule `a91d99a`, navigation and area `28f339e`, the page with its bridge, bar and evidence `7311d2e` (after the berry `negative` in `b7d7f19`). A-60, A-61, M1-3 and the Available values in M2/M3 are green. The milestone tag `v0.4-available` follows Stage 9.
 
 #### 9 — Signals
 - **Question:** *Of everything true right now, what deserves my attention?* Signals select and rank; the owning feature explains ([domain-model.md §11](domain-model.md)).
@@ -524,5 +525,5 @@ Every item here is **deliberately open, not forgotten**. A stage's plan resolves
 
 **Known gaps, not open questions:**
 
-- The account-setup service accepts `included_in_available = false` for a credit card when a caller passes it (no UI does). **Stage 8 closes it** ([domain-model.md §5](domain-model.md)).
+- ~~The account-setup service accepts `included_in_available = false` for a credit card when a caller passes it (no UI does).~~ **Resolved in Stage 8 (`a91d99a`):** a liability cannot be created with `included_in_available = false`; the rule is enforced at the domain/write boundary. The database CHECK remains deferred ([domain-model.md §5](domain-model.md)).
 - *(Found 2026-09-28, Stage 7.)* An account is archived only at a zero balance, but that is checked only when it is archived. Afterwards, **deleting** a transaction that touched it, or **editing** one so it no longer does, is still allowed (only the new version's accounts are checked), so an archived account can regain a non-zero balance. New entries, restores and reconciliation on it are rejected. Not fixed in Stage 7, which never assumes an archived account holds zero; to be reviewed later. **Not fixed in Stage 8 either (2026-09-28):** Available has no archive filter, so a regained balance counts by the account's flag (always, for a liability) ([domain-model.md §10](domain-model.md)).
