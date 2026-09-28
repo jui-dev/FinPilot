@@ -17,6 +17,7 @@ import {
 } from "@/server/services/ledger-service";
 
 import { getMonthlyCashFlow } from "@/server/services/analysis-service";
+import { getAvailable, type AvailableView } from "@/server/services/available-service";
 import { getItems, reserve } from "@/server/services/protected-money-service";
 import { getAccountVerifications } from "@/server/services/reconciliation-service";
 
@@ -132,6 +133,16 @@ async function spendingByName(s: Scenario, range = SEP_1_22): Promise<Record<str
   );
   return Object.fromEntries([...byId].map(([id, amount]) => [names.get(id) ?? id, amount]));
 }
+
+/** The Available bridge's terms, without its evidence lines. */
+const bridgeTerms = (view: AvailableView) => ({
+  includedAssetBalances: view.includedAssetBalances,
+  liabilityBalances: view.liabilityBalances,
+  balancesInScope: view.balancesInScope,
+  commitmentsDue: view.commitmentsDue,
+  coveredEarmarks: view.coveredEarmarks,
+  available: view.available,
+});
 
 /** Occurrences keyed "Name Mon D" (e.g. "Rent 2026-09-01"), as read on 2026-09-22. */
 async function occurrencesByKey(s: Scenario) {
@@ -523,6 +534,104 @@ const implemented: Record<string, () => Promise<void>> = {
     expect(onLiability).toMatchObject({ ok: false, error: { code: "account_not_asset" } });
     expect(count()).toEqual(before);
     expect(before).toEqual({ entries: 2, earmarks: 2 });
+  },
+
+  "A-60": async () => {
+    const s = await base();
+    const view = await getAvailable(s.ctx);
+    expect(bridgeTerms(view)).toEqual({
+      includedAssetBalances: taka(146_163),
+      liabilityBalances: taka(-6_000),
+      balancesInScope: taka(140_163),
+      commitmentsDue: taka(32_200),
+      coveredEarmarks: taka(20_000),
+      available: taka(87_963),
+    });
+    // 133,000 + 8,963 + 4,200 (accounts in name order).
+    expect(
+      view.accounts
+        .filter((a) => a.accountClass === "asset" && a.counted)
+        .map((a) => [a.name, a.balance]),
+    ).toEqual([
+      ["Bank", taka(133_000)],
+      ["bKash", taka(8_963)],
+      ["Cash", taka(4_200)],
+    ]);
+    // Due on or before Oct 22; Internet Oct 25 and Rent Nov 1 fall outside.
+    expect(view.horizonEnd).toBe("2026-10-22");
+    expect(view.commitments.map((c) => [c.name, c.dueOn, c.expectedAmount])).toEqual([
+      ["Internet", "2026-09-25", taka(1_500)],
+      ["Rent", "2026-10-01", taka(30_000)],
+      ["Streaming", "2026-10-03", taka(700)],
+    ]);
+    // Only the Bank earmark is deducted, at what Bank covers.
+    expect(view.earmarks.filter((e) => e.deducted)).toMatchObject([
+      { itemId: s.items.laptop, accountId: s.accounts.bank, covered: taka(20_000) },
+    ]);
+  },
+
+  "A-61": async () => {
+    const s = await base();
+    const view = await getAvailable(s.ctx);
+    // The Savings balance is outside the pool…
+    expect(view.accounts.find((a) => a.accountId === s.accounts.savings)).toMatchObject({
+      counted: false,
+      balance: taka(90_000),
+    });
+    // …and so is the money set aside on it (Savings covers 90,000 of 100,000).
+    expect(view.earmarks.find((e) => e.accountId === s.accounts.savings)).toMatchObject({
+      covered: taka(90_000),
+      deducted: false,
+    });
+    // No income term: the Oct 1 salary is not expected income, and every
+    // subtracted line is an outflow commitment.
+    expect(new Set(view.commitments.map((c) => c.name))).toEqual(
+      new Set(["Internet", "Rent", "Streaming"]),
+    );
+    expect(view.available).toBe(
+      subtract(subtract(view.balancesInScope, view.commitmentsDue), view.coveredEarmarks),
+    );
+    expect(view.available).toBe(taka(87_963));
+  },
+
+  "M1-3": async () => {
+    const view = await getAvailable((await m1()).ctx);
+    expect(bridgeTerms(view)).toEqual({
+      includedAssetBalances: taka(176_163),
+      liabilityBalances: taka(-6_000),
+      balancesInScope: taka(170_163),
+      commitmentsDue: taka(62_200),
+      coveredEarmarks: taka(20_000),
+      available: taka(87_963),
+    });
+    expect(view.commitments[0]).toMatchObject({
+      name: "Rent",
+      dueOn: "2026-09-01",
+      expectedAmount: taka(30_000),
+      display: "overdue",
+    });
+  },
+
+  "M2-2 (Available)": async () => {
+    const view = await getAvailable((await m2()).ctx);
+    expect(view.includedAssetBalances).toBe(taka(146_163));
+    expect(view.available).toBe(taka(87_963));
+  },
+
+  "M3-1 (Available)": async () => {
+    const view = await getAvailable((await m3()).ctx);
+    expect(bridgeTerms(view)).toMatchObject({
+      includedAssetBalances: taka(146_163),
+      liabilityBalances: taka(-18_000),
+      available: taka(75_963),
+    });
+  },
+
+  "M3-3 (Available)": async () => {
+    const { s } = await m3Corrected();
+    const view = await getAvailable(s.ctx);
+    expect(view.liabilityBalances).toBe(taka(-6_000));
+    expect(view.available).toBe(taka(87_963));
   },
 };
 
