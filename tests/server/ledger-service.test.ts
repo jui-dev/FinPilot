@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { DatabaseHandle } from "@/db/client";
 import { owners, transactions } from "@/db/schema";
 import { monthRange, yearMonth } from "@/domain/calendar-date";
+import type { AccountType } from "@/domain/ledger/accounts";
 import { money } from "@/domain/money";
 import {
   deleteTransaction,
@@ -15,7 +16,7 @@ import {
   restoreTransaction,
   updateTransaction,
 } from "@/server/services/ledger-service";
-import { createAccount, createCategory } from "@/server/services/setup-service";
+import { createAccount, createCategory, getAccounts } from "@/server/services/setup-service";
 
 import { d, errorCode, ok, setupLedger, taka } from "../support/ledger";
 
@@ -73,6 +74,56 @@ describe("accounts and opening balances", () => {
         await createAccount(ctx, { name: "Later", type: "cash", openedOn: d("2026-09-23") }),
       ),
     ).toBe("future_date");
+  });
+
+  it("never stores an excluded liability; asset eligibility is kept as given", async () => {
+    const { ctx, handle: h } = await ledger();
+    const rows = () =>
+      h.sqlite
+        .prepare(
+          "SELECT (SELECT count(*) FROM accounts) AS accounts, (SELECT count(*) FROM transactions) AS transactions",
+        )
+        .get();
+    const before = rows();
+
+    // Rejected atomically: neither the account nor its opening balance is written.
+    const excludedCard = await createAccount(ctx, {
+      name: "Amex",
+      type: "credit_card",
+      openedOn: d("2026-08-01"),
+      openingBalance: taka(-1_000),
+      includedInAvailable: false,
+    });
+    expect(excludedCard).toMatchObject({
+      ok: false,
+      error: {
+        code: "liability_excluded",
+        message: "A credit card always counts toward Available and cannot be excluded.",
+      },
+    });
+    expect(rows()).toEqual(before);
+
+    const create = async (name: string, type: AccountType, includedInAvailable?: boolean) =>
+      ok(await createAccount(ctx, { name, type, openedOn: d("2026-08-01"), includedInAvailable }));
+    const stored = new Set([
+      await create("Amex", "credit_card", true),
+      await create("Mastercard", "credit_card"),
+      await create("Deposit", "savings", false),
+      await create("Salary account", "bank", false),
+      await create("Pension", "savings", true),
+    ]);
+    const flags = Object.fromEntries(
+      (await getAccounts(ctx))
+        .filter((a) => stored.has(a.id))
+        .map((a) => [a.name, a.includedInAvailable]),
+    );
+    expect(flags).toEqual({
+      Amex: true,
+      Mastercard: true,
+      Deposit: false,
+      "Salary account": false,
+      Pension: true,
+    });
   });
 
   it("opening balances are only created with their account", async () => {

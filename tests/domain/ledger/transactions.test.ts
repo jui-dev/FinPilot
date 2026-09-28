@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { calendarDateFromIso } from "@/domain/calendar-date";
-import { accountClass, defaultIncludedInAvailable } from "@/domain/ledger/accounts";
+import {
+  ACCOUNT_TYPES,
+  accountClass,
+  checkAvailableEligibility,
+  defaultIncludedInAvailable,
+} from "@/domain/ledger/accounts";
 import { formatPercent, savingsRate } from "@/domain/ledger/analytics";
 import { compareLedgerOrder } from "@/domain/ledger/ordering";
 import { summarizePosition } from "@/domain/ledger/position";
@@ -39,6 +44,23 @@ describe("accounts", () => {
     expect(defaultIncludedInAvailable("savings")).toBe(false);
     expect(defaultIncludedInAvailable("credit_card")).toBe(true);
     expect(defaultIncludedInAvailable("mobile_wallet")).toBe(true);
+  });
+
+  it("rejects an excluded liability; an asset may be included or excluded", () => {
+    expect(checkAvailableEligibility("credit_card", false)).toMatchObject({
+      code: "liability_excluded",
+    });
+    expect(checkAvailableEligibility("credit_card", true)).toBeUndefined();
+    for (const t of ["cash", "bank", "mobile_wallet", "savings"] as const) {
+      expect(checkAvailableEligibility(t, true)).toBeUndefined();
+      expect(checkAvailableEligibility(t, false)).toBeUndefined();
+    }
+  });
+
+  it("every type's default eligibility satisfies the liability invariant", () => {
+    for (const t of ACCOUNT_TYPES) {
+      expect(checkAvailableEligibility(t, defaultIncludedInAvailable(t))).toBeUndefined();
+    }
   });
 });
 

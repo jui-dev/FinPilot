@@ -11,7 +11,7 @@ import {
 } from "@/db/schema";
 import { accountEntries } from "@/db/views";
 import type { CalendarDate } from "@/domain/calendar-date";
-import type { AccountType } from "@/domain/ledger/accounts";
+import { checkAvailableEligibility, type AccountType } from "@/domain/ledger/accounts";
 import { DEFAULT_CATEGORIES } from "@/domain/ledger/categories";
 import type { CategoryKind } from "@/domain/ledger/transactions";
 import type { IdGenerator } from "@/domain/ids";
@@ -79,6 +79,8 @@ export function insertAccount(
     if (input.name.trim().length === 0) {
       throw new LedgerRuleError("invalid_name", "The account needs a name.");
     }
+    const ineligible = checkAvailableEligibility(input.type, input.includedInAvailable);
+    if (ineligible) throw new LedgerRuleError(ineligible.code, ineligible.message);
     const duplicate = tx
       .select({ id: accounts.id })
       .from(accounts)
