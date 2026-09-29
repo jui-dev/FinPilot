@@ -12,7 +12,7 @@ import { CommitmentsSummary } from "@/components/commitments/commitments-summary
 import { pluralPayments } from "@/components/commitments/describe";
 import { CARD, OccurrenceList, type PendingRow } from "@/components/commitments/occurrence-list";
 import { shortDate } from "@/components/format";
-import { AreaSwitch } from "@/components/shell/area-switch";
+import { AreaSwitch, AVAILABLE_AREA } from "@/components/shell/area-switch";
 import { EmptyState } from "@/components/ui/panel";
 import { materialisedThrough } from "@/domain/commitments/occurrences";
 import { sum } from "@/domain/money";
@@ -62,7 +62,7 @@ export default async function CommitmentsPage() {
 
   const header = (
     <>
-      <AreaSwitch current="/commitments" />
+      <AreaSwitch area={AVAILABLE_AREA} current="/commitments" />
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1">
         <h1 className="text-title font-bold text-navy">Commitments</h1>
         <div className="md:row-span-2">

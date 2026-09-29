@@ -6,6 +6,7 @@ import { Summary } from "@/components/cash-flow/summary";
 import { WhatChanged } from "@/components/cash-flow/what-changed";
 import { WhereItWent } from "@/components/cash-flow/where-it-went";
 import { monthLabel } from "@/components/format";
+import { AreaSwitch, CASH_FLOW_AREA } from "@/components/shell/area-switch";
 import { getMonthlyCashFlow } from "@/server/services/analysis-service";
 
 export const metadata: Metadata = { title: "Cash flow" };
@@ -33,6 +34,7 @@ export default async function CashFlowPage({
 
   return (
     <div className="flex flex-col gap-5 md:gap-6">
+      <AreaSwitch area={CASH_FLOW_AREA} current="/cash-flow" />
       <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0">
           <h1 className="text-title font-bold text-navy">Cash flow</h1>

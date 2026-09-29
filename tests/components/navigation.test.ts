@@ -76,4 +76,12 @@ describe("navigation", () => {
       expect(current(path, PHONE_TABS)).toEqual(["Available"]);
     }
   });
+
+  it("keeps Cash flow current on Trends, the other page of its area, with no phone tab", () => {
+    const cashFlow = PRIMARY_NAV.find((i) => i.href === "/cash-flow")!;
+    expect(navState("/cash-flow", cashFlow)).toBe("page");
+    expect(navState("/trends", cashFlow)).toBe("area");
+    expect(current("/trends", PRIMARY_NAV)).toEqual(["Cash flow"]);
+    expect(current("/trends", PHONE_TABS)).toEqual([]);
+  });
 });

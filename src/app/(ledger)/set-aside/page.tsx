@@ -5,7 +5,7 @@ import { CARD } from "@/components/commitments/occurrence-list";
 import { summary } from "@/components/set-aside/describe";
 import { ArchivedItems, ItemList, type ItemRow } from "@/components/set-aside/item-list";
 import { NewPurposeButton, type Source } from "@/components/set-aside/panels";
-import { AreaSwitch } from "@/components/shell/area-switch";
+import { AreaSwitch, AVAILABLE_AREA } from "@/components/shell/area-switch";
 import { Money } from "@/components/ui/money";
 import { EmptyState } from "@/components/ui/panel";
 import { getItems, getReserveSources } from "@/server/services/protected-money-service";
@@ -59,7 +59,7 @@ export default async function SetAsidePage() {
 
   return (
     <div className="flex flex-col gap-5 md:gap-6">
-      <AreaSwitch current="/set-aside" />
+      <AreaSwitch area={AVAILABLE_AREA} current="/set-aside" />
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1">
         <h1 className="text-title font-bold text-navy">Set aside</h1>
         <div className="md:row-span-2">

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { getRequestContext } from "@/app/_server/context";
 import { AnswerCard } from "@/components/available/answer-card";
 import { Evidence } from "@/components/available/evidence";
-import { AreaSwitch } from "@/components/shell/area-switch";
+import { AreaSwitch, AVAILABLE_AREA } from "@/components/shell/area-switch";
 import { buttonClass } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/panel";
 import { getAvailable } from "@/server/services/available-service";
@@ -23,7 +23,7 @@ export default async function AvailablePage() {
 
   return (
     <div className="flex flex-col gap-5 md:gap-6">
-      <AreaSwitch current="/available" />
+      <AreaSwitch area={AVAILABLE_AREA} current="/available" />
       <header>
         <h1 className="text-title font-bold text-navy">Available</h1>
         <p className="mt-1 text-body text-ink-2">What you can use now, before new income.</p>

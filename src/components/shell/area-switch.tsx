@@ -3,22 +3,39 @@ import Link from "next/link";
 import { cn } from "../ui/cn";
 
 /**
- * The switch between the pages of the Available area (roadmap §8.3, P-2):
- * Available leads, and Commitments and Set aside are its inputs. Links, not
- * tabs: each page has its own URL, and the global Available destination stays
- * current on all three.
+ * A local switch between the pages of one area. Links, not tabs: each page has
+ * its own URL, and the area's global destination stays current on all of them.
  */
-const PAGES = [
-  { href: "/available", label: "Available" },
-  { href: "/commitments", label: "Commitments" },
-  { href: "/set-aside", label: "Set aside" },
-] as const;
+export interface Area {
+  /** Names the switch for assistive technology. */
+  readonly label: string;
+  readonly pages: readonly { readonly href: string; readonly label: string }[];
+}
 
-export function AreaSwitch({ current }: { readonly current: (typeof PAGES)[number]["href"] }) {
+/** The forward-looking area (roadmap §8.3, P-2): Available leads, Commitments and Set aside are its inputs. */
+export const AVAILABLE_AREA: Area = {
+  label: "Available",
+  pages: [
+    { href: "/available", label: "Available" },
+    { href: "/commitments", label: "Commitments" },
+    { href: "/set-aside", label: "Set aside" },
+  ],
+};
+
+/** One month's cash flow, and its shape across complete months (Trends). */
+export const CASH_FLOW_AREA: Area = {
+  label: "Cash flow",
+  pages: [
+    { href: "/cash-flow", label: "Cash flow" },
+    { href: "/trends", label: "Trends" },
+  ],
+};
+
+export function AreaSwitch({ area, current }: { readonly area: Area; readonly current: string }) {
   return (
-    <nav aria-label="Available" className="-mb-1">
+    <nav aria-label={area.label} className="-mb-1">
       <ul className="inline-flex rounded-control border border-line bg-surface-subtle p-0.5">
-        {PAGES.map((page) => {
+        {area.pages.map((page) => {
           const selected = page.href === current;
           return (
             <li key={page.href}>
