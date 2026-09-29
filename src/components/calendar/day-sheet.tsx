@@ -24,7 +24,7 @@ function subscribe(onChange: () => void) {
  *
  * `everywhere` opens it at every width — a side panel from 768px, a bottom
  * sheet below — for a page with no evidence panel beside its days (the
- * Overview's Your month).
+ * Overview's Month at a glance).
  */
 export function DaySheet({
   open,

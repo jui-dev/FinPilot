@@ -1,18 +1,20 @@
 import { compareDates, rangeContains, type CalendarDate } from "@/domain/calendar-date";
 import { WEEKDAYS, weekdayIndex, type Weekday } from "@/domain/calendar-weeks";
 import type { OccurrenceDisplayState } from "@/domain/commitments/occurrences";
-import type { CashFlowSummary } from "@/domain/ledger/cash-flow";
-import type { Money } from "@/domain/money";
+import { accountClass, type AccountType } from "@/domain/ledger/accounts";
+import type { IncomeSource, SpendingComposition, CashFlowSummary } from "@/domain/ledger/cash-flow";
+import { sum, type Money } from "@/domain/money";
 import type { AvailableView } from "@/server/services/available-service";
 import type { CalendarDue, MonthCalendar } from "@/server/services/calendar-service";
 
-import { listOf, spokenForBar, type SegmentKind } from "../available/describe";
+import { spokenForBar, type SegmentKind } from "../available/describe";
 
 /**
  * How the Overview draws what the read models already say. Every amount is
- * the Available read model's or the position's; nothing here adds up money.
- * This only decides whether each visual can say something true, and turns the
- * amounts it is given into the fractions it is drawn with.
+ * a read model's (Available, the Calendar, Cash flow, the balances); nothing
+ * here computes a financial figure. This only decides whether each visual can
+ * say something true, groups what is too small to draw on its own into Other
+ * (a sum of the read model's own amounts), and turns amounts into geometry.
  */
 
 /**
@@ -64,92 +66,8 @@ export function availableRing(view: AvailableView): AvailableRing | null {
   return { pool: bar.pool, arcs };
 }
 
-export interface RailPart {
-  readonly amount: Money;
-  /** Its part of the rail, 0–1. */
-  readonly share: number;
-}
-
 /**
- * What you own, in two parts (docs/design-direction.md §5): the asset balances
- * that count toward Available and those outside it, both from the Available
- * read model, with the outside accounts named. Drawn only when both parts are
- * ≥ 0 and assets are above zero; otherwise a two-part rail cannot be true.
- */
-export type AssetRail = {
-  readonly counts: RailPart;
-  readonly outside: RailPart & { readonly accounts: readonly string[] };
-} | null;
-
-export function assetRail(view: AvailableView, assets: Money): AssetRail {
-  const { includedAssetBalances: counts, excludedAssetBalances: outside } = view;
-  if (counts < 0 || outside < 0 || assets <= 0) return null;
-  return {
-    counts: { amount: counts, share: counts / assets },
-    outside: {
-      amount: outside,
-      share: outside / assets,
-      // Names only, for the words; the amount is the read model's.
-      accounts: view.accounts
-        .filter((a) => a.accountClass === "asset" && !a.counted && a.balance !== 0)
-        .map((a) => a.name),
-    },
-  };
-}
-
-/** "Savings", "Savings and FD", or "Savings and 2 more" when there are more than two. */
-export const shortNames = (names: readonly string[]): string =>
-  names.length <= 2 ? listOf(names) : `${names[0]} and ${names.length - 1} more`;
-
-/**
- * This month as a flow (docs/design-direction.md §5): what came in and what
- * went out on one scale, and the span between them — what was left over, or
- * how much more went out than came in. Only the Cash flow summary's own three
- * amounts are read; the fractions are geometry and are never shown as a rate.
- */
-export type MonthFlow =
-  | {
-      readonly kind: "flow";
-      /** Bar lengths, 0–1 of the longer of the two. */
-      readonly cameIn: number;
-      readonly wentOut: number;
-      /** The span between the bar ends, as fractions; null when they are equal. */
-      readonly gap: {
-        readonly from: number;
-        readonly to: number;
-        /** "left": left over; "over": more went out than came in. */
-        readonly kind: "left" | "over";
-      } | null;
-    }
-  /** Nothing came in or went out yet. */
-  | { readonly kind: "empty" }
-  /** A total below zero (refunds larger than spending) cannot be drawn as a length. */
-  | { readonly kind: "text" };
-
-export function monthFlow(
-  summary: Pick<CashFlowSummary, "income" | "spending" | "leftOver">,
-): MonthFlow {
-  const { income, spending, leftOver } = summary;
-  if (income < 0 || spending < 0) return { kind: "text" };
-  if (income === 0 && spending === 0) return { kind: "empty" };
-  const scale = Math.max(income, spending);
-  const cameIn = income / scale;
-  const wentOut = spending / scale;
-  return {
-    kind: "flow",
-    cameIn,
-    wentOut,
-    gap:
-      leftOver > 0
-        ? { from: wentOut, to: cameIn, kind: "left" }
-        : leftOver < 0
-          ? { from: cameIn, to: wentOut, kind: "over" }
-          : null,
-  };
-}
-
-/**
- * Your month at a glance: the Calendar read model's month reduced to what a
+ * Month at a glance: the Calendar read model's month reduced to what a
  * day can show without figures — today, whether money came in or went out
  * that day (income or spending, as Cash flow counts it; transfers are not
  * money in or out), and whether a payment is still due on it. Nothing is
@@ -222,5 +140,143 @@ export function monthGlance(
     pending: calendar.due.occurrences
       .filter((d) => d.display === "upcoming" || NEEDS_DECISION.has(d.display))
       .sort((a, b) => compareDates(a.dueOn, b.dueOn)),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// This month: the journey
+// ---------------------------------------------------------------------------
+
+/** A place money came from or went to, or several grouped as "N more". */
+export interface JourneyPart {
+  readonly key: string;
+  readonly name: string;
+  readonly amount: Money;
+  /** The category behind it; null for a group. */
+  readonly categoryId: string | null;
+  /** How many categories a group holds; 1 otherwise. */
+  readonly count: number;
+}
+
+export interface JourneyColumn extends JourneyPart {
+  /** Its length against the longest column, 0–1: every column on one scale. */
+  readonly length: number;
+}
+
+/**
+ * This month as a journey: Came in → Went out → Left over, with where the
+ * money went hanging from the way out, each column as long as its amount.
+ * The three figures are Cash flow's; the columns are its category lines above
+ * zero, the smallest grouped. A category whose refunds exceeded its spending
+ * has no length to draw, so it is named instead, never drawn.
+ */
+export type MonthJourney =
+  | { readonly kind: "empty" }
+  | {
+      readonly kind: "journey";
+      readonly sources: readonly JourneyPart[];
+      readonly columns: readonly JourneyColumn[];
+      /** Categories where refunds were larger than spending, by name. */
+      readonly refunded: readonly string[];
+    };
+
+/** Columns drawn on their own before the rest are grouped. */
+export const JOURNEY_COLUMNS = 6;
+/** Sources named on their own under Came in. */
+export const JOURNEY_SOURCES = 2;
+
+function grouped(
+  lines: readonly { readonly categoryId: string; readonly name: string; readonly amount: Money }[],
+  max: number,
+): JourneyPart[] {
+  const part = (l: (typeof lines)[number]): JourneyPart => ({
+    key: l.categoryId,
+    name: l.name,
+    amount: l.amount,
+    categoryId: l.categoryId,
+    count: 1,
+  });
+  // Grouping one line would only rename it.
+  if (lines.length <= max + 1) return lines.map(part);
+  const rest = lines.slice(max);
+  return [
+    ...lines.slice(0, max).map(part),
+    {
+      key: "more",
+      name: `${rest.length} more`,
+      amount: sum(rest.map((l) => l.amount)),
+      categoryId: null,
+      count: rest.length,
+    },
+  ];
+}
+
+export function monthJourney(cashFlow: {
+  readonly summary: Pick<CashFlowSummary, "income" | "spending">;
+  readonly sources: readonly IncomeSource[];
+  readonly composition: Pick<SpendingComposition, "spent" | "refundedMoreThanSpent">;
+}): MonthJourney {
+  const { spent, refundedMoreThanSpent } = cashFlow.composition;
+  const { income, spending } = cashFlow.summary;
+  if (income === 0 && spending === 0 && spent.length === 0 && refundedMoreThanSpent.length === 0)
+    return { kind: "empty" };
+  const parts = grouped(
+    spent.filter((l) => l.amount > 0),
+    JOURNEY_COLUMNS,
+  );
+  const longest = Math.max(...parts.map((p) => p.amount), 0);
+  return {
+    kind: "journey",
+    sources: grouped(cashFlow.sources, JOURNEY_SOURCES),
+    columns: parts.map((p) => ({ ...p, length: longest > 0 ? p.amount / longest : 0 })),
+    refunded: refundedMoreThanSpent.map((l) => l.name),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Where you stand: Net worth = You own − You owe
+// ---------------------------------------------------------------------------
+
+export interface StandingAccount {
+  readonly accountId: string;
+  readonly name: string;
+  readonly type: AccountType;
+  readonly balance: Money;
+  readonly archived: boolean;
+}
+
+export interface OweLine {
+  readonly accountId: string;
+  readonly name: string;
+  /** What is owed, or the credit held, as a magnitude. */
+  readonly amount: Money;
+  readonly kind: "owed" | "credit";
+  readonly archived: boolean;
+}
+
+/**
+ * The accounts behind the position, as evidence: what you own (every open
+ * asset account, and an archived one only while it still holds money),
+ * largest first; and the cards that owe or hold credit, owed first. The
+ * totals are the position's; this only arranges its accounts.
+ */
+export function standing(accounts: readonly StandingAccount[]): {
+  readonly own: readonly StandingAccount[];
+  readonly owe: readonly OweLine[];
+} {
+  return {
+    own: accounts
+      .filter((a) => accountClass(a.type) === "asset" && (!a.archived || a.balance !== 0))
+      .sort((a, b) => b.balance - a.balance),
+    owe: accounts
+      .filter((a) => accountClass(a.type) === "liability" && a.balance !== 0)
+      .map((a) => ({
+        accountId: a.accountId,
+        name: a.name,
+        amount: (a.balance < 0 ? -a.balance : a.balance) as Money,
+        kind: a.balance < 0 ? ("owed" as const) : ("credit" as const),
+        archived: a.archived,
+      }))
+      .sort((a, b) => (a.kind === b.kind ? b.amount - a.amount : a.kind === "owed" ? -1 : 1)),
   };
 }

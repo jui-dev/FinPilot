@@ -85,6 +85,29 @@ export function spendingByCategory(db: AppDatabase, ownerId: string, range: Date
     .all();
 }
 
+/**
+ * Income per income category over a half-open range: the same rows as
+ * incomeTotal, grouped by where the money came from (every income row has a
+ * category). Its sum is incomeTotal.
+ */
+export function incomeByCategory(db: AppDatabase, ownerId: string, range: DateRange) {
+  return db
+    .select({
+      categoryId: activeTransactions.categoryId,
+      incomeMinor: sql<number>`sum(${activeTransactions.amountMinor})`,
+    })
+    .from(activeTransactions)
+    .where(
+      and(
+        eq(activeTransactions.ownerId, ownerId),
+        eq(activeTransactions.type, "income"),
+        inRange(range),
+      ),
+    )
+    .groupBy(activeTransactions.categoryId)
+    .all();
+}
+
 /** Income over a half-open range. */
 export function incomeTotal(db: AppDatabase, ownerId: string, range: DateRange): number {
   const row = db

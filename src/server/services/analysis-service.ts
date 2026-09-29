@@ -6,6 +6,7 @@ import {
   type YearMonth,
 } from "@/domain/calendar-date";
 import {
+  byName,
   cashFlowPeriod,
   selectableMonths,
   spendingComposition,
@@ -13,6 +14,7 @@ import {
   type CashFlowPeriod,
   type CashFlowSummary,
   type CategorySpending,
+  type IncomeSource,
   type SpendingComposition,
 } from "@/domain/ledger/cash-flow";
 import {
@@ -32,6 +34,7 @@ import type { Money } from "@/domain/money";
 import type { ServiceContext } from "@/server/context";
 import {
   getIncome,
+  getIncomeByCategory,
   getSpendingByCategory,
   getTotalSpending,
 } from "@/server/services/ledger-service";
@@ -70,6 +73,8 @@ export interface MonthlyCashFlow {
   /** Every month that can be selected, newest first. */
   readonly months: readonly YearMonth[];
   readonly summary: CashFlowSummary;
+  /** Where the income came from, by income category, largest first; the amounts sum to summary.income. */
+  readonly sources: readonly IncomeSource[];
   readonly composition: SpendingComposition;
   /** How spending changed against the comparison period; null when there is none. */
   readonly change: MonthOverMonth | null;
@@ -98,12 +103,14 @@ export async function getMonthlyCashFlow(
 
   const comparison = comparisonPeriod(period, months);
 
-  const [income, spendingByCategory, previousByCategory, lines] = await Promise.all([
-    getIncome(ctx, period.range),
-    getSpendingByCategory(ctx, period.range),
-    comparison ? getSpendingByCategory(ctx, comparison.range) : null,
-    categoryLines(ctx),
-  ]);
+  const [income, incomeByCategory, spendingByCategory, previousByCategory, lines] =
+    await Promise.all([
+      getIncome(ctx, period.range),
+      getIncomeByCategory(ctx, period.range),
+      getSpendingByCategory(ctx, period.range),
+      comparison ? getSpendingByCategory(ctx, comparison.range) : null,
+      categoryLines(ctx),
+    ]);
   const current = lines(spendingByCategory);
   const composition = spendingComposition(current);
   const change =
@@ -113,10 +120,12 @@ export async function getMonthlyCashFlow(
           explanation: explainSpendingChange(current, lines(previousByCategory)),
         }
       : null;
+  const sources = lines(incomeByCategory).sort((a, b) => b.amount - a.amount || byName(a, b));
   return {
     period,
     months,
     summary: summarizeCashFlow(income, composition.total),
+    sources,
     composition,
     change,
   };

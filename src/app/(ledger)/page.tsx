@@ -11,7 +11,7 @@ import { dayMonth, WEEK_STARTS_ON, weekdayLong } from "@/components/calendar/des
 import { AvailableCard } from "@/components/overview/available-card";
 import { ThisMonth } from "@/components/overview/this-month";
 import { WhereYouStand } from "@/components/overview/where-you-stand";
-import { YourMonth } from "@/components/overview/your-month";
+import { MonthAtAGlance } from "@/components/overview/month-at-a-glance";
 import { ZoneHeader } from "@/components/overview/zone-header";
 import { weekdayOf } from "@/domain/calendar-weeks";
 import { getMonthlyCashFlow } from "@/server/services/analysis-service";
@@ -29,7 +29,7 @@ export const metadata: Metadata = { title: "Overview" };
  * it composes the answers of Available, the Calendar, Attention, Cash flow and
  * the position, and each zone leads to the page that explains it.
  *
- * From 1024px, Available and Your month side by side, one height; Attention
+ * From 1024px, Available and Month at a glance side by side, one height; Attention
  * across the page under them; then This month and Where you stand. Below
  * 1024px the same zones stack in the same order.
  *
@@ -65,7 +65,7 @@ export default async function OverviewPage({
 
       <div className="grid gap-5 lg:grid-cols-2 lg:gap-6">
         <AvailableCard view={available} />
-        <YourMonth calendar={calendar} selected={named} />
+        <MonthAtAGlance calendar={calendar} selected={named} />
       </div>
 
       <section
@@ -113,11 +113,9 @@ export default async function OverviewPage({
         </DaySheet>
       )}
 
-      {/* This month and Where you stand, as they are: side by side from 768px. */}
-      <div className="grid overflow-clip rounded-panel border border-line bg-surface shadow-card md:grid-cols-2 md:divide-x md:divide-line max-md:divide-y max-md:divide-line">
-        <ThisMonth summary={cashFlow.summary} period={cashFlow.period} />
-        <WhereYouStand position={position} available={available} />
-      </div>
+      {/* How money moved, then what it adds up to: each a full-width story of its own. */}
+      <ThisMonth cashFlow={cashFlow} />
+      <WhereYouStand position={position} accounts={available.accounts} />
     </div>
   );
 }

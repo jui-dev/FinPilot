@@ -3,15 +3,9 @@ import { describe, expect, it } from "vitest";
 
 import { spokenForBar } from "@/components/available/describe";
 import { AvailableCard } from "@/components/overview/available-card";
-import {
-  assetRail,
-  availableRing,
-  monthFlow,
-  monthGlance,
-  shortNames,
-} from "@/components/overview/describe";
+import { availableRing, monthGlance, monthJourney, standing } from "@/components/overview/describe";
 import { ThisMonth } from "@/components/overview/this-month";
-import { YourMonth } from "@/components/overview/your-month";
+import { MonthAtAGlance } from "@/components/overview/month-at-a-glance";
 import { WhereYouStand } from "@/components/overview/where-you-stand";
 import {
   availableBridge,
@@ -27,16 +21,17 @@ import {
 import { monthWeeks } from "@/domain/calendar-weeks";
 import type { OccurrenceDisplayState } from "@/domain/commitments/occurrences";
 import type { AccountType } from "@/domain/ledger/accounts";
-import { cashFlowPeriod, summarizeCashFlow } from "@/domain/ledger/cash-flow";
+import { cashFlowPeriod, spendingComposition, summarizeCashFlow } from "@/domain/ledger/cash-flow";
 import { summarizePosition } from "@/domain/ledger/position";
 import { fromMajor } from "@/domain/money";
+import type { MonthlyCashFlow } from "@/server/services/analysis-service";
 import type { AvailableView } from "@/server/services/available-service";
 import type { CalendarDue, MonthCalendar } from "@/server/services/calendar-service";
 
 /**
- * How the Overview reads: the Available card and its ring, Your month, This
- * month, and Where you stand with its asset rail. Views come from
- * the real bridge and position, as the services would build them.
+ * How the Overview reads: the Available card and its ring, Month at a glance,
+ * This month's journey and Where you stand's net worth. Views come from the
+ * real bridge, cash-flow summary and position, as the services would build them.
  */
 const t = fromMajor;
 const TODAY = calendarDateFromIso("2026-09-22");
@@ -79,9 +74,6 @@ function view(accounts: AvailableAccountInput[], occurrences: AvailableOccurrenc
     earmarks: [],
   } satisfies AvailableView;
 }
-const positionOf = (accounts: AvailableAccountInput[]) =>
-  summarizePosition(accounts.map(({ accountId, type, balance }) => ({ accountId, type, balance })));
-
 const card = (v: AvailableView) => renderToStaticMarkup(<AvailableCard view={v} />);
 
 describe("availableRing", () => {
@@ -208,154 +200,235 @@ describe("AvailableCard", () => {
   });
 });
 
-describe("monthFlow", () => {
-  const flow = (income: number, spending: number) =>
-    monthFlow(summarizeCashFlow(t(income), t(spending)));
+// ---------------------------------------------------------------------------
+// This month: the journey
+// ---------------------------------------------------------------------------
 
-  it("draws both on the longer one's scale, with the left-over span between their ends", () => {
-    expect(flow(100_000, 75_000)).toEqual({
-      kind: "flow",
-      cameIn: 1,
-      wentOut: 0.75,
-      gap: { from: 0.75, to: 1, kind: "left" },
-    });
+const cat = (name: string, amount: number) => ({
+  categoryId: `c-${name}`,
+  name,
+  amount: t(amount),
+});
+
+/** A month as the Cash flow read model builds it, from its sources and category lines. */
+function month(
+  sources: [string, number][],
+  lines: [string, number][],
+): Pick<MonthlyCashFlow, "summary" | "period" | "sources" | "composition"> {
+  const composition = spendingComposition(lines.map(([n, a]) => cat(n, a)));
+  const income = t(sources.reduce((n, [, a]) => n + a, 0));
+  return {
+    period: cashFlowPeriod("2026-09" as never, TODAY),
+    summary: summarizeCashFlow(income, composition.total),
+    sources: sources.map(([n, a]) => cat(n, a)),
+    composition,
+  };
+}
+
+const SPENT: [string, number][] = [
+  ["Housing", 30_000],
+  ["Groceries", 14_200],
+  ["Transport", 9_800],
+  ["Health", 6_000],
+  ["Shopping", 3_000],
+  ["Fees", 400],
+];
+
+describe("monthJourney", () => {
+  it("hangs the six largest categories, the rest as N more, each on one scale", () => {
+    const journey = monthJourney(
+      month(
+        [
+          ["Salary", 1_05_000],
+          ["Other Income", 2_500],
+        ],
+        [...SPENT, ["Utilities", 5_270], ["Internet", 3_090], ["Entertainment", 850]],
+      ),
+    );
+    if (journey.kind !== "journey") throw new Error(journey.kind);
+    expect(journey.columns.map((c) => [c.name, c.amount])).toEqual([
+      ["Housing", t(30_000)],
+      ["Groceries", t(14_200)],
+      ["Transport", t(9_800)],
+      ["Health", t(6_000)],
+      ["Utilities", t(5_270)],
+      ["Internet", t(3_090)],
+      ["3 more", t(3_000 + 850 + 400)],
+    ]);
+    expect(journey.columns.at(-1)).toMatchObject({ categoryId: null, count: 3 });
+    expect(journey.columns[0]!.length).toBe(1);
+    expect(journey.columns[1]!.length).toBeCloseTo(14_200 / 30_000);
+    expect(journey.sources.map((s) => s.name)).toEqual(["Salary", "Other Income"]);
   });
 
-  it("marks what went out past what came in, including before anything came in", () => {
-    expect(flow(50_000, 100_000)).toEqual({
-      kind: "flow",
-      cameIn: 0.5,
-      wentOut: 1,
-      gap: { from: 0.5, to: 1, kind: "over" },
-    });
-    expect(flow(0, 4_000)).toEqual({
-      kind: "flow",
-      cameIn: 0,
-      wentOut: 1,
-      gap: { from: 0, to: 1, kind: "over" },
-    });
+  it("never groups a single category, and never gives a refunded category a column", () => {
+    const seven = monthJourney(month([["Salary", 1_00_000]], [...SPENT, ["Utilities", 5_270]]));
+    if (seven.kind !== "journey") throw new Error(seven.kind);
+    expect(seven.columns.some((c) => c.categoryId === null)).toBe(false);
+    const refunded = monthJourney(
+      month(
+        [["Salary", 10_000]],
+        [
+          ["Housing", 5_000],
+          ["Shopping", -2_000],
+        ],
+      ),
+    );
+    expect(refunded).toMatchObject({ kind: "journey", refunded: ["Shopping"] });
+    if (refunded.kind !== "journey") throw new Error(refunded.kind);
+    expect(refunded.columns.map((c) => c.name)).toEqual(["Housing"]);
   });
 
-  it("has no span when they are equal, nothing to draw before anything moves, and no bars below zero", () => {
-    expect(flow(10_000, 10_000)).toMatchObject({ kind: "flow", gap: null });
-    expect(flow(0, 0)).toEqual({ kind: "empty" });
-    // Refunds larger than spending: a total below zero is not a length.
-    expect(flow(10_000, -2_000)).toEqual({ kind: "text" });
+  it("has nothing to tell before anything moves", () => {
+    expect(monthJourney(month([], []))).toEqual({ kind: "empty" });
   });
 });
 
 describe("ThisMonth", () => {
-  const period = cashFlowPeriod("2026-09" as never, TODAY);
-  const month = (income: number, spending: number) =>
-    renderToStaticMarkup(
-      <ThisMonth summary={summarizeCashFlow(t(income), t(spending))} period={period} />,
+  it("tells the journey with exact figures, each part leading to its rows, and no rate", () => {
+    const html = renderToStaticMarkup(
+      <ThisMonth
+        cashFlow={month(
+          [
+            ["Salary", 1_00_000],
+            ["Other Income", 7_500],
+          ],
+          SPENT,
+        )}
+      />,
     );
-
-  it("draws what came in and went out, and names what was left over", () => {
-    const html = month(95_000, 66_487);
     const words = text(html);
-    expect(words).toContain("This month 1–22 Sep 2026, so far");
-    expect(words).toContain("Came in ৳ 95,000");
-    expect(html).toContain('aria-label="Came in, 1–22 Sep 2026: ৳95,000"');
-    expect(words).toContain("Went out ৳ 66,487");
-    expect(html).toContain('aria-label="Went out, 1–22 Sep 2026: ৳66,487"');
-    expect(words).toContain("Left over ৳ 28,513");
-    expect(html).toContain('href="/activity?type=income&amp;from=2026-09-01&amp;to=2026-09-22"');
-    expect(html).toContain('href="/activity?from=2026-09-01&amp;to=2026-09-22"');
-    expect(html).toContain('href="/cash-flow"');
-    // Came in splits into what went out again and what was left over (navy, as the figure).
-    expect(html).toMatch(/bg-tide" style="width:69\.9\d*%/);
-    expect(html).toMatch(/bg-navy" style="width:30\.0\d*%/);
-    // No rate, percentage or comparison in the words.
-    expect(words).not.toMatch(/%|Savings rate|vs /);
+    expect(words).toMatch(/Came in ৳ 1,07,500 Salary ৳ 1,00,000 · Other Income ৳ 7,500/);
+    expect(words).toMatch(/Went out ৳ 63,400 Net of refunds Left over ৳ 44,100/);
+    expect(html).toContain('aria-label="Came in, 1–22 Sep 2026: ৳1,07,500"');
+    expect(html).toContain('data-testid="month-journey"');
+    expect(html).toContain('data-testid="month-journey-down"');
+    expect(html).toContain('aria-label="Housing: ৳30,000"');
+    expect(html).toContain("category=c-Housing");
+    expect(html).toContain("category=c-Salary&amp;type=income");
+    expect(words).not.toMatch(/%|rate/i);
   });
 
-  it("writes a month that spent more with a true minus, and links nothing that is zero", () => {
-    const html = month(0, 4_000);
-    expect(text(html)).toContain("Left over − ৳ 4,000");
-    expect(html).not.toContain("type=income");
-    // What went out past what came in is outlined, never filled in berry.
-    expect(html).toContain("border-ocean");
-    expect(html).not.toMatch(/negative/);
-  });
-
-  it("says so when nothing has moved, and draws no bars below zero", () => {
-    expect(text(month(0, 0))).toContain("Nothing has come in or gone out yet this month.");
-    expect(month(10_000, -2_000)).not.toContain("bg-ocean");
-  });
-});
-
-describe("WhereYouStand", () => {
-  const stand = (accounts: AvailableAccountInput[]) =>
-    renderToStaticMarkup(
-      <WhereYouStand position={positionOf(accounts)} available={view(accounts)} />,
+  it("when more went out: a true minus on Left over and an outlined way, never berry", () => {
+    const html = renderToStaticMarkup(
+      <ThisMonth cashFlow={month([["Salary", 50_000]], [["Housing", 80_000]])} />,
     );
-
-  it("shows net worth, what you own split by the rail, and what you owe on its own line", () => {
-    const html = stand([
-      acct("Bank", "bank", 100_000),
-      acct("Savings", "savings", 60_000),
-      acct("Visa", "credit_card", -6_000),
-    ]);
-    const words = text(html);
-    expect(words).toContain("Net worth ৳ 1,54,000");
-    expect(words).toContain("You own ৳ 1,60,000");
-    expect(words).toContain("Counts toward Available ৳ 1,00,000");
-    expect(words).toContain("Outside Available ৳ 60,000 · Savings");
-    expect(words).toContain("You owe on cards ৳ 6,000");
-    expect(words).not.toContain("Credit on cards");
-    expect(html).toContain('data-testid="asset-rail"');
-    expect(html).toContain('href="/accounts"');
+    expect(text(html)).toContain("Left over − ৳ 30,000");
+    expect(html).toContain("border-dashed border-ocean");
+    expect(html).not.toContain("negative");
   });
 
-  it("reads a card holding credit as Credit on cards, never as owed", () => {
-    const words = text(stand([acct("Bank", "bank", 10_000), acct("Visa", "credit_card", 500)]));
-    expect(words).toContain("Credit on cards ৳ 500");
-    expect(words).not.toContain("owe");
-  });
-
-  it("says nothing is outside Available when everything counts", () => {
-    const words = text(stand([acct("Bank", "bank", 10_000), acct("Visa", "credit_card", 0)]));
-    expect(words).toContain("You owe on cards ৳ 0");
-    expect(words).toContain("Outside Available Nothing");
-  });
-
-  it("draws no rail when a part is negative or nothing is owned", () => {
-    for (const accounts of [
-      [acct("Bank", "bank", -2_000), acct("Savings", "savings", 5_000)],
-      [acct("Bank", "bank", 0)],
-    ]) {
-      const html = stand(accounts);
-      expect(html).not.toContain("asset-rail");
-      expect(text(html)).not.toContain("Counts toward Available");
-    }
-  });
-
-  it("shortens a long list of accounts outside Available", () => {
-    expect(shortNames(["Savings"])).toBe("Savings");
-    expect(shortNames(["Savings", "FD"])).toBe("Savings and FD");
-    expect(shortNames(["Savings", "FD", "Locker"])).toBe("Savings and 2 more");
-  });
-});
-
-describe("assetRail", () => {
-  it("takes both parts from the read model, and names the accounts outside Available", () => {
-    const accounts = [
-      acct("Bank", "bank", 75_000),
-      acct("Savings", "savings", 20_000),
-      acct("Locker", "cash", 5_000, false),
-      acct("Empty", "savings", 0),
-    ];
-    const v = view(accounts);
-    expect(assetRail(v, positionOf(accounts).assets)).toEqual({
-      counts: { amount: t(75_000), share: 0.75 },
-      outside: { amount: t(25_000), share: 0.25, accounts: ["Savings", "Locker"] },
-    });
+  it("names refunded categories instead of drawing them, and says when nothing moved", () => {
+    const refunds = text(
+      renderToStaticMarkup(
+        <ThisMonth
+          cashFlow={month(
+            [["Salary", 10_000]],
+            [
+              ["Housing", 5_000],
+              ["Shopping", -2_000],
+            ],
+          )}
+        />,
+      ),
+    );
+    expect(refunds).toContain(
+      "Refunds in Shopping were larger than what was spent there, so it has no column.",
+    );
+    const empty = renderToStaticMarkup(<ThisMonth cashFlow={month([], [])} />);
+    expect(text(empty)).toContain("Nothing has come in or gone out yet this month.");
+    expect(empty).not.toContain("month-journey");
   });
 });
 
 // ---------------------------------------------------------------------------
-// Your month
+// Where you stand: Net worth = You own − You owe
+// ---------------------------------------------------------------------------
+
+const held = (id: string, type: AccountType, balance: number, archived = false) => ({
+  accountId: id,
+  name: id,
+  type,
+  balance: t(balance),
+  archived,
+});
+
+describe("standing", () => {
+  it("lists what you own largest first, and an archived account only while it holds money", () => {
+    const { own, owe } = standing([
+      held("Bank", "bank", 1_47_180),
+      held("Savings", "savings", 4_05_000),
+      held("Old wallet", "mobile_wallet", 0, true),
+      held("Old cash", "cash", 300, true),
+      held("Cash", "cash", 0),
+      held("Visa", "credit_card", -35_290),
+      held("Old card", "credit_card", 0),
+    ]);
+    expect(own.map((a) => a.name)).toEqual(["Savings", "Bank", "Old cash", "Cash"]);
+    expect(owe).toEqual([
+      { accountId: "Visa", name: "Visa", amount: t(35_290), kind: "owed", archived: false },
+    ]);
+  });
+
+  it("puts what is owed before a card's credit", () => {
+    const { owe } = standing([
+      held("Amex", "credit_card", 2_000),
+      held("Visa", "credit_card", -9_000),
+    ]);
+    expect(owe.map((l) => [l.name, l.kind])).toEqual([
+      ["Visa", "owed"],
+      ["Amex", "credit"],
+    ]);
+  });
+});
+
+describe("WhereYouStand", () => {
+  const render = (accounts: ReturnType<typeof held>[]) =>
+    renderToStaticMarkup(
+      <WhereYouStand
+        position={summarizePosition(
+          accounts.map(({ accountId, type, balance }) => ({ accountId, type, balance })),
+        )}
+        accounts={accounts}
+      />,
+    );
+
+  it("leads with net worth, then You own − You owe = Net worth, then the accounts", () => {
+    const html = render([
+      held("Savings", "savings", 4_05_000),
+      held("Bank", "bank", 1_47_180),
+      held("Visa", "credit_card", -35_290),
+    ]);
+    const words = text(html);
+    // Net worth first; then the statement: You own (its accounts) − You owe (its cards) = Net worth.
+    expect(words).toMatch(/^ ?Where you stand Your accounts Net worth ৳ 5,16,890 /);
+    expect(words).toContain(
+      "You own ৳ 5,52,180 Savings ৳ 4,05,000 Bank ৳ 1,47,180 − You owe ৳ 35,290 Visa ৳ 35,290 = Net worth ৳ 5,16,890",
+    );
+    // What you owe is berry, restrained: a soft surface with a berry figure.
+    expect(html).toContain("bg-negative-soft");
+    expect(html).toContain("text-negative");
+    // Liquidity is Available's question.
+    expect(words).not.toMatch(/Available/);
+  });
+
+  it("keeps a negative net worth navy with a true minus, and reads a card's credit as credit", () => {
+    const under = render([held("Cash", "cash", 1_000), held("Visa", "credit_card", -6_000)]);
+    expect(text(under)).toContain("Net worth − ৳ 5,000");
+    const credit = render([held("Bank", "bank", 10_000), held("Visa", "credit_card", 500)]);
+    expect(text(credit)).toMatch(/\+ Credit on cards ৳ 500/);
+    expect(text(credit)).toContain("Net worth ৳ 10,500");
+    expect(text(credit)).toMatch(/Visa \+ ?৳ 500 credit/);
+    expect(credit).not.toContain("bg-negative-soft");
+  });
+
+  it("says nothing is owed when no card owes", () => {
+    expect(text(render([held("Bank", "bank", 10_000)]))).toContain("Nothing is owed on cards.");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Month at a glance
 // ---------------------------------------------------------------------------
 
 const SEPT = "2026-09" as YearMonth;
@@ -452,13 +525,13 @@ describe("monthGlance", () => {
   });
 });
 
-describe("YourMonth", () => {
+describe("MonthAtAGlance", () => {
   it("shows the month at a glance, what is still due, the next payment, and the way to the Calendar", () => {
     const html = renderToStaticMarkup(
-      <YourMonth calendar={september({ "2026-09-03": [0, 450] }, DUES)} />,
+      <MonthAtAGlance calendar={september({ "2026-09-03": [0, 450] }, DUES)} />,
     );
     const words = text(html);
-    expect(words).toContain("Your month September 2026");
+    expect(words).toContain("Month at a glance September 2026");
     expect(html).toContain('href="/calendar?month=2026-09"');
     expect(words).toMatch(/Still due this month ৳ 26,500 · 2 payments/);
     expect(words).toMatch(/Next: Rent\s?, 28 Sep/);
@@ -475,17 +548,19 @@ describe("YourMonth", () => {
   });
 
   it("says so when nothing is still due", () => {
-    const words = text(renderToStaticMarkup(<YourMonth calendar={september({}, [DUES[1]!])} />));
+    const words = text(
+      renderToStaticMarkup(<MonthAtAGlance calendar={september({}, [DUES[1]!])} />),
+    );
     expect(words).toContain("Nothing still due this month");
     expect(words).toContain("No payment is still due this month.");
     expect(words).not.toContain("Next:");
   });
 });
 
-describe("YourMonth days", () => {
+describe("MonthAtAGlance days", () => {
   const month = (selected: CalendarDate | null) =>
     renderToStaticMarkup(
-      <YourMonth calendar={september({ "2026-09-03": [0, 450] }, DUES)} selected={selected} />,
+      <MonthAtAGlance calendar={september({ "2026-09-03": [0, 450] }, DUES)} selected={selected} />,
     );
 
   it("makes every day of the month a link that opens it on the Overview", () => {

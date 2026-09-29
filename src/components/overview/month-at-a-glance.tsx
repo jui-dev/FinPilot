@@ -28,7 +28,7 @@ import { ZoneHeader, ZoneLink } from "./zone-header";
  * Phones and the spread stack the grid over what is still due; at 768px, where
  * the card is the page's width, they sit side by side.
  */
-export function YourMonth({
+export function MonthAtAGlance({
   calendar,
   selected = null,
   className,
@@ -48,7 +48,7 @@ export function YourMonth({
 
   return (
     <section
-      aria-labelledby="overview-your-month"
+      aria-labelledby="overview-glance"
       className={cn(
         "flex flex-col rounded-panel border border-line bg-surface p-5 shadow-card",
         "md:grid md:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] md:gap-x-10 md:p-7",
@@ -58,8 +58,8 @@ export function YourMonth({
     >
       <div className="md:col-span-2">
         <ZoneHeader
-          id="overview-your-month"
-          title="Your month"
+          id="overview-glance"
+          title="Month at a glance"
           note={monthLabel(month)}
           action={<ZoneLink href={calendarHref(month)}>Open Calendar</ZoneLink>}
         />

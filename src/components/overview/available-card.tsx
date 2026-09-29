@@ -20,7 +20,7 @@ import { availableRing, type AvailableRing, type RingArc, type RingKind } from "
  * spoken-for bar does, with a compact legend. Every amount is the Available
  * read model's; the ring and legend never add anything up.
  *
- * Phones and the spread (from 1024px, beside Your month) stack the answer over
+ * Phones and the spread (from 1024px, beside Month at a glance) stack the answer over
  * the ring; at 768px the card is the page's width and the ring sits beside it.
  */
 export function AvailableCard({

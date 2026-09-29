@@ -96,6 +96,13 @@ export function summarizeCashFlow(income: Money, spending: Money): CashFlowSumma
 // Composition
 // ---------------------------------------------------------------------------
 
+/** Income from one income category in the period: where money came from. Always > 0. */
+export interface IncomeSource {
+  readonly categoryId: string;
+  readonly name: string;
+  readonly amount: Money;
+}
+
 export interface CategorySpending {
   readonly categoryId: string;
   readonly name: string;

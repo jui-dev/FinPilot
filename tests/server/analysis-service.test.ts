@@ -176,6 +176,31 @@ describe("getMonthlyCashFlow", () => {
     expect(flow.composition.total).toBe(await getTotalSpending(ctx, flow.period.range));
   });
 
+  it("names where the income came from, largest first, summing to what came in", async () => {
+    const { ctx, record, bank, bkash, category } = await ledger();
+    await record({
+      type: "income",
+      amount: "7500",
+      accountId: bkash,
+      categoryId: category("Other Income"),
+      occurredOn: "2026-09-08",
+    });
+    await record({
+      type: "income",
+      amount: "5000",
+      accountId: bank,
+      categoryId: category("Salary"),
+      occurredOn: "2026-09-20",
+    });
+    const flow = await getMonthlyCashFlow(ctx);
+    expect(flow.sources.map((s) => [s.name, s.amount])).toEqual([
+      ["Salary", taka(65_000)],
+      ["Other Income", taka(7_500)],
+    ]);
+    // Only income rows: transfers, refunds, opening balances and the adjustment are not sources.
+    expect(flow.sources.reduce((n, s) => n + s.amount, 0)).toBe(flow.summary.income);
+  });
+
   it("leaves out soft-deleted transactions", async () => {
     const { ctx, cash, expense } = await ledger();
     const [dinner] = await expense("900", cash, "Food & Dining", "2026-09-20");

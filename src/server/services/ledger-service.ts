@@ -132,6 +132,18 @@ export async function getTotalSpending(ctx: ServiceContext, range: DateRange): P
   return sum((await getSpendingByCategory(ctx, range)).values());
 }
 
+/** Income per income category id over a half-open range; the values sum to getIncome. */
+export async function getIncomeByCategory(
+  ctx: ServiceContext,
+  range: DateRange,
+): Promise<Map<string, Money>> {
+  return new Map(
+    queries
+      .incomeByCategory(ctx.db, ctx.ownerId, range)
+      .map((r) => [r.categoryId ?? "", money(r.incomeMinor)] as const),
+  );
+}
+
 export async function getIncome(ctx: ServiceContext, range: DateRange): Promise<Money> {
   return money(queries.incomeTotal(ctx.db, ctx.ownerId, range));
 }

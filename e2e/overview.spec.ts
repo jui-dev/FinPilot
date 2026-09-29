@@ -140,7 +140,7 @@ test("the logo leads to the Overview: five zones in order, and Overview is curre
   await expect(page).toHaveTitle(/^Overview · FinPilot$/);
   await expect(page.getByRole("heading", { level: 2 })).toHaveText([
     "Available now",
-    "Your month",
+    "Month at a glance",
     "Attention",
     "This month",
     "Where you stand",
@@ -190,9 +190,9 @@ test("Available leads, with its ring, and opens the Available page", async ({ pa
   await expect(page).toHaveURL(/\/available$/);
 });
 
-test("Your month shows the month at a glance and opens the Calendar", async ({ page }) => {
+test("Month at a glance shows the month at a glance and opens the Calendar", async ({ page }) => {
   await page.goto("/");
-  const month = page.getByRole("region", { name: "Your month" });
+  const month = page.getByRole("region", { name: "Month at a glance" });
   await expect(month.getByTestId("month-glance")).toBeVisible();
   await expect(month).toContainText(/Today is \w+day, \d{1,2} \w{3}\./);
   // This month owns Came in and Went out; no day shows an amount.
@@ -202,16 +202,14 @@ test("Your month shows the month at a glance and opens the Calendar", async ({ p
   await expect(page).toHaveURL(/\/calendar\?month=\d{4}-\d{2}$/);
 });
 
-test("a day in Your month opens its evidence in a panel; Escape returns to the day", async ({
+test("a day in Month at a glance opens its evidence in a panel; Escape returns to the day", async ({
   page,
 }) => {
   await page.goto("/");
-  const month = page.getByRole("region", { name: "Your month" });
+  const month = page.getByRole("region", { name: "Month at a glance" });
   // By CSS, not role: while the panel is open, the page behind it is hidden from the
   // accessibility tree (a modal), and the day's selected state is still checked there.
-  const today = page.locator(
-    'section[aria-labelledby="overview-your-month"] a[aria-current="date"]',
-  );
+  const today = page.locator('section[aria-labelledby="overview-glance"] a[aria-current="date"]');
   // Every day of the month is a link, named by its date.
   const [year, monthNumber] = dhakaDate().split("-").map(Number);
   const daysInMonth = new Date(Date.UTC(year!, monthNumber!, 0)).getUTCDate();
@@ -253,10 +251,10 @@ test("a day in Your month opens its evidence in a panel; Escape returns to the d
   );
 });
 
-test("on a phone, a day in Your month opens as a bottom sheet", async ({ page }) => {
+test("on a phone, a day in Month at a glance opens as a bottom sheet", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  const month = page.getByRole("region", { name: "Your month" });
+  const month = page.getByRole("region", { name: "Month at a glance" });
   await month.locator('a[aria-current="date"]').click();
   const sheet = page.getByRole("dialog");
   await expect(sheet).toBeVisible();
@@ -278,16 +276,31 @@ test("This month and Where you stand lead to the rows and pages behind them", as
   await expect(month).toContainText("so far");
   await expect(month).toContainText("Left over");
   await expect(month).not.toContainText("Savings rate");
-  await month.getByRole("link", { name: /^Came in, / }).click();
+  // The journey: where it came from and where it went, each leading to its rows.
+  await expect(month.getByTestId("month-journey")).toBeVisible();
+  await expect(
+    month.getByRole("link", { name: /more categories: ৳|^[^,]+: ৳/ }).first(),
+  ).toBeVisible();
+  await month.getByRole("link", { name: /^Salary: ৳/ }).click();
+  await expect(page).toHaveURL(/\/activity\?category=[^&]+&type=income&from=\d{4}-\d{2}-01&to=/);
+
+  await page.goto("/");
+  await page
+    .getByRole("region", { name: "This month" })
+    .getByRole("link", { name: /^Came in, / })
+    .click();
   await expect(page).toHaveURL(/\/activity\?type=income&from=\d{4}-\d{2}-01&to=/);
 
   await page.goto("/");
   const stand = page.getByRole("region", { name: "Where you stand" });
-  await expect(stand).toContainText("Net worth");
-  // The demo's Visa owes; Savings is outside Available.
-  await expect(stand).toContainText(/You owe on cards\s*৳[\d,]+/);
-  await expect(stand).toContainText(/Outside Available\s*৳[\d,]+ · Savings/);
-  await expect(stand.getByTestId("asset-rail")).toBeVisible();
+  // Net worth first; then the statement, You own (its accounts) − You owe (its cards) = Net worth.
+  // The demo's Visa owes.
+  await expect(stand).toContainText(/^Where you stand.*Net worth\s*৳[\d,]+/);
+  await expect(stand).toContainText(
+    /You own\s*৳[\d,]+.*Savings.*−\s*You owe\s*৳[\d,]+\s*Visa card\s*৳[\d,]+\s*=\s*Net worth\s*৳[\d,]+/,
+  );
+  // Liquidity is Available's question.
+  await expect(stand).not.toContainText("Available");
   await stand.getByRole("link", { name: "Your accounts" }).click();
   await expect(page).toHaveURL(/\/accounts$/);
 });
@@ -468,7 +481,13 @@ for (const width of [390, 768, 820, 1024, 1280, 1920]) {
 
     // The DOM order is the reading order; on screen, each zone starts after
     // the one before it (below it, or to its right in the spread from 1024px).
-    const zones = ["Available now", "Your month", "Attention", "This month", "Where you stand"];
+    const zones = [
+      "Available now",
+      "Month at a glance",
+      "Attention",
+      "This month",
+      "Where you stand",
+    ];
     await expect(page.getByRole("heading", { level: 2 })).toHaveText(zones);
     const boxes = await Promise.all(
       zones.map((name) => page.getByRole("heading", { level: 2, name }).boundingBox()),
@@ -478,12 +497,12 @@ for (const width of [390, 768, 820, 1024, 1280, 1920]) {
       expect(next.y > prev.y || next.x > prev.x, `${zones[i]} after ${zones[i - 1]}`).toBe(true);
     }
     const monthBeside = boxes[1]!.x > boxes[0]!.x + 100;
-    expect(monthBeside, "Your month beside Available only from 1024px").toBe(width >= 1024);
+    expect(monthBeside, "Month at a glance beside Available only from 1024px").toBe(width >= 1024);
     if (width >= 1024) {
-      // The top row: Available and Your month share one top edge and one height.
+      // The top row: Available and Month at a glance share one top edge and one height.
       const [left, right] = await Promise.all([
         band.boundingBox(),
-        page.getByRole("region", { name: "Your month" }).boundingBox(),
+        page.getByRole("region", { name: "Month at a glance" }).boundingBox(),
       ]);
       expect(Math.round(left!.y)).toBe(Math.round(right!.y));
       expect(Math.round(left!.height)).toBe(Math.round(right!.height));
@@ -503,11 +522,20 @@ for (const width of [390, 768, 820, 1024, 1280, 1920]) {
       }
     }
 
-    // The asset rail and its words stay inside the card.
+    // Net worth and the month's journey stay inside their cards.
     const stand = page.getByRole("region", { name: "Where you stand" });
-    const standBox = await stand.boundingBox();
-    const rail = await stand.getByTestId("asset-rail").boundingBox();
-    expect(rail!.x + rail!.width).toBeLessThanOrEqual(standBox!.x + standBox!.width);
+    const standBox = (await stand.boundingBox())!;
+    const worth = (await stand
+      .getByText(/^৳[\d,]+$/)
+      .first()
+      .boundingBox())!;
+    expect(worth.x + worth.width).toBeLessThanOrEqual(standBox.x + standBox.width);
+    const story = page.getByRole("region", { name: "This month" });
+    const storyBox = (await story.boundingBox())!;
+    const journey = (await story
+      .getByTestId(width >= 768 ? "month-journey" : "month-journey-down")
+      .boundingBox())!;
+    expect(journey.x + journey.width).toBeLessThanOrEqual(storyBox.x + storyBox.width);
 
     // Five destinations on desktop, four phone tabs around the +; Overview is current.
     await expectCurrent(page, width, "Overview");
