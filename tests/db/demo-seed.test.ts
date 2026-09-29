@@ -1,13 +1,14 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 
 import type { DatabaseHandle } from "@/db/client";
 import { seedDemo, type DemoSeedOptions } from "@/db/seed/demo-seed";
-import { calendarDateFromIso } from "@/domain/calendar-date";
+import { addMonths, calendarDateFromIso, firstDayOf, yearMonthOf } from "@/domain/calendar-date";
 import { fixedClock } from "@/domain/clock";
-import { fromMajor } from "@/domain/money";
+import { fromMajor, money, negate, sum } from "@/domain/money";
 import { ATTENTION_KINDS } from "@/domain/signals/signals";
 import type { ServiceContext } from "@/server/context";
 import { uuidV7Generator } from "@/server/ids";
+import { getTrends } from "@/server/services/analysis-service";
 import { getAttention } from "@/server/services/attention-service";
 import { getAvailable } from "@/server/services/available-service";
 import { getOccurrences } from "@/server/services/commitment-service";
@@ -18,12 +19,12 @@ import { getAccountVerifications } from "@/server/services/reconciliation-servic
 import { freshDatabase } from "../support/database";
 
 let handles: DatabaseHandle[] = [];
-afterEach(() => {
+afterAll(() => {
   for (const h of handles) h.close();
   handles = [];
 });
 
-async function seeded(today: string, options?: DemoSeedOptions) {
+async function seedFresh(today: string, options?: DemoSeedOptions) {
   const handle = freshDatabase();
   handles.push(handle);
   const result = await seedDemo(handle, calendarDateFromIso(today), options);
@@ -35,6 +36,17 @@ async function seeded(today: string, options?: DemoSeedOptions) {
     now: () => new Date(),
   };
   return { result, ctx };
+}
+
+/**
+ * A year of history takes a moment to seed, and every test here only reads,
+ * so each day (and set of options) is seeded once for the file.
+ */
+const cache = new Map<string, ReturnType<typeof seedFresh>>();
+function seeded(today: string, options?: DemoSeedOptions) {
+  const key = JSON.stringify([today, options ?? {}]);
+  if (!cache.has(key)) cache.set(key, seedFresh(today, options));
+  return cache.get(key)!;
 }
 
 const summary = async (ctx: ServiceContext) => ({
@@ -73,8 +85,8 @@ describe("demo seed", () => {
   it.each([undefined, { situations: false }])(
     "is deterministic for a given day (%o)",
     async (o) => {
-      const a = await seeded("2026-09-22", o);
-      const b = await seeded("2026-09-22", o);
+      const a = await seedFresh("2026-09-22", o);
+      const b = await seedFresh("2026-09-22", o);
       expect(await summary(b.ctx)).toEqual(await summary(a.ctx));
     },
   );
@@ -151,6 +163,50 @@ describe("demo seed", () => {
     expect(share).toBeGreaterThanOrEqual(0.3);
     expect(share).toBeLessThanOrEqual(0.6);
   });
+
+  it.each(DAYS)("gives Trends a year with a believable shape, relative to %s", async (today) => {
+    const { ctx } = await seeded(today);
+    const { months, change } = await getTrends(ctx, "12");
+
+    // Twelve complete months, ending last month; both halves compared.
+    expect(months).toHaveLength(12);
+    expect(months.at(-1)!.month).toBe(addMonths(yearMonthOf(calendarDateFromIso(today)), -1));
+    expect(change!.recent.months).toHaveLength(6);
+
+    // A raise four months ago; one festival bonus earlier in the year. (The
+    // late "Sold old phone" can add 2,500 to a recent month.)
+    const salaryish = months.map((m) => m.income);
+    expect(salaryish.slice(-4).every((i) => i >= fromMajor(1_05_000))).toBe(true);
+    expect(salaryish.filter((i) => i >= fromMajor(1_40_000))).toHaveLength(1);
+
+    // Most months leave something over; only the refrigerator's month is in the minus.
+    const minus = months.filter((m) => m.leftOver < 0);
+    expect(minus.map((m) => m.month)).toEqual([months[months.length - 5]!.month]);
+    expect(months.filter((m) => m.leftOver >= fromMajor(15_000)).length).toBeGreaterThanOrEqual(10);
+  });
+
+  it.each([
+    ...DAYS.map((d) => [d, undefined] as const),
+    ["2026-09-22", { situations: false }] as const,
+  ])(
+    "pays the card for what went on it, so what it owes never piles up, relative to %s",
+    async (today, options) => {
+      const { ctx } = await seeded(today, options);
+      const visa = (await getAccountBalances(ctx)).find((b) => b.type === "credit_card")!;
+      // Since the start of last month: what the latest payment hasn't covered yet.
+      const since = firstDayOf(addMonths(yearMonthOf(calendarDateFromIso(today)), -1));
+      const recentCharges = negate(
+        sum(
+          (await getTransactions(ctx))
+            .filter((r) => r.accountId === visa.accountId && r.occurredOn >= since)
+            .filter((r) => r.type === "expense" || r.type === "refund")
+            .map((r) => money(r.amountMinor)),
+        ),
+      );
+      expect(visa.balance).toBeLessThan(0);
+      expect(negate(visa.balance)).toBeLessThanOrEqual(recentCharges);
+    },
+  );
 
   it("without situations is the plain ledger the end-to-end suite builds on", async () => {
     const { ctx } = await seeded("2026-09-22", { situations: false });

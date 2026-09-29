@@ -31,9 +31,15 @@ import { getAccountBalances } from "@/server/services/ledger-service";
 import { createOwner, getCategories } from "@/server/services/setup-service";
 
 /**
- * The demo: one salaried person in Dhaka, with five accounts and about three
- * months of ordinary household activity, dated relative to `today` so the
- * demo never looks stale. Deterministic for a given `today` (seeded PRNG).
+ * The demo: one salaried person in Dhaka, with five accounts and a year of
+ * ordinary household activity, dated relative to `today` so the demo never
+ * looks stale. Deterministic for a given `today` (seeded PRNG).
+ *
+ * The year has the shape a real one has (roadmap Stage 11, for Trends): the
+ * electricity bill rises with the air-conditioning months, eating out creeps
+ * up lately, a raise lands four months ago, and two things stand out — a
+ * festival bonus spent partly on festival shopping, and a refrigerator
+ * replaced on the card, which puts that month in the minus.
  *
  * Every row goes through the same commands as the UI, so the seed can never
  * contain a ledger the rules would reject.
@@ -47,11 +53,19 @@ import { createOwner, getCategories } from "@/server/services/setup-service";
  * from `today`, so every V1 Attention kind is there on any day.
  *
  * Without `situations` it is the plain ledger (demo seed v1), on which the
- * end-to-end suite builds its own states. The 9–12 month history is Stage 11.
+ * end-to-end suite builds its own states.
  */
 
 export const DEMO_TIME_ZONE = "Asia/Dhaka";
-export const DEMO_HISTORY_MONTHS = 3;
+export const DEMO_HISTORY_MONTHS = 12;
+
+/** How many months before the current one each part of the story happened. */
+const FESTIVAL_MONTHS_AGO = 8;
+const FRIDGE_MONTHS_AGO = 5;
+/** The raise is paid from this month on. */
+const RAISE_MONTHS_AGO = 4;
+/** Eating out is more frequent in these latest months, the current one included. */
+const EATING_OUT_MONTHS_AGO = 3;
 
 /** mulberry32: a small, fast, seedable PRNG — deterministic demo data. */
 function prng(seed: number) {
@@ -77,7 +91,7 @@ type AccountKey = "bank" | "cash" | "bkash" | "savings" | "visa";
 
 const ACCOUNTS: ReadonlyArray<{ key: AccountKey; name: string; type: AccountType; start: number }> =
   [
-    { key: "bank", name: "Bank", type: "bank", start: 42_000 },
+    { key: "bank", name: "Bank", type: "bank", start: 30_000 },
     { key: "cash", name: "Cash", type: "cash", start: 3_500 },
     { key: "bkash", name: "bKash", type: "mobile_wallet", start: 6_000 },
     { key: "savings", name: "Savings", type: "savings", start: 1_20_000 },
@@ -92,6 +106,8 @@ interface PlannedEntry {
   readonly label?: string;
   /** Recorded by paying this commitment occurrence rather than as a plain expense. */
   readonly occurrenceId?: string;
+  /** A card payment: its amount is what went on the card in this month, known only as the plan is recorded. */
+  readonly cardPaymentFor?: YearMonth;
 }
 
 /**
@@ -220,12 +236,14 @@ export async function seedDemo(
     const days = daysInYearMonth(month);
     const { year, month: m } = toParts(firstDayOf(month));
     const day = (d: number) => calendarDate(year, m, Math.min(d, days));
+    const monthsAgo = DEMO_HISTORY_MONTHS - offset;
+    const raised = monthsAgo <= RAISE_MONTHS_AGO;
 
     plan.push({
       on: day(1),
       input: {
         type: "income",
-        amount: "95000",
+        amount: raised ? "105000" : "95000",
         accountId: account.bank,
         categoryId: category("Salary"),
         occurredOn: day(1),
@@ -235,10 +253,20 @@ export async function seedDemo(
     // With situations, rent, internet and the phone bill are commitments, paid through Pay.
     if (!situations) expense(day(2), 30_000, "Housing", "bank", "Rent");
     transfer(day(2), 10_000, "bank", "bkash", "bKash top-up");
-    transfer(day(3), 10_000, "bank", "savings", "Monthly savings");
+    // A standing order moves most of what is usually left over to Savings on
+    // salary day, a little more after the raise.
+    transfer(day(1), raised ? 25_000 : 20_000, "bank", "savings", "Monthly savings");
     // bKash charges about 1.85% to cash out (৳37 per ৳2,000).
     transfer(day(3), 5_000, "bkash", "cash", "bKash cash-out", 93);
-    expense(day(8), random.amount(1_700, 2_600), "Utilities", "bkash", "DESCO electricity");
+    // Air-conditioning from April to October roughly doubles the electricity bill.
+    const summer = m >= 4 && m <= 10;
+    expense(
+      day(8),
+      summer ? random.amount(2_900, 4_200) : random.amount(1_400, 2_100),
+      "Utilities",
+      "bkash",
+      "DESCO electricity",
+    );
     expense(day(10), 1_080, "Utilities", "bkash", "Titas gas");
     if (!situations) expense(day(12), 499, "Utilities", "bkash", "Grameenphone recharge");
     transfer(day(16), 8_000, "bank", "bkash", "bKash top-up");
@@ -255,7 +283,8 @@ export async function seedDemo(
         random.pick(["Shwapno", "Meena Bazar", "Agora"]),
       );
     }
-    for (let i = 0; i < 6; i++) {
+    const meals = monthsAgo <= EATING_OUT_MONTHS_AGO ? 9 : 6;
+    for (let i = 0; i < meals; i++) {
       const place = random.pick(["Foodpanda", "Sultan's Dine", "Star Kabab", "Pizza Hut", "Café"]);
       expense(
         day(random.between(1, days)),
@@ -282,8 +311,29 @@ export async function seedDemo(
         "Shopping",
         "visa",
         shop,
-        offset === 1 && i === 0 ? "refundable" : undefined,
+        monthsAgo === 2 && i === 0 ? "refundable" : undefined,
       );
+    }
+    if (monthsAgo === FESTIVAL_MONTHS_AGO) {
+      // The festival bonus comes with the salary; new clothes and a family dinner follow.
+      plan.push({
+        on: day(1),
+        input: {
+          type: "income",
+          amount: "47500",
+          accountId: account.bank,
+          categoryId: category("Salary"),
+          occurredOn: day(1),
+          description: "Festival bonus",
+        },
+      });
+      expense(day(6), 8_600, "Shopping", "visa", "Aarong");
+      expense(day(7), 3_450, "Shopping", "visa", "Bata");
+      expense(day(9), 3_200, "Food & Dining", "visa", "Star Kabab");
+    }
+    if (monthsAgo === FRIDGE_MONTHS_AGO) {
+      // The old refrigerator gave out; its replacement went on the card.
+      expense(day(14), 48_500, "Shopping", "visa", "Walton refrigerator");
     }
     if (random.chance(0.7)) {
       expense(
@@ -369,21 +419,24 @@ export async function seedDemo(
     expense(treatedOn, 18_500, "Health", "visa", "Square Hospital");
   }
 
-  // The card is paid off from the bank each month (a transfer, never an expense).
-  // Its amount is derived from the plan so the demo stays internally consistent.
-  const visaCharges = new Map<string, number>();
-  for (const e of plan) {
-    if (e.input.type === "expense" && e.input.accountId === account.visa) {
-      const month = yearMonthOf(e.on);
-      visaCharges.set(month, (visaCharges.get(month) ?? 0) + Number(e.input.amount));
-    }
-  }
+  // The card is paid off from the bank on the 11th for the month before (a
+  // transfer, never an expense). Its amount is what actually went on the card,
+  // including purchases moved there when cash or wallet money ran out, so the
+  // amount owed never accumulates.
   for (let offset = 1; offset <= DEMO_HISTORY_MONTHS; offset++) {
     const month = addMonths(firstMonth, offset);
-    const previous = addMonths(month, -1);
-    const owed = (visaCharges.get(previous) ?? 0) + (offset === 1 ? 4_200 : 0);
     const on = calendarDate(toParts(firstDayOf(month)).year, toParts(firstDayOf(month)).month, 11);
-    transfer(on, owed, "bank", "visa", "Visa card payment");
+    plan.push({
+      on,
+      cardPaymentFor: addMonths(month, -1),
+      input: {
+        type: "transfer",
+        accountId: account.bank,
+        counterAccountId: account.visa,
+        occurredOn: on,
+        description: "Visa card payment",
+      },
+    });
   }
 
   // Only what has happened: nothing after today.
@@ -399,10 +452,20 @@ export async function seedDemo(
   ) as Record<AccountKey, number>;
   const spendable = (key: AccountKey) => key === "cash" || key === "bkash";
 
+  // What went on the card each month; the first payment also clears what was owed at the start.
+  const charged = new Map<YearMonth, number>([
+    [firstMonth, ACCOUNTS.find((a) => a.key === "visa")!.start],
+  ]);
+
   let count = 0;
   const labelled = new Map<string, { id: string; amount: string; on: CalendarDate }>();
   for (const planned of due) {
     const entry = { ...planned, input: { ...planned.input } };
+    if (entry.cardPaymentFor) {
+      const owed = charged.get(entry.cardPaymentFor) ?? 0;
+      if (owed <= 0) continue;
+      entry.input.amount = String(owed);
+    }
     const amount = Number(entry.input.amount);
     const fromKey = keyOf.get(entry.input.accountId!)!;
     if (entry.input.type === "expense" && spendable(fromKey) && running[fromKey] < amount) {
@@ -416,6 +479,10 @@ export async function seedDemo(
     const fee = Number(entry.input.fee ?? 0);
     if (entry.input.type === "income") running[key] += amount;
     if (entry.input.type === "expense") running[key] -= amount;
+    if (entry.input.type === "expense" && key === "visa") {
+      const month = yearMonthOf(entry.on);
+      charged.set(month, (charged.get(month) ?? 0) + amount);
+    }
     if (entry.input.type === "transfer") {
       running[key] -= amount + fee;
       running[keyOf.get(entry.input.counterAccountId!)!] += amount;
