@@ -52,12 +52,15 @@
 | 7 | Protected money | product capability | C — `v0.3-spoken-for` |
 | 8 | Available | product capability and surface | D — `v0.4-available` |
 | 9 | Signals | product capability | D — `v0.4-available` |
-| 10 | Overview + V1 readiness | product surface; readiness | E — `v1.0` (the **V1.0 candidate**) |
-| 11 | Extended demo history | data/history foundation | after V1 — product depth |
-| 12 | Trends | product capability | after V1 — product depth |
-| 13 | Monthly Plan (optional; replaces Budgets) | product capability | after V1 — product depth |
+| 10 | Overview + V1 readiness | product surface; readiness | the **V1.0 candidate** (the V1 feature set); no tag — **done** |
+| 11 | Extended demo history | data/history foundation | after the V1 candidate — product depth |
+| 12 | Trends | product capability | after the V1 candidate — product depth |
+| 13 | Monthly Plan (optional; replaces Budgets) | product capability | after the V1 candidate — product depth |
+| R | Final V1 readiness gate | readiness | E — `v1.0` |
 
 Stage numbers 7–12 meant different stages before 2026-09-27. §8.4 maps old to new; entries written before then keep their original numbers.
+
+*(2026-09-29, at Stage 10 closure: Stage 10 completes the V1 feature set but no longer marks `v1.0`. The README, portfolio screenshots, whole-product responsive and accessibility review and final product polish move to the final readiness gate (§4), which follows the portfolio features still to be built; `v1.0` is tagged after it.)*
 
 ## 4. Stages
 
@@ -333,7 +336,9 @@ The two inputs to Available: money already obligated and money deliberately set 
 - **Done (2026-09-28):** decisions and the signal catalogue `616ebc1`, pure signal derivation `5295ec2`, the Attention read model and minimal dismissal `4f0b7f1`, and the Attention page at `/` `a25bf44` (the logo leads there; still four global destinations and four phone tabs; [design-direction.md §6](design-direction.md)). A-70, A-71, A-72, A-73, M1-5 and M2-3 are green. Milestone D is tagged `v0.4-available` at `598a381` (2026-09-28, before Stage 10).
 - **Commit:** `feat(signals): deterministic signal engine`
 
-### Milestone E — "Portfolio-ready V1" — tag `v1.0`
+### The V1 feature set — no milestone tag
+
+*(Until 2026-09-29 this heading read Milestone E — "Portfolio-ready V1" — tag `v1.0`, closed by Stage 10. Milestone E and `v1.0` now belong to the final readiness gate, after the product-depth stages.)*
 
 #### 10 — Overview + V1 readiness
 - **Question:** *What can I use right now, what needs me, and how does that sit against this month and where I stand?* The Overview owns no financial truth; it composes existing answers, and each links to the page that explains it. *(Until 2026-09-28: "What should I know right now, and what should I do next?")*
@@ -374,16 +379,17 @@ The two inputs to Available: money already obligated and money deliberately set 
   - **Not built:** Recent activity (Activity exists), copies of Cash flow's charts, a full commitment list, Overview-only metrics, and protected-money or commitment widgets when Attention already surfaces the shortfall or deadline.
 - **Builds — V1 readiness** (the responsibilities of the former Stage 12 that V1 needs):
   - Demo seed situations that demonstrate the V1 product, including a **planted situation for every V1 signal family**, on the existing short history. Extended history is Stage 11.
-  - A responsive review (390 / 820 / 1280) and an accessibility review.
-  - **README:** architecture, decisions, how to run, and **portfolio screenshots** (required).
-  - A final V1 product and polish review. *(Decided 2026-09-29: the current Overview is the accepted V1 composition; its final visual and product polish is deferred until the remaining portfolio features are built, and no space is reserved on it now for features that don't exist yet.)*
+  - ~~A responsive review (390 / 820 / 1280) and an accessibility review.~~
+  - ~~**README:** architecture, decisions, how to run, and **portfolio screenshots** (required).~~
+  - ~~A final V1 product and polish review.~~ *(Decided 2026-09-29: the current Overview is the accepted V1 composition; its final visual and product polish is deferred until the remaining portfolio features are built, and no space is reserved on it now for features that don't exist yet.)*
+  - **Moved to the final readiness gate (decided 2026-09-29, at Stage 10 closure):** the whole-product responsive and accessibility review, the README with its portfolio screenshots, and the final V1 product and polish review. They describe the finished product, so they wait for the features still to be built. Stage 10 checked its own surfaces: the Overview at 390–1920px, its reading order, and overlay focus and toast placement.
 - **Why here:** an overview built after its inputs can't hold fake state, and it no longer waits for optional features.
 - **Tests that must pass:**
   - **Playwright flow 4:** Quick Add → the overview updates (Available, signals). *(Green 2026-09-29, `e2e/overview-flow.spec.ts`: a newly verified Cash account records a ৳275 expense through Quick Add on `/`; without a reload, Available and the money on hand drop by ৳275 and Attention gains the account's *Doesn't match* item, ৳275 off.)*
   - A seed smoke test: every V1 signal family fires on a fresh seed.
   - **V1 exit criterion:** every acceptance assertion is green **except A-40 and M1-4**, which are deliberately deferred with Monthly Plan to Stage 13.
 - **What you can see at the end:** the V1.0 candidate. Clone → `npm install` → `npm run db:reset` → `npm run dev`.
-- **Then:** tag `v1.0` after the V1 review.
+- ~~**Then:** tag `v1.0` after the V1 review.~~ *(2026-09-29: no tag marks Stage 10; `v1.0` follows the final readiness gate.)*
 - **Deferred:** deployment and the public demo strategy, auth, V1.1 items.
 - **Slices, in order** (decided 2026-09-28; each planned, audited and committed on its own):
   0. decisions (this entry)
@@ -392,12 +398,13 @@ The two inputs to Available: money already obligated and money deliberately set 
   3. the Overview at `/`
   4. navigation (P-3)
   5. responsive and accessibility review, Playwright flow 4, and the two UX blockers
-  6. V1 readiness: README and screenshots, docs closure, then `v1.0` after review
+  6. ~~V1 readiness: README and screenshots, docs closure, then `v1.0` after review~~ docs closure; the README, screenshots and `v1.0` moved to the final readiness gate (2026-09-29)
 - **Progress:** Slice 0 `72dcd1f`; Slice 1 `a86b755`; Slice 2 (2026-09-28): the Accounts sign fix `09828bc` (liability standing: a card's credit reads as credit, never owed), then the read model: the Available bridge exposes `excludedAssetBalances` and `pool`, with their invariants, and the spoken-for bar reads `pool` instead of rebuilding it. Slice 3 (2026-09-29): the Overview at `/` — the navy Available band with the free-share ring, Attention's first 3 with Show N more in place, This month as a statement, and Where you stand with the asset rail — composed in the page from `getAvailable`, `getAttention`, `getMonthlyCashFlow` and `getPosition`, with no service of its own; Available's hero sentence is shared with the Available page. Slice 4 (2026-09-29): P-3 navigation — Overview is the first destination on desktop and a phone tab; Cash flow has no phone tab, and no tab is current on `/cash-flow` at phone width. Slice 5 (2026-09-29): the two V1 UX blockers — overlays return focus to their opener, and toasts stay clear of open overlays with Undo that no longer closes them. The Overview redesign (2026-09-29, "the Spread"): the navy panel with a 48px hero and a larger ring beside one context surface; Attention as a 3-row queue with View all in a sheet; This month as a proportional flow; Where you stand with a labelled rail. Playwright flow 4 (2026-09-29): Quick Add on the Overview → Available and Attention update, through the real write and read models.
+- **Done (2026-09-29):** decisions `72dcd1f`; demo situations `a86b755`; the Accounts sign fix `09828bc`; excluded asset balances and the pool `bbd8590`; the Overview `55aa41d`; P-3 navigation `3840e9d`; overlay focus and toasts `ef91897`; the Overview recomposed as a spread `8b5eb2b`; Playwright flow 4 `fe99725`. Every acceptance assertion is green except A-40 and M1-4, and the full Playwright suite passes on the production build. No tag marks Stage 10.
 - **Commits:**
   - `feat(demo): V1 demo situations`
   - `feat(overview): overview composed from existing answers`
-  - `chore: V1 polish and README`
+  - ~~`chore: V1 polish and README`~~ (moved to the final readiness gate)
 
 ### After the V1 candidate — product depth
 
@@ -432,6 +439,20 @@ The two inputs to Available: money already obligated and money deliberately set 
   - A test that every other feature returns identical results with and without a plan.
   - **Acceptance:** A-40, M1-4 → **full suite green**.
 - **Commit:** `feat(plan): optional monthly plan with commitment-aware projection`
+
+### Milestone E — "Portfolio-ready V1" — tag `v1.0`
+
+#### R — Final V1 readiness gate
+- **Decided 2026-09-29, at Stage 10 closure.** Portfolio presentation and the final review describe the finished product, so they wait for the features still to be built. They don't keep the stage that built the Overview open.
+- **When:** once the portfolio features planned before it are built: Stages 11–13, and any portfolio differentiator whose own discussion places it before the gate.
+- **Builds:**
+  - **README:** status, architecture, decisions, how to run, and **portfolio screenshots** (required). The README is not rewritten before this gate.
+  - A whole-product responsive review (390 / 820 / 1280) and accessibility review.
+  - The final V1 product and polish review, including the Overview's final visual and product polish (deferred from Stage 10). Space is added to the Overview only for features that exist by then.
+- **Tests that must pass:** everything in the definition of done, with the full Playwright suite run on the production build, and the seed smoke test.
+- **Then:** tag `v1.0` after this review. It is the only V1 release marker; Stage 10 has no tag.
+- **Deferred:** deployment and the public demo strategy, auth, V1.1 items.
+- **Commit:** `chore: V1 polish and README`
 
 ### Portfolio differentiators (after the product-depth stages; each its own discussion)
 
