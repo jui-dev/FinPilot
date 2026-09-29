@@ -26,8 +26,8 @@ export const PRIMARY_NAV: readonly NavItem[] = [
   { href: "/accounts", label: "Accounts" },
   // No phone tab (P-3): on phones Cash flow is reached from the Overview's This
   // month, Attention and Activity, and stays its own page with no tab current.
-  // Trends is the other page of its area, behind a local switch.
-  { href: "/cash-flow", label: "Cash flow", area: ["/trends"], phoneTab: false },
+  // Trends and Calendar are the other pages of its area, behind a local switch.
+  { href: "/cash-flow", label: "Cash flow", area: ["/trends", "/calendar"], phoneTab: false },
   // The forward-looking area (roadmap §8.3, P-2): it leads with Available, and
   // Commitments and Set aside, its inputs, are its other pages behind a local switch.
   { href: "/available", label: "Available", area: ["/commitments", "/set-aside"] },

@@ -84,4 +84,9 @@ describe("navigation", () => {
     expect(current("/trends", PRIMARY_NAV)).toEqual(["Cash flow"]);
     expect(current("/trends", PHONE_TABS)).toEqual([]);
   });
+
+  it("keeps Cash flow current on Calendar too, with no phone tab", () => {
+    expect(current("/calendar", PRIMARY_NAV)).toEqual(["Cash flow"]);
+    expect(current("/calendar", PHONE_TABS)).toEqual([]);
+  });
 });

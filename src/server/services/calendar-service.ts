@@ -77,6 +77,8 @@ export interface CalendarVerification {
   readonly statedBalance: Money;
   /** The adjustment it posted; null when the count matched. */
   readonly adjustment: { readonly transactionId: string; readonly amount: Money } | null;
+  /** The account's entries from its opening through the counted day: what the count covered. */
+  readonly reviewRange: DateRange;
 }
 
 export interface CalendarDayDetail {
@@ -152,7 +154,9 @@ export async function getMonthCalendar(
 ): Promise<MonthCalendar> {
   const today = ctx.clock.today();
   const horizon = materialisedThrough(today);
-  const earliest = (await getAccounts(ctx)).reduce<CalendarDate | null>(
+  const accounts = await getAccounts(ctx);
+  const openedOn = new Map(accounts.map((a) => [a.id, a.openedOn as CalendarDate]));
+  const earliest = accounts.reduce<CalendarDate | null>(
     (min, a) => (min === null || a.openedOn < min ? (a.openedOn as CalendarDate) : min),
     null,
   );
@@ -235,6 +239,7 @@ export async function getMonthCalendar(
             c.adjustmentId !== null && c.adjustmentAmountMinor !== null
               ? { transactionId: c.adjustmentId, amount: money(c.adjustmentAmountMinor) }
               : null,
+          reviewRange: { start: openedOn.get(c.accountId) ?? selected, end: addDays(selected, 1) },
         })),
       scheduled: day.scheduled,
     };

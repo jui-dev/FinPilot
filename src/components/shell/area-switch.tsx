@@ -22,12 +22,13 @@ export const AVAILABLE_AREA: Area = {
   ],
 };
 
-/** One month's cash flow, and its shape across complete months (Trends). */
+/** One month's cash flow, its shape across complete months (Trends), and when money moved (Calendar). */
 export const CASH_FLOW_AREA: Area = {
   label: "Cash flow",
   pages: [
     { href: "/cash-flow", label: "Cash flow" },
     { href: "/trends", label: "Trends" },
+    { href: "/calendar", label: "Calendar" },
   ],
 };
 
