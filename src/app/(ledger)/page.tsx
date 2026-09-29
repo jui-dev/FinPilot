@@ -2,10 +2,13 @@ import type { Metadata } from "next";
 
 import { getRequestContext } from "@/app/_server/context";
 import { AttentionList } from "@/components/attention/attention-list";
-import { countLine } from "@/components/attention/describe";
+import { AttentionPreview, PREVIEW_SIGNALS } from "@/components/attention/attention-preview";
+import { AttentionSheet, SHEET_HEADING_ID } from "@/components/attention/attention-sheet";
+import { countLine, describeSignal } from "@/components/attention/describe";
 import { AvailableBand } from "@/components/overview/available-band";
 import { ThisMonth } from "@/components/overview/this-month";
 import { WhereYouStand } from "@/components/overview/where-you-stand";
+import { ZoneHeader } from "@/components/overview/zone-header";
 import { getMonthlyCashFlow } from "@/server/services/analysis-service";
 import { getAttention } from "@/server/services/attention-service";
 import { getAvailable } from "@/server/services/available-service";
@@ -18,8 +21,12 @@ export const metadata: Metadata = { title: "Overview" };
  * me, and how does that sit against this month and where I stand? It owns no
  * financial truth and has no service of its own: it composes the answers of
  * Available, Attention, Cash flow and the position, and each zone leads to the
- * page that explains it. Four zones in one fixed order, the same in the DOM
- * and on screen at every width.
+ * page that explains it.
+ *
+ * A spread (docs/design-direction.md §6): from 1024px, the answer on the navy
+ * page at the left and the context on one surface at the right — Attention,
+ * This month and Where you stand as bands. Below 1024px the same four zones
+ * stack in the same order.
  */
 export default async function OverviewPage() {
   const request = await getRequestContext();
@@ -36,32 +43,49 @@ export default async function OverviewPage() {
     <div className="flex flex-col gap-5 md:gap-6">
       <h1 className="text-title font-bold text-navy">Overview</h1>
 
-      {/* From 1280px Attention sits beside the band; below it, under it. */}
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] xl:gap-6">
+      {/* In the spread the navy page and the context column share their top edge;
+          each is only as tall as its content. */}
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-6">
         <AvailableBand view={available} />
 
-        <div className="flex min-w-0 flex-col gap-3">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            {/* Takes focus after Hide, when the row that held it is gone. */}
-            <h2
+        <div className="overflow-clip rounded-panel border border-line bg-surface shadow-card">
+          <section aria-labelledby="overview-attention" className="p-5 md:p-7 md:pb-5">
+            <ZoneHeader
               id="overview-attention"
-              tabIndex={-1}
-              className="text-heading font-bold text-navy outline-none"
-            >
-              Attention
-            </h2>
-            {signals.length > 0 && (
-              <p className="text-meta text-ink-2">{countLine(signals.length)}</p>
-            )}
-          </div>
-          <AttentionList signals={signals} today={today} labelledBy="overview-attention" />
-        </div>
-      </div>
+              title="Attention"
+              note={signals.length > 0 ? countLine(signals.length) : undefined}
+              focusable
+              action={
+                <AttentionSheet
+                  count={signals.length}
+                  action={
+                    signals.length > PREVIEW_SIGNALS
+                      ? "view-all"
+                      : signals.some((s) => describeSignal(s, today).hide !== null)
+                        ? "open"
+                        : null
+                  }
+                  fallbackFocusId="overview-attention"
+                  list={
+                    <AttentionList
+                      signals={signals}
+                      today={today}
+                      labelledBy={SHEET_HEADING_ID}
+                      className="mt-1"
+                    />
+                  }
+                />
+              }
+            />
+            <AttentionPreview signals={signals} today={today} labelledBy="overview-attention" />
+          </section>
 
-      {/* This month and Where you stand share one split card. */}
-      <div className="grid overflow-clip rounded-panel border border-line bg-surface shadow-card md:grid-cols-2 md:divide-x md:divide-line max-md:divide-y max-md:divide-line">
-        <ThisMonth summary={cashFlow.summary} period={cashFlow.period} />
-        <WhereYouStand position={position} available={available} />
+          {/* Side by side at 768px, where the column is the page's width; stacked in the spread. */}
+          <div className="grid border-t border-line md:grid-cols-2 md:divide-x md:divide-line lg:grid-cols-1 lg:divide-x-0 lg:divide-y max-md:divide-y max-md:divide-line">
+            <ThisMonth summary={cashFlow.summary} period={cashFlow.period} />
+            <WhereYouStand position={position} available={available} />
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,8 @@
+import type { CashFlowSummary } from "@/domain/ledger/cash-flow";
 import type { Money } from "@/domain/money";
 import type { AvailableView } from "@/server/services/available-service";
+
+import { listOf } from "../available/describe";
 
 /**
  * How the Overview draws what the read models already say. Every amount is
@@ -61,5 +64,56 @@ export function assetRail(view: AvailableView, assets: Money): AssetRail {
         .filter((a) => a.accountClass === "asset" && !a.counted && a.balance !== 0)
         .map((a) => a.name),
     },
+  };
+}
+
+/** "Savings", "Savings and FD", or "Savings and 2 more" when there are more than two. */
+export const shortNames = (names: readonly string[]): string =>
+  names.length <= 2 ? listOf(names) : `${names[0]} and ${names.length - 1} more`;
+
+/**
+ * This month as a flow (docs/design-direction.md §5): what came in and what
+ * went out on one scale, and the span between them — what was left over, or
+ * how much more went out than came in. Only the Cash flow summary's own three
+ * amounts are read; the fractions are geometry and are never shown as a rate.
+ */
+export type MonthFlow =
+  | {
+      readonly kind: "flow";
+      /** Bar lengths, 0–1 of the longer of the two. */
+      readonly cameIn: number;
+      readonly wentOut: number;
+      /** The span between the bar ends, as fractions; null when they are equal. */
+      readonly gap: {
+        readonly from: number;
+        readonly to: number;
+        /** "left": left over; "over": more went out than came in. */
+        readonly kind: "left" | "over";
+      } | null;
+    }
+  /** Nothing came in or went out yet. */
+  | { readonly kind: "empty" }
+  /** A total below zero (refunds larger than spending) cannot be drawn as a length. */
+  | { readonly kind: "text" };
+
+export function monthFlow(
+  summary: Pick<CashFlowSummary, "income" | "spending" | "leftOver">,
+): MonthFlow {
+  const { income, spending, leftOver } = summary;
+  if (income < 0 || spending < 0) return { kind: "text" };
+  if (income === 0 && spending === 0) return { kind: "empty" };
+  const scale = Math.max(income, spending);
+  const cameIn = income / scale;
+  const wentOut = spending / scale;
+  return {
+    kind: "flow",
+    cameIn,
+    wentOut,
+    gap:
+      leftOver > 0
+        ? { from: wentOut, to: cameIn, kind: "left" }
+        : leftOver < 0
+          ? { from: cameIn, to: wentOut, kind: "over" }
+          : null,
   };
 }

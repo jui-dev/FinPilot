@@ -2,6 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { AttentionList } from "@/components/attention/attention-list";
+import { AttentionPreview } from "@/components/attention/attention-preview";
+import { AttentionSheet, type SheetAction } from "@/components/attention/attention-sheet";
 import { countLine, describeSignal, evidenceHref } from "@/components/attention/describe";
 import { calendarDateFromIso, type YearMonth } from "@/domain/calendar-date";
 import type { AccountType } from "@/domain/ledger/accounts";
@@ -311,7 +313,7 @@ describe("AttentionList", () => {
     expect(html).not.toMatch(/safe|healthy|good/i);
   });
 
-  it("shows the first 3 in order, and the rest behind Show N more", () => {
+  it("is the complete list: every signal, in priority order", () => {
     const names = ["Rent", "Internet", "Mobile", "Gym", "Water"];
     const signals = deriveAttention(
       facts({
@@ -320,33 +322,12 @@ describe("AttentionList", () => {
         ),
       }),
     );
-    expect(signals).toHaveLength(5);
     const html = renderToStaticMarkup(
       <AttentionList signals={signals} today={TODAY} labelledBy="attention-title" />,
     );
-    expect(html.match(/<li/g)).toHaveLength(3);
-    // The first three, by priority: the nearest due dates first.
-    for (const name of names.slice(0, 3)) expect(html).toContain(`${name} is due`);
-    for (const name of names.slice(3)) expect(html).not.toContain(`${name} is due`);
-    expect(html).toContain("Show 2 more");
-    expect(html).toContain('aria-expanded="false"');
-    expect(html).toContain('aria-controls="attention-title-list"');
-  });
-
-  it("has no Show more button with 3 or fewer", () => {
-    const signals = deriveAttention(
-      facts({
-        occurrences: ["Rent", "Internet", "Mobile"].map((name, i) =>
-          occurrence(`o${i}`, `c${i}`, name, `2026-09-2${4 + i}`, 1_000),
-        ),
-      }),
-    );
-    const html = renderToStaticMarkup(
-      <AttentionList signals={signals} today={TODAY} labelledBy="attention-title" />,
-    );
-    expect(html.match(/<li/g)).toHaveLength(3);
-    expect(html).not.toContain("more</");
-    expect(html).not.toContain("aria-expanded");
+    expect(html.match(/<li/g)).toHaveLength(5);
+    const positions = names.map((name) => html.indexOf(`${name} is due`));
+    expect([...positions].sort((a, b) => a - b)).toEqual(positions);
   });
 
   it("lists the signals in order, and offers Hide only where a signal can be hidden", () => {
@@ -373,5 +354,63 @@ describe("AttentionList", () => {
     expect(html.match(/>Hide</g)).toHaveLength(2);
     expect(html).toContain(" for September");
     expect(html).toContain('aria-labelledby="attention-title"');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The Overview's preview and View all
+// ---------------------------------------------------------------------------
+
+describe("AttentionPreview", () => {
+  const five = () =>
+    deriveAttention(
+      facts({
+        occurrences: ["Rent", "Internet", "Mobile", "Gym", "Water"].map((name, i) =>
+          occurrence(`o${i}`, `c${i}`, name, `2026-09-2${4 + i}`, 1_000 + i),
+        ),
+        spending: spending([line("Health", 30_000)], [line("Health", 1_000)]),
+      }),
+    );
+
+  it("shows at most the first 3, in priority order, each with one link and no Hide", () => {
+    const html = renderToStaticMarkup(
+      <AttentionPreview signals={five()} today={TODAY} labelledBy="overview-attention" />,
+    );
+    expect(html.match(/<li/g)).toHaveLength(3);
+    for (const name of ["Rent", "Internet", "Mobile"]) expect(html).toContain(`${name} is due`);
+    expect(html).not.toContain("Gym is due");
+    expect(html).not.toContain(">Hide<");
+    expect(html.match(/<a /g)).toHaveLength(3);
+    // The link names where it leads, then the row it is for.
+    expect(html).toContain('aria-label="Open Commitments: Rent is due Thu, 24 Sep"');
+  });
+
+  it("says plainly when nothing needs attention", () => {
+    const html = renderToStaticMarkup(
+      <AttentionPreview signals={[]} today={TODAY} labelledBy="overview-attention" />,
+    );
+    expect(html).toContain("Nothing needs your attention");
+    expect(html).not.toContain("<a ");
+  });
+});
+
+describe("AttentionSheet", () => {
+  const sheet = (count: number, action: SheetAction) =>
+    renderToStaticMarkup(
+      <AttentionSheet
+        count={count}
+        action={action}
+        fallbackFocusId="overview-attention"
+        list={<p>the full list</p>}
+      />,
+    );
+
+  it("names its action by what it opens, and offers none when nothing needs it", () => {
+    expect(sheet(7, "view-all")).toContain("View all 7");
+    // All shown already, but one can be hidden: the sheet is where Hide lives.
+    expect(sheet(2, "open")).toContain("Open Attention");
+    expect(sheet(2, "open")).not.toContain("View all");
+    expect(sheet(3, null)).toBe("");
+    expect(sheet(0, null)).toBe("");
   });
 });

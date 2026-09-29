@@ -18,11 +18,9 @@ import { Money } from "../ui/money";
 import { Tag } from "../ui/panel";
 import { describeSignal, type AttentionIcon, type AttentionRow } from "./describe";
 import { HideButton } from "./hide-button";
-import { ShowMoreList } from "./show-more";
 
-const CARD = "overflow-clip rounded-panel border border-line bg-surface shadow-card";
-
-const ICONS: Record<AttentionIcon, typeof CalendarClock> = {
+/** Each kind's icon, shared by the full list and the Overview's preview. */
+export const SIGNAL_ICONS: Record<AttentionIcon, typeof CalendarClock> = {
   calendar: CalendarClock,
   "calendar-soon": CalendarDays,
   alert: CircleAlert,
@@ -31,56 +29,54 @@ const ICONS: Record<AttentionIcon, typeof CalendarClock> = {
   scale: Scale,
 };
 
+/** What the empty state says, wherever Attention has nothing to show. */
+export const NOTHING_TITLE = "Nothing needs your attention";
+export const NOTHING_DETAIL =
+  "No payment, money set aside, verified balance or change in spending needs a look right now.";
+
 /**
- * "What actually needs my attention right now?" — the Attention signals, in
- * their fixed priority order, as one list. Each row says what happened, why
- * it matters, the figure it is about, and links to the page that owns it; the
- * two kinds nothing else resolves can be hidden. The first `initial` rows
- * show, and the rest open in place. With nothing to show, one compact strip
- * says so plainly. The surrounding page supplies the heading (`labelledBy`).
+ * "What actually needs my attention right now?" — every Attention signal, in
+ * the fixed priority order, as one list: what happened, why it matters, the
+ * figure it is about, a link to the page that owns it, and Hide on the two
+ * kinds nothing else resolves. It is the complete list the Overview's View all
+ * opens; the surface around it (the sheet) supplies the heading (`labelledBy`).
  */
 export function AttentionList({
   signals,
   today,
   labelledBy,
-  initial = 3,
   className,
 }: {
   readonly signals: readonly AttentionSignal[];
   readonly today: CalendarDate;
   /** The id of the heading that names the list; it also takes focus after Hide. */
   readonly labelledBy: string;
-  /** How many rows show before **Show N more**. */
-  readonly initial?: number;
   readonly className?: string;
 }) {
   if (signals.length === 0) {
     return (
-      <section aria-labelledby={labelledBy} className={cn(CARD, "px-4 py-4 md:px-5", className)}>
-        <p className="text-body font-semibold text-ink">Nothing needs your attention</p>
-        <p className="mt-0.5 text-meta text-ink-2">
-          No payment, money set aside, verified balance or change in spending needs a look right
-          now.
-        </p>
+      <section aria-labelledby={labelledBy} className={cn("py-4", className)}>
+        <p className="text-body font-semibold text-ink">{NOTHING_TITLE}</p>
+        <p className="mt-0.5 text-meta text-ink-2">{NOTHING_DETAIL}</p>
       </section>
     );
   }
 
   return (
-    <section aria-labelledby={labelledBy} className={cn(CARD, className)}>
-      <ShowMoreList id={`${labelledBy}-list`} initial={initial}>
+    <section aria-labelledby={labelledBy} className={className}>
+      <ul className="divide-y divide-line">
         {signals.map((signal) => (
           <SignalRow key={signal.key} row={describeSignal(signal, today)} focusId={labelledBy} />
         ))}
-      </ShowMoreList>
+      </ul>
     </section>
   );
 }
 
 function SignalRow({ row, focusId }: { readonly row: AttentionRow; readonly focusId: string }) {
-  const Icon = ICONS[row.tag.icon];
+  const Icon = SIGNAL_ICONS[row.tag.icon];
   return (
-    <li className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1.5 px-4 py-4 md:px-5">
+    <li className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1.5 py-4">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         {/* The shared Tag palette: warning, berry for short, ocean on mist, neutral. */}
         <Tag tone={row.tag.tone} icon={<Icon aria-hidden className="size-3.5" />}>

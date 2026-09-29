@@ -170,8 +170,8 @@ Deferred to V1.1: expected income (runway), split transactions, CSV import/expor
 **Narrowed 2026-09-27; completed 2026-09-28 (Stage 10 Slice 0).** The Overview answers *what can I use right now, what needs me, and how does that sit against this month and where I stand?* It owns no financial truth and composes existing answers, each linking to the page that explains it. Four zones, in one fixed order, the same in the DOM and on screen at every width:
 
 1. **Available:** the one headline, as the entry point to its bridge. The Overview surfaces Available; it does not own it, and never redraws its bridge or spoken-for bar.
-2. **Attention:** a preview of the ranked signals. This zone absorbs upcoming and overdue commitments, protected-money shortfalls and verification issues, so they get no widgets of their own.
-3. **This month:** a concise current-month outcome from Cash flow — what came in, what went out, what was left over — as a statement linking to Cash flow and to the rows behind it. No savings rate and no comparison.
+2. **Attention:** a preview of the ranked signals (the first 3; the complete list opens in a sheet). This zone absorbs upcoming and overdue commitments, protected-money shortfalls and verification issues, so they get no widgets of their own.
+3. **This month:** a concise current-month outcome from Cash flow — what came in, what went out, what was left over — drawn as a proportional flow of the amounts, linking to Cash flow and to the rows behind it. No savings rate, no percentage and no comparison.
 4. **Where you stand:** net worth with Own and Owe, and how much of what you own counts toward Available, as **secondary context**. Net worth is never a second headline.
 
 **The one headline is still Available** (§3.1).

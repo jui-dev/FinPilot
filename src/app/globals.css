@@ -52,10 +52,14 @@
   --color-negative-soft: #f8eaf0;
 
   /*
-   * Seven type steps and no others (docs/design-direction.md §3). Weight stays
-   * an explicit utility; display, title and figure shrink on phones (see base layer).
+   * Eight type steps and no others (docs/design-direction.md §3). Weight stays
+   * an explicit utility; hero, display, title and figure shrink on phones (see base layer).
    */
   --text-*: initial;
+  /* The Overview's Available figure only: FinPilot's one hero number. */
+  --text-hero: 3rem;
+  --text-hero--line-height: 1;
+  --text-hero--letter-spacing: -0.025em;
   --text-display: 2rem;
   --text-display--line-height: 1.1;
   --text-display--letter-spacing: -0.02em;
@@ -127,9 +131,10 @@
     border-color: var(--color-line);
   }
 
-  /* Phones: the two largest steps come down one notch; the class names stay the same. */
+  /* Phones: the largest steps come down one notch; the class names stay the same. */
   @media (width < 48rem) {
     :root {
+      --text-hero: 2.5rem;
       --text-display: 1.75rem;
       --text-title: 1.5rem;
       --text-figure: 1.125rem;

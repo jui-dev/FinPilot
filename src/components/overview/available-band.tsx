@@ -1,7 +1,7 @@
 import { ArrowRight, CircleAlert } from "lucide-react";
 import Link from "next/link";
 
-import type { Money as MoneyValue } from "@/domain/money";
+import { formatMoney, type Money as MoneyValue } from "@/domain/money";
 import type { AvailableView } from "@/server/services/available-service";
 
 import { outcomeOf } from "../available/describe";
@@ -14,10 +14,15 @@ import { freeShare, type FreeShare } from "./describe";
 
 /**
  * The Overview's headline: Available, on the product's one navy surface
- * (docs/design-direction.md §2). The figure, *Before new income*, the
- * over-commitment tag when there is one, and Available's own sentence, then
- * the free-share ring. It explains nothing further: the bridge lives on
- * /available, and the band leads there.
+ * (docs/design-direction.md §2, §6). Three groups: the answer (the hero figure
+ * and its tags), the free-share ring with the money on hand it is a share of,
+ * and the explanation (Available's own sentence and the way to its bridge).
+ * It never redraws the bridge or the spoken-for bar.
+ *
+ * Phones stack the groups, the ring beside its words. At 768px the band is
+ * wide: the answer and the explanation on the left, the ring on the right.
+ * From 1024px, where the band is the left page of the spread, the groups
+ * stack again with a larger ring, the panel only as tall as they need.
  */
 export function AvailableBand({
   view,
@@ -32,75 +37,86 @@ export function AvailableBand({
     <section
       aria-labelledby="overview-available"
       className={cn(
-        "flex flex-col gap-5 rounded-panel bg-navy px-5 py-5 text-white shadow-card md:px-7 md:py-6 xl:self-start",
+        "grid gap-6 rounded-panel bg-navy p-5 text-white shadow-card md:grid-cols-[minmax(0,1fr)_auto] md:gap-x-10 md:p-7",
+        "lg:grid-cols-1 lg:gap-7",
         // Focus rings stay visible on navy.
         "[&_:focus-visible]:outline-mist",
         className,
       )}
     >
-      {/* Phones to laptops: the ring beside the figure. From 1280px, where the band
-          sits beside Attention, the ring takes its own row with its words beside it. */}
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-5 gap-y-3 xl:grid-cols-1 xl:gap-y-6">
-        <div className="min-w-0">
-          <h2 id="overview-available" className="text-body font-semibold text-white/85">
-            Available now
-          </h2>
-          {/* White on navy, with a true minus when negative; berry never sits on navy. */}
-          <p className="mt-1 text-display font-bold">
-            <Money amount={view.available} />
-          </p>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            {outcome === "over" && (
-              <Tag tone="negative" icon={<CircleAlert aria-hidden className="size-3.5" />}>
-                Over-committed by <Money amount={-view.available as MoneyValue} sign="none" />
-              </Tag>
-            )}
-            <Tag tone="info">Before new income</Tag>
-          </div>
+      <div className="min-w-0">
+        <h2 id="overview-available" className="text-body font-semibold text-white/85">
+          Available now
+        </h2>
+        {/* White on navy, with a true minus when negative; berry never sits on navy. */}
+        <p className="mt-2 text-hero font-bold">
+          <Money amount={view.available} />
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {outcome === "over" && (
+            <Tag tone="negative" icon={<CircleAlert aria-hidden className="size-3.5" />}>
+              Over-committed by <Money amount={-view.available as MoneyValue} sign="none" />
+            </Tag>
+          )}
+          <Tag tone="info">Before new income</Tag>
         </div>
-        {share && <FreeShareRing share={share} />}
-        <p className="col-span-2 max-w-lg text-body text-white/85 xl:col-span-1">
+      </div>
+
+      <div className="md:row-span-2 md:self-center lg:row-span-1">
+        {share ? <FreeShare share={share} available={view.available} /> : <NothingOnHand />}
+      </div>
+
+      <div className="flex min-w-0 flex-col gap-4">
+        <p className="max-w-md text-body text-white/85 lg:text-heading lg:font-normal">
           <AvailableSentence
             view={view}
             dueBy={shortDate(view.horizonEnd, view.today)}
             figureClassName="font-semibold text-white"
           />
         </p>
+        <Link
+          href="/available"
+          className="inline-flex min-h-8 items-center gap-1.5 self-start text-body font-medium text-white underline decoration-white/50 underline-offset-4 transition-colors hover:decoration-white max-md:min-h-10"
+        >
+          See how it&apos;s worked out
+          <ArrowRight aria-hidden className="size-4" />
+        </Link>
       </div>
-      <Link
-        href="/available"
-        className="mt-auto inline-flex min-h-8 items-center gap-1.5 self-start text-body font-medium text-white underline decoration-white/50 underline-offset-4 transition-colors hover:decoration-white max-md:min-h-10"
-      >
-        See how it&apos;s worked out
-        <ArrowRight aria-hidden className="size-4" />
-      </Link>
     </section>
   );
 }
 
 const SIZE = 96;
-const STROKE = 10;
+const STROKE = 8;
 const RADIUS = (SIZE - STROKE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 /**
- * FinPilot's only ring: one arc of what is free against the pool, starting at
- * the top and running clockwise. No percentage, no score, no thresholds; the
- * words beside it carry the amounts, and the drawing is hidden from assistive
- * technology.
+ * FinPilot's only ring: one arc of what is free against the money on hand —
+ * the Available pool, the counted balances plus any card credit — starting at
+ * the top and running clockwise. No percentage, no score, no thresholds. The
+ * drawing and its short words are hidden from assistive technology; one
+ * sentence says the same precisely.
  */
-function FreeShareRing({ share }: { readonly share: NonNullable<FreeShare> }) {
+function FreeShare({
+  share,
+  available,
+}: {
+  readonly share: NonNullable<FreeShare>;
+  readonly available: MoneyValue;
+}) {
   // A free amount too small to see still shows as a sliver, never as nothing.
   const arc = share.free === null ? 0 : Math.max(share.fraction, 0.015) * CIRCUMFERENCE;
+  const pool = formatMoney(share.pool);
   return (
-    <div className="flex flex-col items-center gap-2 text-center xl:flex-row xl:gap-5 xl:text-left">
+    <figure className="flex items-center gap-4 md:flex-col md:gap-3 md:text-center lg:flex-row lg:gap-6 lg:text-left">
       <svg
         aria-hidden
         data-testid="free-share-ring"
         width={SIZE}
         height={SIZE}
         viewBox={`0 0 ${SIZE} ${SIZE}`}
-        className="size-20 shrink-0 md:size-24 xl:size-32"
+        className="size-28 shrink-0 md:size-36 lg:size-48 xl:size-60"
       >
         <circle
           cx={SIZE / 2}
@@ -123,19 +139,35 @@ function FreeShareRing({ share }: { readonly share: NonNullable<FreeShare> }) {
           />
         )}
       </svg>
-      <p className="text-meta leading-tight text-white/85 xl:text-body">
-        {share.free === null ? (
-          <span className="block font-semibold text-white">Nothing free</span>
-        ) : (
-          <span className="block">
-            Free <Money amount={share.free} sign="none" className="font-semibold text-white" />
+      <figcaption>
+        <span aria-hidden className="block">
+          {share.free === null && (
+            <span className="mb-1 block text-body font-semibold text-white">Nothing free</span>
+          )}
+          <span className="block text-body text-white/85">of</span>
+          <span className="block text-figure font-semibold text-white">
+            <Money amount={share.pool} sign="none" />
           </span>
-        )}{" "}
-        {/* Two lines on screen, one phrase when read: the space keeps them apart. */}
-        <span className="block">
-          of <Money amount={share.pool} sign="none" />
+          <span className="block text-body text-white/85">on hand</span>
         </span>
-      </p>
-    </div>
+        <span className="sr-only">
+          {share.free === null
+            ? `Nothing is free of the ${pool} on hand in the accounts and cards that count toward Available.`
+            : `Free: ${formatMoney(available)} of the ${pool} on hand in the accounts and cards that count toward Available.`}
+        </span>
+      </figcaption>
+    </figure>
+  );
+}
+
+/** With nothing on hand there is nothing for a share to be of: words instead of a ring. */
+function NothingOnHand() {
+  return (
+    <p className="max-w-xs">
+      <span className="block text-figure font-semibold text-white">Nothing on hand</span>
+      <span className="mt-1 block text-body text-white/85">
+        in the accounts and cards that count toward Available
+      </span>
+    </p>
   );
 }

@@ -60,12 +60,19 @@ async function openDialog(page: Page, open: () => Promise<void>) {
   }).toPass({ timeout: 20_000 });
 }
 
-/** The Attention list: the region named by its heading. */
+/** Attention on the Overview: the preview, named by its heading. */
 const list = (page: Page) => page.getByRole("region", { name: "Attention" });
 const rows = (page: Page) => list(page).getByRole("listitem");
 const row = (page: Page, text: string) => rows(page).filter({ hasText: text });
-const hideButtons = (page: Page) => list(page).getByRole("button", { name: /^Hide/ });
-const attentionHeading = (page: Page) => page.getByRole("heading", { level: 2, name: "Attention" });
+const viewAll = (page: Page) =>
+  list(page).getByRole("button", { name: /^(View all \d+|Open Attention)$/ });
+
+/** The complete list, in the View all sheet: where Hide lives. */
+const sheet = (page: Page) => page.getByRole("dialog", { name: "Attention" });
+const sheetRows = (page: Page) => sheet(page).getByRole("listitem");
+const sheetRow = (page: Page, text: string) => sheetRows(page).filter({ hasText: text });
+const sheetHeading = (page: Page) => sheet(page).getByRole("heading", { level: 3 });
+const openSheet = (page: Page) => openDialog(page, () => viewAll(page).click());
 
 /** The desktop header's navigation, or the phone tab bar (only one is visible at a time). */
 const mainNav = (page: Page, width: number) => {
@@ -92,15 +99,18 @@ async function expectCurrent(page: Page, width: number, current: string | null) 
 /** Hides every signal that can be hidden, one at a time, as a person would. */
 async function hideEverythingHideable(page: Page) {
   await page.goto("/");
-  const more = list(page).getByRole("button", { name: /^Show \d+ more/ });
-  if (await more.count()) await more.click();
-  while ((await hideButtons(page).count()) > 0) {
-    const before = await rows(page).count();
+  if ((await viewAll(page).count()) === 0) return;
+  await openSheet(page);
+  const hide = sheet(page).getByRole("button", { name: /^Hide/ });
+  while ((await hide.count()) > 0) {
+    const before = await sheetRows(page).count();
     await expect(async () => {
-      await hideButtons(page).first().click();
-      await expect(rows(page)).toHaveCount(before - 1, { timeout: 2_000 });
+      await hide.first().click();
+      await expect(sheetRows(page)).toHaveCount(before - 1, { timeout: 2_000 });
     }).toPass({ timeout: 20_000 });
   }
+  await page.keyboard.press("Escape");
+  await expect(sheet(page)).toBeHidden();
 }
 
 async function addCommitment(page: Page, name: string, amount: string, inDays: number) {
@@ -171,7 +181,7 @@ test("Available leads, with its free share, and opens the Available page", async
   await page.goto("/");
   const band = page.getByRole("region", { name: "Available now" });
   await expect(band).toContainText("Before new income");
-  await expect(band).toContainText(/Free ৳[\d,]+ of ৳[\d,]+/);
+  await expect(band).toContainText(/Free: ৳[\d,]+ of the ৳[\d,]+ on hand/);
   await expect(band.getByTestId("free-share-ring")).toBeVisible();
   await expect(band).not.toContainText("%");
   await band.getByRole("link", { name: "See how it's worked out" }).click();
@@ -191,8 +201,8 @@ test("This month and Where you stand lead to the rows and pages behind them", as
   const stand = page.getByRole("region", { name: "Where you stand" });
   await expect(stand).toContainText("Net worth");
   // The demo's Visa owes; Savings is outside Available.
-  await expect(stand).toContainText(/Owe\s*৳[\d,]+/);
-  await expect(stand).toContainText(/Outside Available ৳[\d,]+ · Savings/);
+  await expect(stand).toContainText(/You owe on cards\s*৳[\d,]+/);
+  await expect(stand).toContainText(/Outside Available\s*৳[\d,]+ · Savings/);
   await expect(stand.getByTestId("asset-rail")).toBeVisible();
   await stand.getByRole("link", { name: "Your accounts" }).click();
   await expect(page).toHaveURL(/\/accounts$/);
@@ -245,20 +255,29 @@ test("an unexplained adjustment: its evidence, and Hide → empty → Undo", asy
   );
   await expect(page.getByText("Balance adjustment").first()).toBeVisible();
 
-  // Hiding the last visible item leaves the empty strip; Undo brings it back.
+  // Hide lives in the complete list: it leaves the sheet empty, focus on its
+  // heading, and Undo brings the row back without closing the sheet.
   await page.goto("/");
+  // Its one signal shows already, but can be hidden: the sheet is where Hide lives.
+  await expect(viewAll(page)).toHaveText("Open Attention");
+  await openSheet(page);
+  const inSheet = sheetRow(page, `${wallet} had an unexplained difference`);
   await expect(async () => {
-    await adjusted
+    await inSheet
       .getByRole("button", { name: `Hide ${wallet} had an unexplained difference` })
       .click();
     await expect(page.getByRole("status")).toContainText("Hidden.", { timeout: 2_000 });
   }).toPass({ timeout: 20_000 });
-  await expect(list(page)).toContainText("Nothing needs your attention");
-  // Focus returns to the heading, since the row that held it is gone.
-  await expect(attentionHeading(page)).toBeFocused();
+  await expect(sheet(page)).toContainText("Nothing needs your attention");
+  await expect(sheetHeading(page)).toBeFocused();
 
   await page.getByRole("status").getByRole("button", { name: "Undo" }).click();
-  await expect(adjusted).toBeVisible();
+  await expect(inSheet).toBeVisible();
+  await expect(sheet(page)).toBeVisible();
+  // Closing returns focus to View all, which stays while its sheet is open.
+  await page.keyboard.press("Escape");
+  await expect(sheet(page)).toBeHidden();
+  await expect(viewAll(page)).toBeFocused();
   await page.reload();
   await expect(adjusted).toBeVisible();
 });
@@ -275,67 +294,74 @@ test("a payment due soon sits above the adjustment and can't be hidden", async (
   expect(texts[0]).toContain("In 3 days");
   expect(texts[1]).toContain(`${wallet} had an unexplained difference`);
 
-  const due = row(page, bill);
-  await expect(due.getByRole("button", { name: /^Hide/ })).toHaveCount(0);
-  await due.getByRole("link", { name: new RegExp(`^Open Commitments: ${bill}`) }).click();
+  // No Hide in the preview; in the complete list, only the adjustment has one.
+  await expect(list(page).getByRole("button", { name: /^Hide/ })).toHaveCount(0);
+  await openSheet(page);
+  await expect(sheetRow(page, bill).getByRole("button", { name: /^Hide/ })).toHaveCount(0);
+  await expect(sheet(page).getByRole("button", { name: /^Hide/ })).toHaveCount(1);
+  await page.keyboard.press("Escape");
+  await expect(sheet(page)).toBeHidden();
+
+  await row(page, bill)
+    .getByRole("link", { name: new RegExp(`^Open Commitments: ${bill}`) })
+    .click();
   await expect(page).toHaveURL(/\/commitments$/);
 });
 
-test("the first 3 show; Show N more opens the rest in place, and Show fewer closes them", async ({
-  page,
-}) => {
+test("the first 3 show; View all opens the complete list in a sheet", async ({ page }) => {
   await addCommitment(page, unique("OV Water"), "900", 4);
   await addCommitment(page, unique("OV Gas"), "700", 5);
 
   await page.goto("/");
   await expect(page.getByText("4 things need a look")).toBeVisible();
   await expect(rows(page)).toHaveCount(3);
-  const more = list(page).getByRole("button", { name: "Show 1 more" });
-  await expect(more).toHaveAttribute("aria-expanded", "false");
-  await more.click();
-
+  await expect(viewAll(page)).toHaveText("View all 4");
+  await openSheet(page);
   await expect(page).toHaveURL(/\/$/);
-  await expect(rows(page)).toHaveCount(4);
-  const fewer = list(page).getByRole("button", { name: "Show fewer" });
-  await expect(fewer).toHaveAttribute("aria-expanded", "true");
-  await expect(fewer).toBeFocused();
+  await expect(sheetRows(page)).toHaveCount(4);
+  await expect(sheetHeading(page)).toHaveText("4 things need a look");
   // Still in priority order: the adjustment comes after every payment due.
-  expect((await rows(page).allInnerTexts())[3]).toContain(
+  expect((await sheetRows(page).allInnerTexts())[3]).toContain(
     `${wallet} had an unexplained difference`,
   );
 
-  // Hide works from the opened rows, and the next one moves up.
+  // Hide in the sheet: the next one moves up, focus goes to the sheet's heading.
   await expect(async () => {
-    await row(page, `${wallet} had an unexplained difference`)
+    await sheetRow(page, `${wallet} had an unexplained difference`)
       .getByRole("button", { name: /^Hide/ })
       .click();
-    await expect(rows(page)).toHaveCount(3, { timeout: 2_000 });
+    await expect(sheetRows(page)).toHaveCount(3, { timeout: 2_000 });
   }).toPass({ timeout: 20_000 });
-  await expect(attentionHeading(page)).toBeFocused();
-  await expect(list(page).getByRole("button", { name: /^Show/ })).toHaveCount(0);
+  await expect(sheetHeading(page)).toBeFocused();
+  await expect(sheetHeading(page)).toHaveText("3 things need a look");
   await page.getByRole("status").getByRole("button", { name: "Undo" }).click();
-  await expect(list(page).getByRole("button", { name: /^Show/ })).toBeVisible();
-  await expect(rows(page)).toHaveCount(4);
+  await expect(sheetRows(page)).toHaveCount(4);
 
-  await list(page).getByRole("button", { name: "Show fewer" }).click();
+  await page.keyboard.press("Escape");
+  await expect(sheet(page)).toBeHidden();
+  await expect(viewAll(page)).toBeFocused();
   await expect(rows(page)).toHaveCount(3);
-  await expect(list(page).getByRole("button", { name: "Show 1 more" })).toBeVisible();
 });
 
 test("a hidden item stays hidden across reloads; what can't be hidden stays", async ({ page }) => {
   await page.goto("/");
-  await list(page).getByRole("button", { name: "Show 1 more" }).click();
-  const adjusted = row(page, `${wallet} had an unexplained difference`);
+  await openSheet(page);
+  const adjusted = sheetRow(page, `${wallet} had an unexplained difference`);
   await expect(async () => {
     await adjusted.getByRole("button", { name: /^Hide/ }).click();
     await expect(adjusted).toHaveCount(0, { timeout: 2_000 });
   }).toPass({ timeout: 20_000 });
+  await page.keyboard.press("Escape");
+  // Nothing left to open the sheet for, so focus goes to the Attention heading.
+  await expect(viewAll(page)).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 2, name: "Attention" })).toBeFocused();
 
   await page.reload();
-  await expect(adjusted).toHaveCount(0);
+  await expect(row(page, `${wallet} had an unexplained difference`)).toHaveCount(0);
   await expect(row(page, bill)).toBeVisible();
   await expect(page.getByText("3 things need a look")).toBeVisible();
-  await expect(hideButtons(page)).toHaveCount(0);
+  // Three payments due fill the preview, and none can be hidden: no View all.
+  await expect(viewAll(page)).toHaveCount(0);
 });
 
 for (const width of [390, 768, 820, 1024, 1280, 1920]) {
@@ -354,7 +380,7 @@ for (const width of [390, 768, 820, 1024, 1280, 1920]) {
     await expect(band.getByTestId("free-share-ring")).toBeInViewport();
 
     // The DOM order is the reading order; on screen, each zone starts after
-    // the one before it (below it, or to its right from 1280px).
+    // the one before it (below it, or to its right in the spread from 1024px).
     const zones = ["Available now", "Attention", "This month", "Where you stand"];
     await expect(page.getByRole("heading", { level: 2 })).toHaveText(zones);
     const boxes = await Promise.all(
@@ -364,12 +390,20 @@ for (const width of [390, 768, 820, 1024, 1280, 1920]) {
       const [prev, next] = [boxes[i - 1]!, boxes[i]!];
       expect(next.y > prev.y || next.x > prev.x, `${zones[i]} after ${zones[i - 1]}`).toBe(true);
     }
-    const attentionBeside = boxes[1]!.x > boxes[0]!.x;
-    expect(attentionBeside, "Attention beside the band only from 1280px").toBe(width >= 1280);
+    const attentionBeside = boxes[1]!.x > boxes[0]!.x + 100;
+    expect(attentionBeside, "Attention beside the band only from 1024px").toBe(width >= 1024);
+    if (width >= 1024) {
+      // The spread: the navy page and the context column share one top edge.
+      const [panel, column] = await Promise.all([
+        band.boundingBox(),
+        list(page).locator("xpath=..").boundingBox(),
+      ]);
+      expect(Math.round(panel!.y)).toBe(Math.round(column!.y));
+    }
 
     // The first Attention row: its tag stays clear of its figure.
     const first = rows(page).first();
-    const tag = await first.locator("span.rounded-full").first().boundingBox();
+    const tag = await first.locator("span.inline-flex.rounded-full").first().boundingBox();
     const amount = await first
       .getByText(/৳[\d,]+/)
       .first()
