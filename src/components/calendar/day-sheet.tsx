@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useSyncExternalStore, type ReactNode } from "react";
 
+import { cn } from "../ui/cn";
 import { SidePanel } from "../ui/overlay";
 
 /** Below lg the Calendar is the agenda, and a chosen day opens as a sheet; from lg it sits beside the grid. */
@@ -20,16 +21,22 @@ function subscribe(onChange: () => void) {
  * pops up on arrival) and only below lg, where there is no panel beside the
  * grid. Closing it leaves the day out of the URL; back and reload keep the
  * day that the URL names.
+ *
+ * `everywhere` opens it at every width — a side panel from 768px, a bottom
+ * sheet below — for a page with no evidence panel beside its days (the
+ * Overview's Your month).
  */
 export function DaySheet({
   open,
   title,
   closeHref,
+  everywhere = false,
   children,
 }: {
   readonly open: boolean;
   readonly title: string;
   readonly closeHref: string;
+  readonly everywhere?: boolean;
   readonly children: ReactNode;
 }) {
   const router = useRouter();
@@ -40,13 +47,13 @@ export function DaySheet({
   );
   return (
     <SidePanel
-      open={open && narrow}
+      open={open && (everywhere || narrow)}
       onOpenChange={(next) => {
         if (!next) router.replace(closeHref, { scroll: false });
       }}
       title={title}
       hideTitle
-      className="lg:hidden [&>div:last-child]:px-0 [&>div:last-child]:pb-3"
+      className={cn(!everywhere && "lg:hidden", "[&>div:last-child]:px-0 [&>div:last-child]:pb-3")}
     >
       {children}
     </SidePanel>

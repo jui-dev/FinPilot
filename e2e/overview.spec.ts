@@ -130,7 +130,7 @@ async function addCommitment(page: Page, name: string, amount: string, inDays: n
 let wallet = "";
 let bill = "";
 
-test("the logo leads to the Overview: four zones in order, and Overview is current", async ({
+test("the logo leads to the Overview: five zones in order, and Overview is current", async ({
   page,
 }) => {
   await page.goto("/activity");
@@ -140,6 +140,7 @@ test("the logo leads to the Overview: four zones in order, and Overview is curre
   await expect(page).toHaveTitle(/^Overview · FinPilot$/);
   await expect(page.getByRole("heading", { level: 2 })).toHaveText([
     "Available now",
+    "Your month",
     "Attention",
     "This month",
     "Where you stand",
@@ -177,15 +178,98 @@ for (const width of [390, 1280]) {
   });
 }
 
-test("Available leads, with its free share, and opens the Available page", async ({ page }) => {
+test("Available leads, with its ring, and opens the Available page", async ({ page }) => {
   await page.goto("/");
   const band = page.getByRole("region", { name: "Available now" });
   await expect(band).toContainText("Before new income");
   await expect(band).toContainText(/Free: ৳[\d,]+ of the ৳[\d,]+ on hand/);
-  await expect(band.getByTestId("free-share-ring")).toBeVisible();
+  await expect(band.getByTestId("available-ring")).toBeVisible();
+  await expect(band).toContainText(/Available\s*৳[\d,]+/);
   await expect(band).not.toContainText("%");
   await band.getByRole("link", { name: "See how it's worked out" }).click();
   await expect(page).toHaveURL(/\/available$/);
+});
+
+test("Your month shows the month at a glance and opens the Calendar", async ({ page }) => {
+  await page.goto("/");
+  const month = page.getByRole("region", { name: "Your month" });
+  await expect(month.getByTestId("month-glance")).toBeVisible();
+  await expect(month).toContainText(/Today is \w+day, \d{1,2} \w{3}\./);
+  // This month owns Came in and Went out; no day shows an amount.
+  await expect(month).not.toContainText(/Came in|Went out/);
+  await expect(month.getByTestId("month-glance")).not.toContainText("৳");
+  await month.getByRole("link", { name: "Open Calendar" }).click();
+  await expect(page).toHaveURL(/\/calendar\?month=\d{4}-\d{2}$/);
+});
+
+test("a day in Your month opens its evidence in a panel; Escape returns to the day", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const month = page.getByRole("region", { name: "Your month" });
+  // By CSS, not role: while the panel is open, the page behind it is hidden from the
+  // accessibility tree (a modal), and the day's selected state is still checked there.
+  const today = page.locator(
+    'section[aria-labelledby="overview-your-month"] a[aria-current="date"]',
+  );
+  // Every day of the month is a link, named by its date.
+  const [year, monthNumber] = dhakaDate().split("-").map(Number);
+  const daysInMonth = new Date(Date.UTC(year!, monthNumber!, 0)).getUTCDate();
+  await expect(month.locator('a[href^="/?day="]')).toHaveCount(daysInMonth);
+  await expect(month.getByRole("link", { name: /^\w+day, \d{1,2} \w{3}/ })).toHaveCount(
+    daysInMonth,
+  );
+
+  // The Overview's own default day never opens on arrival.
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  // By keyboard: Enter on today opens its evidence, named by the URL.
+  await today.focus();
+  await page.keyboard.press("Enter");
+  const panel = page.getByRole("dialog");
+  await expect(panel).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/\\?day=${dhakaDate()}$`));
+  await expect(panel.getByRole("heading", { level: 3 }).first()).toBeVisible();
+  await expect(today).toContainText("shown");
+
+  // Escape closes it, leaves the day out of the URL, and focus returns to the day.
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(today).toBeFocused();
+
+  // A day money moved on: its figures lead to that day's rows in Activity.
+  const moved = month.getByRole("link", { name: /money in or out/ }).first();
+  await moved.click();
+  await expect(panel).toBeVisible();
+  await expect(panel).toContainText("Came in");
+  await expect(panel).toContainText("Went out");
+  await panel
+    .getByRole("link", { name: /^(This day|Income) in Activity$/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(
+    /\/activity\?(type=income&)?from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}$/,
+  );
+});
+
+test("on a phone, a day in Your month opens as a bottom sheet", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  const month = page.getByRole("region", { name: "Your month" });
+  await month.locator('a[aria-current="date"]').click();
+  const sheet = page.getByRole("dialog");
+  await expect(sheet).toBeVisible();
+  // Once it has slid in: across the width, resting on the bottom edge.
+  await expect
+    .poll(async () => {
+      const box = (await sheet.boundingBox())!;
+      return [Math.round(box.y + box.height), Math.round(box.width)];
+    })
+    .toEqual([844, 390]);
+  await sheet.getByRole("button", { name: "Close" }).click();
+  await expect(sheet).toBeHidden();
+  await expect(page).toHaveURL(/\/$/);
 });
 
 test("This month and Where you stand lead to the rows and pages behind them", async ({ page }) => {
@@ -243,9 +327,11 @@ test("an unexplained adjustment: its evidence, and Hide → empty → Undo", asy
   await expect(page.getByRole("dialog")).toBeHidden();
 
   await page.goto("/");
-  const adjusted = row(page, `${wallet} had an unexplained difference`);
+  // The preview is a glance: the tag, the account and the figure; why is in the sheet.
+  const adjusted = row(page, wallet);
   await expect(adjusted).toContainText("Adjusted");
-  await expect(adjusted).toContainText("found ৳350 less than the ledger recorded");
+  await expect(adjusted).toContainText("৳350");
+  await expect(adjusted).not.toContainText("found ৳350 less");
   await expect(page.getByText("1 thing needs a look")).toBeVisible();
 
   // Its evidence: the adjustment itself, in Activity, on that account and day.
@@ -292,7 +378,8 @@ test("a payment due soon sits above the adjustment and can't be hidden", async (
   expect(texts).toHaveLength(2);
   expect(texts[0]).toContain(bill);
   expect(texts[0]).toContain("In 3 days");
-  expect(texts[1]).toContain(`${wallet} had an unexplained difference`);
+  expect(texts[1]).toContain(wallet);
+  expect(texts[1]).toContain("Adjusted");
 
   // No Hide in the preview; in the complete list, only the adjustment has one.
   await expect(list(page).getByRole("button", { name: /^Hide/ })).toHaveCount(0);
@@ -357,7 +444,7 @@ test("a hidden item stays hidden across reloads; what can't be hidden stays", as
   await expect(page.getByRole("heading", { level: 2, name: "Attention" })).toBeFocused();
 
   await page.reload();
-  await expect(row(page, `${wallet} had an unexplained difference`)).toHaveCount(0);
+  await expect(row(page, wallet)).toHaveCount(0);
   await expect(row(page, bill)).toBeVisible();
   await expect(page.getByText("3 things need a look")).toBeVisible();
   // Three payments due fill the preview, and none can be hidden: no View all.
@@ -377,11 +464,11 @@ for (const width of [390, 768, 820, 1024, 1280, 1920]) {
 
     const band = page.getByRole("region", { name: "Available now" });
     await expect(band.getByRole("heading", { name: "Available now" })).toBeInViewport();
-    await expect(band.getByTestId("free-share-ring")).toBeInViewport();
+    await expect(band.getByTestId("available-ring")).toBeInViewport();
 
     // The DOM order is the reading order; on screen, each zone starts after
     // the one before it (below it, or to its right in the spread from 1024px).
-    const zones = ["Available now", "Attention", "This month", "Where you stand"];
+    const zones = ["Available now", "Your month", "Attention", "This month", "Where you stand"];
     await expect(page.getByRole("heading", { level: 2 })).toHaveText(zones);
     const boxes = await Promise.all(
       zones.map((name) => page.getByRole("heading", { level: 2, name }).boundingBox()),
@@ -390,27 +477,31 @@ for (const width of [390, 768, 820, 1024, 1280, 1920]) {
       const [prev, next] = [boxes[i - 1]!, boxes[i]!];
       expect(next.y > prev.y || next.x > prev.x, `${zones[i]} after ${zones[i - 1]}`).toBe(true);
     }
-    const attentionBeside = boxes[1]!.x > boxes[0]!.x + 100;
-    expect(attentionBeside, "Attention beside the band only from 1024px").toBe(width >= 1024);
+    const monthBeside = boxes[1]!.x > boxes[0]!.x + 100;
+    expect(monthBeside, "Your month beside Available only from 1024px").toBe(width >= 1024);
     if (width >= 1024) {
-      // The spread: the navy page and the context column share one top edge.
-      const [panel, column] = await Promise.all([
+      // The top row: Available and Your month share one top edge and one height.
+      const [left, right] = await Promise.all([
         band.boundingBox(),
-        list(page).locator("xpath=..").boundingBox(),
+        page.getByRole("region", { name: "Your month" }).boundingBox(),
       ]);
-      expect(Math.round(panel!.y)).toBe(Math.round(column!.y));
+      expect(Math.round(left!.y)).toBe(Math.round(right!.y));
+      expect(Math.round(left!.height)).toBe(Math.round(right!.height));
     }
 
-    // The first Attention row: its tag stays clear of its figure.
-    const first = rows(page).first();
-    const tag = await first.locator("span.inline-flex.rounded-full").first().boundingBox();
-    const amount = await first
-      .getByText(/৳[\d,]+/)
-      .first()
-      .boundingBox();
-    const box = await first.boundingBox();
-    expect(tag!.x + tag!.width, "tag runs into the amount").toBeLessThanOrEqual(amount!.x);
-    expect(amount!.x + amount!.width).toBeLessThanOrEqual(box!.x + box!.width);
+    // Each Attention card holds its tag, subject and figure inside it.
+    for (const card of await rows(page).all()) {
+      const box = (await card.boundingBox())!;
+      for (const part of [
+        card.locator("span.inline-flex.rounded-full").first(),
+        card.getByText(/৳[\d,]+/).first(),
+      ]) {
+        const inner = (await part.boundingBox())!;
+        expect(inner.x + inner.width, "runs out of its card").toBeLessThanOrEqual(
+          box.x + box.width,
+        );
+      }
+    }
 
     // The asset rail and its words stay inside the card.
     const stand = page.getByRole("region", { name: "Where you stand" });

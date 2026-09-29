@@ -1,8 +1,12 @@
+import { compareDates, rangeContains, type CalendarDate } from "@/domain/calendar-date";
+import { WEEKDAYS, weekdayIndex, type Weekday } from "@/domain/calendar-weeks";
+import type { OccurrenceDisplayState } from "@/domain/commitments/occurrences";
 import type { CashFlowSummary } from "@/domain/ledger/cash-flow";
 import type { Money } from "@/domain/money";
 import type { AvailableView } from "@/server/services/available-service";
+import type { CalendarDue, MonthCalendar } from "@/server/services/calendar-service";
 
-import { listOf } from "../available/describe";
+import { listOf, spokenForBar, type SegmentKind } from "../available/describe";
 
 /**
  * How the Overview draws what the read models already say. Every amount is
@@ -12,26 +16,52 @@ import { listOf } from "../available/describe";
  */
 
 /**
- * The free-share ring (docs/design-direction.md §5): Available against the
- * bridge's pool. No ring when the pool is ≤ 0, since there is nothing for a
- * share to be of; an empty track when nothing is free (Available ≤ 0), the
- * over-commitment tag carrying the rest.
+ * The Available ring: the money on hand (the bridge's pool) divided as the
+ * Available page's spoken-for bar divides it, drawn clockwise from the top
+ * with what is free first. Every amount and share is `spokenForBar`'s; this
+ * only orders the parts and turns their shares into where each arc starts.
+ * When more is spoken for than the pool holds, the over-commitment is the last
+ * arc, as the bar's outlined gap is its last part. No ring when there is
+ * nothing on hand, since there is nothing for the parts to be of.
  */
-export type FreeShare = {
-  /** What is free: Available, or nothing when Available is ≤ 0. */
-  readonly free: Money | null;
-  readonly pool: Money;
-  /** The arc to draw, 0–1. Geometry only; never shown as a number. */
-  readonly fraction: number;
-} | null;
+export type RingKind = SegmentKind | "over";
 
-export function freeShare(view: Pick<AvailableView, "available" | "pool">): FreeShare {
-  const { available, pool } = view;
-  if (pool <= 0) return null;
-  if (available <= 0) return { free: null, pool, fraction: 0 };
-  // Available never exceeds the pool (the bridge's invariant); the clamp only
-  // keeps the drawing inside its circle.
-  return { free: available, pool, fraction: Math.min(available / pool, 1) };
+export interface RingArc {
+  readonly kind: RingKind;
+  readonly amount: Money;
+  /** Where the arc starts and how much of the circle it takes, 0–1. Geometry only. */
+  readonly start: number;
+  readonly length: number;
+}
+
+export interface AvailableRing {
+  readonly pool: Money;
+  readonly arcs: readonly RingArc[];
+}
+
+const RING_ORDER: readonly SegmentKind[] = ["available", "owed", "payments", "setAside"];
+
+export function availableRing(view: AvailableView): AvailableRing | null {
+  const bar = spokenForBar(view);
+  if (!bar) return null;
+  const parts = [...bar.segments].sort(
+    (a, b) => RING_ORDER.indexOf(a.kind) - RING_ORDER.indexOf(b.kind),
+  );
+  let at = 0;
+  const arcs: RingArc[] = parts.map((s) => {
+    const arc = { kind: s.kind, amount: s.amount, start: at, length: s.share };
+    at += s.share;
+    return arc;
+  });
+  if (bar.over) {
+    arcs.push({
+      kind: "over",
+      amount: bar.over.amount,
+      start: bar.over.from,
+      length: 1 - bar.over.from,
+    });
+  }
+  return { pool: bar.pool, arcs };
 }
 
 export interface RailPart {
@@ -115,5 +145,82 @@ export function monthFlow(
         : leftOver < 0
           ? { from: cameIn, to: wentOut, kind: "over" }
           : null,
+  };
+}
+
+/**
+ * Your month at a glance: the Calendar read model's month reduced to what a
+ * day can show without figures — today, whether money came in or went out
+ * that day (income or spending, as Cash flow counts it; transfers are not
+ * money in or out), and whether a payment is still due on it. Nothing is
+ * summed here; the month's figures stay the read model's.
+ */
+export interface GlanceDay {
+  readonly date: CalendarDate;
+  readonly day: number;
+  readonly today: boolean;
+  /** The day whose evidence is open. */
+  readonly selected: boolean;
+  /** After today: nothing can have happened yet. */
+  readonly later: boolean;
+  readonly moved: boolean;
+  /**
+   * A payment still due that day: "attention" when one is overdue or due
+   * today (a decision is needed), "expected" when it is only coming up.
+   * Paid and skipped payments are settled and leave no mark.
+   */
+  readonly due: "attention" | "expected" | null;
+}
+
+export interface MonthGlance {
+  readonly weekdays: readonly Weekday[];
+  /** Seven places a week; null before the month's first day and after its last. */
+  readonly weeks: readonly (readonly (GlanceDay | null)[])[];
+  readonly movedDays: number;
+  /** The payments still due in the month, overdue ones included, by due date. */
+  readonly pending: readonly CalendarDue[];
+}
+
+const NEEDS_DECISION = new Set<OccurrenceDisplayState>(["overdue", "due_today"]);
+
+export function monthGlance(
+  calendar: MonthCalendar,
+  selected: CalendarDate | null = null,
+): MonthGlance {
+  const { weekStartsOn, weeks, days, today } = calendar;
+  const at = WEEKDAYS.indexOf(weekStartsOn);
+  const glance = days.map((d): GlanceDay => {
+    const pending = d.dues.filter(
+      (due) => due.display === "upcoming" || NEEDS_DECISION.has(due.display),
+    );
+    return {
+      date: d.date,
+      day: Number(d.date.slice(8)),
+      today: d.date === today,
+      selected: d.date === selected,
+      later: d.date > today,
+      moved: d.money !== null && (d.money.income !== 0 || d.money.spending !== 0),
+      due: pending.some((due) => NEEDS_DECISION.has(due.display))
+        ? "attention"
+        : pending.length > 0
+          ? "expected"
+          : null,
+    };
+  });
+  return {
+    weekdays: [...WEEKDAYS.slice(at), ...WEEKDAYS.slice(0, at)],
+    weeks: weeks.map((week) => {
+      const inWeek = glance.filter((d) => rangeContains(week.range, d.date));
+      const lead = weekdayIndex(inWeek[0]!.date, weekStartsOn);
+      return [
+        ...Array<null>(lead).fill(null),
+        ...inWeek,
+        ...Array<null>(7 - lead - inWeek.length).fill(null),
+      ];
+    }),
+    movedDays: glance.filter((d) => d.moved).length,
+    pending: calendar.due.occurrences
+      .filter((d) => d.display === "upcoming" || NEEDS_DECISION.has(d.display))
+      .sort((a, b) => compareDates(a.dueOn, b.dueOn)),
   };
 }

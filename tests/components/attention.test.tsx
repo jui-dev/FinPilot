@@ -105,6 +105,7 @@ describe("how each signal reads", () => {
       key: "commitment_overdue:rent",
       tag: { label: "Overdue", tone: "warning", icon: "calendar" },
       title: "Rent is overdue",
+      subject: "Rent",
       detail: "Due 1 Sep, 21 days ago, and not paid or skipped.",
       amount: { value: taka(30_000), sign: "none" },
       evidence: { href: "/commitments", label: "Pay or skip in Commitments" },
@@ -158,6 +159,7 @@ describe("how each signal reads", () => {
     ).toMatchObject({
       tag: { label: "Short", tone: "negative", icon: "alert" },
       title: "Laptop is short on Savings",
+      subject: "Laptop",
       detail:
         "Savings now holds less than is set aside there: ৳90,000 of ৳1,00,000 is still covered.",
       amount: { value: taka(10_000), note: "short", negative: true },
@@ -171,6 +173,7 @@ describe("how each signal reads", () => {
     expect(cash).toMatchObject({
       tag: { label: "Doesn't match", tone: "warning" },
       title: "Cash no longer matches its 20 Sep verification",
+      subject: "Cash",
       detail: "The ledger now records ৳4,650 for that day; you verified ৳4,200.",
       amount: { value: taka(450), note: "off" },
       evidence: {
@@ -216,6 +219,7 @@ describe("how each signal reads", () => {
       key: "spending_up:2026-09",
       tag: { label: "Spending up", tone: "neutral", icon: "trend" },
       title: "Spending is up ৳26,450 on the same days last month",
+      subject: "September so far",
       detail:
         "Health accounts for all of the increase. Shopping, Groceries and Food & Dining were lower.",
       amount: { value: taka(26_450), sign: "always" },
@@ -241,6 +245,7 @@ describe("how each signal reads", () => {
       key: "unexplained_adjustment:adj-Cash",
       tag: { label: "Adjusted", tone: "neutral", icon: "scale" },
       title: "Cash had an unexplained difference",
+      subject: "Cash",
       detail:
         "Verifying on 20 Sep found ৳350 less than the ledger recorded, so an adjustment was added.",
       amount: { value: taka(350), sign: "none" },
@@ -377,8 +382,17 @@ describe("AttentionPreview", () => {
       <AttentionPreview signals={five()} today={TODAY} labelledBy="overview-attention" />,
     );
     expect(html.match(/<li/g)).toHaveLength(3);
-    for (const name of ["Rent", "Internet", "Mobile"]) expect(html).toContain(`${name} is due`);
-    expect(html).not.toContain("Gym is due");
+    // A glance: the tag, what it is about and the figure; why it matters stays in View all.
+    const subjects = [...html.matchAll(/text-heading font-semibold[^>]*>([^<]+)</g)].map(
+      (m) => m[1],
+    );
+    expect(subjects).toEqual(["Rent", "Internet", "Mobile"]);
+    expect(html).not.toContain("Gym");
+    expect(html).not.toContain("Coming up, and not paid yet.");
+    // Neutral cards: no coloured edge; the tone is in the icon tile and the tag.
+    expect(html).not.toMatch(/h-1 w-full/);
+    expect(html).toContain("bg-surface-subtle");
+    expect(html.match(/bg-mist text-ocean/g)!.length).toBeGreaterThanOrEqual(3);
     expect(html).not.toContain(">Hide<");
     expect(html.match(/<a /g)).toHaveLength(3);
     // The link names where it leads, then the row it is for.

@@ -28,6 +28,8 @@ export interface AttentionRow {
   };
   /** What happened. */
   readonly title: string;
+  /** What it is about, in a word or a name: the Overview's glance at it. */
+  readonly subject: string;
   /** Why it matters, in one sentence. */
   readonly detail: string;
   /** The figure it is about, and a word after it ("short", "off"). */
@@ -75,6 +77,7 @@ export function describeSignal(signal: AttentionSignal, today: CalendarDate): At
         key: signal.key,
         tag: { label: "Overdue", tone: "warning", icon: "calendar" },
         title: `${signal.name} is overdue`,
+        subject: signal.name,
         detail:
           signal.occurrenceIds.length === 1
             ? `Due ${date(signal.oldestDueOn)}, ${days(signal.daysOverdue)} ago, and not paid or skipped.`
@@ -89,6 +92,7 @@ export function describeSignal(signal: AttentionSignal, today: CalendarDate): At
         key: signal.key,
         tag: { label: "Due today", tone: "warning", icon: "calendar" },
         title: `${signal.name} is due today`,
+        subject: signal.name,
         detail: "It hasn't been paid or skipped yet.",
         amount: { value: signal.amount, sign: "none" },
         evidence: { href, label: "Pay or skip in Commitments" },
@@ -107,6 +111,7 @@ export function describeSignal(signal: AttentionSignal, today: CalendarDate): At
           signal.daysUntil === 1
             ? `${signal.name} is due tomorrow`
             : `${signal.name} is due ${dayLabel(signal.dueOn, today)}`,
+        subject: signal.name,
         detail: "Coming up, and not paid yet.",
         amount: { value: signal.amount, sign: "none" },
         evidence: { href, label: "Open Commitments" },
@@ -118,6 +123,7 @@ export function describeSignal(signal: AttentionSignal, today: CalendarDate): At
         key: signal.key,
         tag: { label: "Short", tone: "negative", icon: "alert" },
         title: `${signal.itemName} is short on ${signal.accountName}`,
+        subject: signal.itemName,
         detail: `${signal.accountName} now holds less than is set aside there: ${formatMoney(signal.covered)} of ${formatMoney(signal.reserved)} is still covered.`,
         amount: { value: signal.short, sign: "none", note: "short", negative: true },
         evidence: { href, label: "Refill or release in Set aside" },
@@ -143,6 +149,7 @@ export function describeSignal(signal: AttentionSignal, today: CalendarDate): At
         key: signal.key,
         tag: { label: "Doesn't match", tone: "warning", icon: "mismatch" },
         title: `${signal.accountName} no longer matches its ${date(signal.asOf)} verification`,
+        subject: signal.accountName,
         detail: `The ledger now records ${shown(view.recorded)} for that day; you verified ${shown(view.verified)}.`,
         amount: { value: view.off, sign: "none", note: "off" },
         evidence: { href, label: `Review entries through ${date(signal.asOf)}` },
@@ -171,6 +178,7 @@ export function describeSignal(signal: AttentionSignal, today: CalendarDate): At
         key: signal.key,
         tag: { label: "Spending up", tone: "neutral", icon: "trend" },
         title: `Spending is up ${formatMoney(signal.net)} on the same days last month`,
+        subject: `${monthLabel(signal.month).split(" ")[0]} so far`,
         detail: why,
         amount: { value: signal.net, sign: "always" },
         evidence: { href, label: "See what changed" },
@@ -188,6 +196,7 @@ export function describeSignal(signal: AttentionSignal, today: CalendarDate): At
         key: signal.key,
         tag: { label: "Adjusted", tone: "neutral", icon: "scale" },
         title: `${signal.accountName} had an unexplained difference`,
+        subject: signal.accountName,
         detail,
         amount: { value: abs(signal.amount), sign: "none" },
         evidence: { href, label: "See the adjustment" },

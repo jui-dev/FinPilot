@@ -131,9 +131,7 @@ test("Quick Add on the Overview: Available drops by the expense and Attention fl
   ).toBeVisible();
 
   // Attention now flags the account: its verification no longer matches, by the expense.
-  const flagged = attention(page)
-    .getByRole("listitem")
-    .filter({ hasText: new RegExp(`${name} no longer matches its .+ verification`) });
+  const flagged = attention(page).getByRole("listitem").filter({ hasText: name });
   await expect(flagged).toHaveCount(1);
   await expect(flagged).toContainText("Doesn't match");
   await expect(flagged).toContainText(`${formatMoney(money(EXPENSE * 100))} off`);
