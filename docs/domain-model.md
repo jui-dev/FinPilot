@@ -331,7 +331,7 @@ Available = Σ balance(asset accounts with included_in_available)
   - protected-money backing: reserved / covered / short per earmark (§9)
   - each account's current checkpoint, its status and drift, and its adjustment (§12)
   - the current month-to-date spending change against the same days of the previous month (below)
-  - later: a category's "typical" amount (Stage 12, Trends, for family 3; the definition is open decision O-5) and Monthly Plan statuses only when a plan exists (Stage 13)
+  - later: a category's "typical" amount (for family 3; the definition is open decision O-5 — Trends, built in Stage 12, compares exact half totals and defines none) and Monthly Plan statuses only when a plan exists (Stage 13)
 - **Signal fields:**
   - `kind`: one of the kinds below; it fixes the priority and the presentation tone
   - `key`: `kind : subject`, plus the episode (a month, an adjustment, a checkpoint date) where the kind has one; built only from ids and dates, never from amounts; stable across reads and used for dismissal and deduplication
@@ -368,7 +368,7 @@ Available = Σ balance(asset accounts with included_in_available)
   |---|---|---|---|
   | 1 | Monthly Plan at risk / committed over / exceeded (formerly "budget") | — | 13, only when a plan exists |
   | 2 | Month-over-month change (resolved 2026-09-28, below) | `spending_up` | 9 |
-  | 3 | Category spike vs typical | — | 12 (needs Trends' baseline; O-5) |
+  | 3 | Category spike vs typical | — | not scheduled (needs a definition of typical; O-5) |
   | 4 | Commitments overdue / due today / due within 7 days | `commitment_overdue`, `commitment_due_today`, `commitment_due_soon` | 9 |
   | 5 | Protected money under-covered (formerly "goal"). *Behind schedule is deferred with target dates (§9).* | `set_aside_short` | 9 |
   | 6 | Available low / over-committed | — | deferred beyond V1 (P-6) |
@@ -501,3 +501,4 @@ Headline results on 2026-09-22:
 | 2026-09-28 | **Stage 10 Slice 0.** §10: excluded asset balances are defined, with the invariant included + excluded asset balances = assets. Explanation only; Available's formula is unchanged. No acceptance value changed. | The Overview shows how much of what you own counts toward Available; that sum belongs to the domain, not to a component. |
 | 2026-09-28 | **Stage 10 Slice 2 (Accounts sign fix).** §5: liability standing (owed, credit, clear) is defined and classified by the domain. No semantics and no acceptance value changed. | Accounts wrote every liability as a magnitude followed by "owed", so a card holding credit read as owed. |
 | 2026-09-28 | **Stage 10 Slice 2 (read model).** §10: excluded asset balances are built as `excludedAssetBalances`, and the bridge gains `pool` = included asset balances + max(liability balances, 0), with the invariants included + excluded = assets and owed + due + set aside + Available = pool. Available's formula is unchanged, and **no acceptance value changed**. | The Overview needs both; the pool rule lived in the spoken-for bar's presentation and moves into the bridge, so it has one owner. |
+| 2026-09-29 | **Stage 12 (Trends).** §11: signal family 3 is no longer tied to Stage 12, and the context's "typical" amount stays open (O-5); Trends compares exact half totals and defines no typical. No semantics and no acceptance value changed. | Trends shipped without a baseline of its own, so family 3 had nothing to wait for there. |

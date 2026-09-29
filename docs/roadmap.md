@@ -414,13 +414,15 @@ The two inputs to Available: money already obligated and money deliberately set 
 - **Why before Trends:** the current three months cannot show a longitudinal pattern.
 - **Tests that must pass:** the seed smoke test still passes; every V1 signal family still fires.
 - **Commit:** `feat(demo): extended history`
+- **Done (2026-09-29):** `024d55f`. Twelve complete months plus the current one for the same person: seasonal electricity, eating out creeping up lately, a raise four months ago, a festival bonus, and one month in the minus (a refrigerator on the card). The card is paid each month for what actually went on it. Every V1 Attention kind still fires, and the plain ledger the end-to-end suite uses carries the same year.
 
 #### 12 — Trends
 - **Question:** *Is this a pattern or a one-off?* The shape across **three or more complete periods**. Cash flow owns one period and its attribution against another; Trends is not Cash flow with a wider date selector.
-- **Rules:** a partial current month is never treated as a complete month. **One** longitudinal visual first: Income vs Spending across complete months. A category trend (for example a sparkline beside the figure) comes only if it proves useful. The rejected charts are listed in [design-direction.md §5](design-direction.md).
-- **Resolve first:** the definition of "typical" (window; mean or median) used by Trends and by family 3 (§8.5).
-- **Builds:** the Trends view, and signal family 3 (category spike vs typical).
+- **Rules (as built):** complete months only. The window is the last **6** (default) or **12** complete months, ending last month; the current month stays on Cash flow, and a month the earliest account opened part-way through is not complete. Fewer than three complete months is not yet a trend. **What changed** compares the recent half of the window with the earlier half (3 against 3, 6 against 6; with an odd count the middle month is in neither), as exact totals through the existing spending-change explanation and its materiality rule. Nothing is averaged, and Trends needs no definition of "typical".
+- **Builds (as built):** the read model `getTrends` over the ledger's existing income and spending queries (each month equals Cash flow's complete month); the `/trends` page in the Cash flow area behind a **Cash flow · Trends** switch, with no new destination or phone tab; the Journey, What changed and Month by month ([design-direction.md §6](design-direction.md)).
+- **Not part of Trends:** signal family 3 (category spike vs typical) and O-5 stay open and unscheduled.
 - **Commit:** `feat(trends): multi-month pattern`
+- **Done (2026-09-29):** read model `39d27d8`; demo history `024d55f` (Stage 11); the page `36e921f`.
 
 #### 13 — Monthly Plan
 - **Question:** *What do I intend to spend or set aside this month, and how did that go?* It is optional, it never feeds Available, and it never rewrites the ledger ([domain-model.md §7](domain-model.md)).
@@ -577,7 +579,7 @@ Every item here is **deliberately open, not forgotten**. A stage's plan resolves
 | ~~O-2~~ | ~~Signal family 2's trigger: stricter or otherwise meaningfully more selective than What changed; A-72 must stay present.~~ **Resolved 2026-09-28 (Stage 9 Slice 0):** `spending_up` fires at most once per month, for total spending, when the previous same-days total is above zero and the net increase is at least max(৳5,000, 20% × that total); no day-of-month guard. A-72 stays present. | [domain-model.md §11](domain-model.md) | closed |
 | ~~O-3~~ | ~~Protected money: the container's code name, and the representation of operation kinds.~~ **Resolved 2026-09-28 (Stage 7):** `protected_money_items`; append-only signed earmark entries, positive = Reserve, negative = Release, no operation-kind field. | [domain-model.md §9.1](domain-model.md) | closed |
 | O-4 | **Use:** how much is released when the expense differs from the reservation, and what happens to the release when the Use transaction is edited or deleted. | [domain-model.md §9.1](domain-model.md) | implementing **Use** (not required in the minimum Stage 7 slice) |
-| O-5 | "Typical" for Trends and signal family 3: the window, and mean or median. | this file, Stage 12 | **Stage 12** |
+| O-5 | "Typical" for signal family 3: the window, and mean or median. *Trends (built 2026-09-29) compares exact half totals and needs none.* | this file | signal family 3, when scheduled |
 | O-6 | Monthly Plan intentions: effective-dated or month-specific. Either reproduces A-40 and M1-4. | [domain-model.md §7](domain-model.md) | **Stage 13** |
 
 **B. Later product questions**
