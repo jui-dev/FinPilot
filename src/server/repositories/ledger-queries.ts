@@ -110,3 +110,27 @@ export function listTransactions(db: AppDatabase, ownerId: string, range?: DateR
     .orderBy(asc(activeTransactions.occurredOn), asc(activeTransactions.sequence))
     .all();
 }
+
+/**
+ * Income and spending per day over a half-open range, with the same meaning
+ * as incomeTotal and spendingByCategory: income is Σ income, spending is
+ * −Σ(expense + refund). Days with neither are absent.
+ */
+export function dailyIncomeAndSpending(db: AppDatabase, ownerId: string, range: DateRange) {
+  return db
+    .select({
+      occurredOn: activeTransactions.occurredOn,
+      incomeMinor: sql<number>`coalesce(sum(case when ${activeTransactions.type} = 'income' then ${activeTransactions.amountMinor} end), 0)`,
+      spendingMinor: sql<number>`-coalesce(sum(case when ${activeTransactions.type} in ('expense', 'refund') then ${activeTransactions.amountMinor} end), 0)`,
+    })
+    .from(activeTransactions)
+    .where(
+      and(
+        eq(activeTransactions.ownerId, ownerId),
+        inArray(activeTransactions.type, ["income", "expense", "refund"]),
+        inRange(range),
+      ),
+    )
+    .groupBy(activeTransactions.occurredOn)
+    .all();
+}

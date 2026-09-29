@@ -89,3 +89,54 @@ export function currentCheckpoints(db: AppDatabase, ownerId: string): CurrentChe
     adjustmentAmountMinor: r.adjustment_amount_minor,
   }));
 }
+
+export interface CheckpointRow {
+  readonly accountId: string;
+  readonly accountName: string;
+  readonly asOf: string;
+  readonly statedBalanceMinor: number;
+  /** The adjustment it posted while that is active; null when none was needed. */
+  readonly adjustmentId: string | null;
+  readonly adjustmentAmountMinor: number | null;
+}
+
+/**
+ * Every checkpoint dated within a half-open range, in (as_of, created_at)
+ * order: each is a fact about what was counted on its day. The adjustment is
+ * read through `active_transactions`, as for current checkpoints.
+ */
+export function checkpointsInRange(
+  db: AppDatabase,
+  ownerId: string,
+  range: { readonly start: string; readonly end: string },
+): CheckpointRow[] {
+  const rows = db.all<{
+    account_id: string;
+    account_name: string;
+    as_of: string;
+    stated_balance_minor: number;
+    adjustment_id: string | null;
+    adjustment_amount_minor: number | null;
+  }>(sql`
+    SELECT
+      c.account_id,
+      acc.name AS account_name,
+      c.as_of,
+      c.stated_balance_minor,
+      a.id AS adjustment_id,
+      a.amount_minor AS adjustment_amount_minor
+    FROM reconciliation_checkpoints c
+    JOIN accounts acc ON acc.owner_id = c.owner_id AND acc.id = c.account_id
+    LEFT JOIN active_transactions a ON a.owner_id = ${ownerId} AND a.id = c.adjustment_id
+    WHERE c.owner_id = ${ownerId} AND c.as_of >= ${range.start} AND c.as_of < ${range.end}
+    ORDER BY c.as_of, c.created_at
+  `);
+  return rows.map((r) => ({
+    accountId: r.account_id,
+    accountName: r.account_name,
+    asOf: r.as_of,
+    statedBalanceMinor: r.stated_balance_minor,
+    adjustmentId: r.adjustment_id,
+    adjustmentAmountMinor: r.adjustment_amount_minor,
+  }));
+}
