@@ -424,6 +424,12 @@ The two inputs to Available: money already obligated and money deliberately set 
 - **Commit:** `feat(trends): multi-month pattern`
 - **Done (2026-09-29):** read model `39d27d8`; demo history `024d55f` (Stage 11); the page `36e921f`.
 
+#### Monthly Calendar (added 2026-09-29)
+- **Question:** *When did money move, and when do payments fall due?* Cash flow reads one month; Trends reads change across months; the Calendar reads when.
+- **Built:** the read model `getMonthCalendar` — each day's income and spending with Cash flow's meaning (the days add up to Cash flow's month, and each day equals Activity's totals for it), each week's totals over its own date range under a week convention the caller passes (Saturday-first in the UI), the commitment occurrences due in the month with their existing states (a payment's due date and paid date kept apart), and a chosen day's evidence (money, moves, adjustments, commitments due, verifications). The `/calendar` page, the third page of the Cash flow area ([design-direction.md §6](design-direction.md)).
+- **Rules:** months reach back to the first account and forward only through the occurrence materialisation horizon; nothing is invented past it. Transfers, adjustments, payment expectations and verifications never enter a total. Set-aside entries are not shown: they have no business date.
+- **Done (2026-09-29):** read model `75b5462`; the page `d168af8`.
+
 #### 13 — Monthly Plan
 - **Question:** *What do I intend to spend or set aside this month, and how did that go?* It is optional, it never feeds Available, and it never rewrites the ledger ([domain-model.md §7](domain-model.md)).
 - **Resolve first:** effective-dated or month-specific intentions (§8.5).
