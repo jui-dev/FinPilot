@@ -38,7 +38,7 @@ These tokens are the whole palette: the default Tailwind palette is removed ([gl
 | `line-control` | `#8193A8` | a softer, cooler control edge, still ≥ 3:1 on white | the filter toolbar's search and selects (Activity) | dividers, decoration |
 | `ink` / `ink-2` | `#172033` / `#4F5869` | text and figures / labels and metadata | | |
 | `ink-3` | `#8B919C` | quiet marks | icons, placeholders | **any text a person must read** |
-| `navy` / `navy-hover` | `#1F385A` / `#182D49` | identity and the strongest emphasis | logo, page and panel titles, key figures, the primary button, the active destination; **higher** in a change explanation; money that exists and is free in Available's marks; Went out in the month bars | status, a card or page background |
+| `navy` / `navy-hover` | `#1F385A` / `#182D49` | identity and the strongest emphasis | logo, page and panel titles, key figures, the primary button, the current section and page; **higher** in a change explanation; money that exists and is free in Available's marks; Went out in the month bars | status, a card or page background |
 | `ocean` | `#46678D` | interaction and analysis | focus, the selected state, evidence links, info text; share bars | status |
 | `mist` | `#D8F3F5` | a quiet highlighted surface | a light tint for a page's hero card and for the outcome of an equation (Left over, Net worth, what is still due), the quiet washes of §4, selected backgrounds, info tags, icon wells, the soft primary button | text |
 | `tide` | `#96BED4` | supporting marks | Came in in the month bars, set aside in Available's marks, **lower** in a change explanation, the third tone of the concentration ring | text or anything that must be read (2.0:1 on white) |
@@ -99,6 +99,7 @@ These tokens are the whole palette: the default Tailwind palette is removed ([gl
 - **List height:** lists that sit side by side may share one fixed height so the grid stays aligned, their rows scrolling inside; once they stack, they take their natural height, so a page never scrolls inside a page on a phone.
 - **Controls:** radius 8px. Chips and badges are pills. A toolbar may use the softer `line-control` edge, which still meets 3:1.
 - **Overlays** (dialog, sheet, side panel): one soft shadow over a scrim of `ink` at 30%.
+- **Navigation chips:** the current page in a section's row is a white chip with `shadow-chip`, raised off the row's `surface-subtle` band; the current section in the top bar is a `mist` pill with navy text. No underlines.
 - **Icons:** lucide, 1.75 stroke, 16–20px. Seeded categories and account types have fixed icons; **user-created categories get a generic tag icon**, so correctness never depends on hand-assigning icons or colours.
 
 ## 5. Visualisation
@@ -131,7 +132,7 @@ These tokens are the whole palette: the default Tailwind palette is removed ([gl
 
 Each core page answers one question. Keeping them distinct is what prevents features and charts from being duplicated across pages.
 
-**Every page opens the same way:** the title and one line under it on the left; on the right, the area's local switch (Cash flow · Trends · Calendar, or Available · Commitments · Set aside), the page's own period control, and its one primary action (**New commitment**, **New purpose**, **New account**, always the navy primary button).
+**Every page opens the same way:** the title and one line under it on the left; on the right, the page's own period control, and its one primary action (**New commitment**, **New purpose**, **New account**, always the navy primary button).
 
 ### Cash flow: "What happened to my money this month?"
 
@@ -145,7 +146,7 @@ Where it went and What changed are different analytical jobs, not interchangeabl
 
 ### Trends: "How is my money changing over time, and what is driving it?"
 
-The second page of the Cash flow area (**Cash flow · Trends · Calendar**); Cash flow stays the current destination. Complete months only: **6 months** (default) or **12 months**, as links, and the subtitle leads to the current month on Cash flow. Three cards, each answering its own question and showing each figure once:
+The second page of the **Insights** section (**Cash flow · Trends · Calendar**). Complete months only: **6 months** (default) or **12 months**, as links, and the subtitle leads to the current month on Cash flow. Three cards, each answering its own question and showing each figure once:
 1. **The months added up** — *how did the window add up?* One equation (§4): Came in − Went out = Left over over the whole window, with each side's monthly average and the share of Came in that was left over.
 2. **Month by month** — *how did each month go?* One table that is also the chart: each month's two bars (§5) and, in the same column, its exact Came in, Went out and Left over. Each month opens its Cash flow page. A month in the minus keeps navy and a true minus. On phones, the months as rows, newest first.
 3. **What changed** — *why is the recent half different?* Cash flow's What changed across the earlier and recent halves, with exact totals and no percentages, shares or averages; unchanged categories are named.
@@ -154,7 +155,7 @@ No scores or invented labels such as "raise" or "bonus": the ledger knows what m
 
 ### Calendar: "When did money move, and when do payments fall due?"
 
-The third page of the Cash flow area; Cash flow stays the current destination. Cash flow reads one month; Trends reads change across months; the Calendar reads *when*. It is neither a heatmap nor a commitment calendar (§5): it shows recorded money first and known payments due second, and nothing else.
+The third page of the **Insights** section. Cash flow reads one month; Trends reads change across months; the Calendar reads *when*. It is neither a heatmap nor a commitment calendar (§5): it shows recorded money first and known payments due second, and nothing else.
 1. **The month:** Came in and Went out (Cash flow's figures, to date) and, apart from them on mist, what is still due this month with its number of payments; **Open in Cash flow**. A future month says "Nothing has come in or gone out yet" and shows only what is due; the last month with scheduled payments says how far they are known.
 2. **The grid (from 1024px),** across the page: a Saturday-first week (a presentation convention, not an accounting rule) with a **Week out** column set apart as a summary. After the date, a day shows its money: Came in with its "+", Went out in bold, "in" and "out" named only on a day that has both. Then, secondary, at most two named payments due and "+N due". Today has the navy numeral and "Today"; later days carry no money.
 3. **A chosen day opens in a drawer** from the right (a bottom sheet on phones), never on arrival: its Came in and Went out, each opening Activity for that day, then only the groups it holds: **Money activity**, **Moved between accounts** and **Balance adjustments** (both "Not spending"), **Commitments due** (a paid one says when it was paid) and **Verifications** ("Review entries through …"). Only the open day is marked in the grid.
@@ -179,7 +180,7 @@ It has no metric cards.
 
 ### Available: "How much can I actually use right now, and why?"
 
-The landing page of the Available area (Available · Commitments · Set aside). Every figure is the Available read model's; the page only restates its terms.
+The first page of the **Plan** section (Available · Commitments · Set aside), where the Plan label leads. Every figure is the Available read model's; the page only restates its terms.
 
 1. **The answer card:** **Available now** as the hero (navy, a true minus when negative), a *Before new income* tag, and one sentence naming only what actually stands between the balances and the answer ("What's left of ৳1,52,419 in your accounts after what you owe on cards, payments due by 30 Oct and money set aside"). When negative, an *Over-committed by ৳X* tag in `negative` (icon + words); the figure stays navy. Under it, three facts: **Left free** (Available's share of the money on hand), **Spoken for**, **Counted until**.
 2. **How it's worked out,** beside it from 1024px: the bridge as a waterfall table. In your accounts → Owed on cards / Credit on cards → Due by ‹date› → Set aside from Available → **= Available**, each step with its amount, what is **Left** after it, and its mark (§5). The card rows are left out without a card account.
@@ -187,14 +188,14 @@ The landing page of the Available area (Available · Commitments · Set aside). 
 
 ### Commitments: "What am I committed to paying, what needs me now, and what is coming?"
 
-A page of the Available area. Every state and date is the domain's; nothing is paid by reaching a date.
+A page of the Plan section. Every state and date is the domain's; nothing is paid by reaching a date.
 1. **Due now,** the hero: what is overdue or due today, with *Overdue* / *Due today*, or *All clear*.
 2. **Looking ahead:** the next payment, everything due through the forecast window, and how that divides by month.
 3. **Four lists,** two by two from 1024px at one height (§4): **Needs attention** (Pay or Skip; Pay records the expense in Activity, Skip records nothing), **Coming up** (by month, each with its count and subtotal), **Your commitments** (next due first; selecting one edits it) and **Recently paid or skipped** (a paid one opens the expense it recorded). Pay is the soft primary action, Skip the quiet one.
 
 ### Set aside: "What am I keeping money for, and is it still really there?"
 
-A page of the Available area, reached through its local switch (roadmap §8.3).
+A page of the Plan section (roadmap §8.3).
 
 1. **Kept aside,** the hero: what is still really set aside (when part of it is short, the covered amount, with a *short* tag), with the number of purposes and accounts and what is still needed toward targets.
 2. **Where it's held:** each account holding set-aside money, for which purposes, with what is set aside against what is still free (§5).
@@ -202,7 +203,7 @@ A page of the Available area, reached through its local switch (roadmap §8.3).
 
 ### Overview: "What can I use right now, what needs me, and how does that sit against this month and where I stand?"
 
-The page at `/`, where the logo leads (Stage 10). It owns no financial truth: every figure is Available's, the Calendar's, Attention's, Cash flow's or the position's, and each zone leads to the page that explains it. It is the first global destination, **Overview**, on desktop and as a phone tab (P-3), current on exactly `/`. The page title **Overview**, then five zones in one fixed order, the same in the DOM and on screen at every width:
+The page at `/`, where the logo leads (Stage 10). It owns no financial truth: every figure is Available's, the Calendar's, Attention's, Cash flow's or the position's, and each zone leads to the page that explains it. It is the first section, **Overview**, on desktop and as a phone tab, current on exactly `/`. The page title **Overview**, then five zones in one fixed order, the same in the DOM and on screen at every width:
 
 1. **Available now,** the one headline: the figure in `hero` with a true minus when negative, *Before new income* and, when negative, *Over-committed by ৳X*; Available's own sentence, shared with the Available page rather than copied, and **See how it's worked out**. Then a **ring of the money on hand**, divided as the Available page divides it (Available in navy, owed, payments due, set aside; an over-commitment as a `negative`-edged gap), with the money on hand in its middle and a legend of the parts. The drawing is hidden from assistive technology; one sentence states what is free. No ring when nothing is on hand.
 2. **Month at a glance:** the current month as a small grid: today in solid coral (orientation, never a financial meaning), a small ocean dot on each day money moved, and a ring on a day still owed a payment (mist with an ocean edge when expected, amber when overdue or due today); what is still due this month; **Open Calendar**. No day shows an amount. Each day opens the Calendar's own evidence for it in a drawer (`/?day=`).
@@ -255,7 +256,7 @@ One dialog (a bottom sheet on phones) with **one structure for Expense, Income a
 ## 8. Responsive
 
 - **Recompose, don't shrink.** Each core page changes its information hierarchy across phone, tablet and desktop rather than squeezing desktop columns:
-  - **Page headers:** the title leads; the local switch, period control and primary action follow it on the right where there is room, and wrap under it on phones.
+  - **Page headers:** the title leads; the period control and primary action follow it on the right where there is room, and wrap under it on phones. Moving between a section's pages belongs to the shell (the section row), never to the page header.
   - **Equation cards:** from 1024px the parts sit side by side with their − / = chips; below that they stack, the result last.
   - **Cash flow:** the outcome leads; Where it went and What changed each span the page. Below 1024px the concentration ring sits above its categories; on phones each category reads name and amount over its bar, and each What changed driver reads its name and change, then its bar, then both periods.
   - **Calendar:** from 1024px the grid spans the page. Below that, never the grid squeezed: a strip of the month's days (bold where something was recorded, a short line where a payment falls due), then the month week by week, each week's Went out in its sticky header and only the days that hold something (date, then money, then payments due). A chosen day opens as a side panel from 768px and a bottom sheet below, only when the URL names it.
@@ -266,7 +267,11 @@ One dialog (a bottom sheet on phones) with **one structure for Expense, Income a
   - **Set aside:** Kept aside leads, Where it's held beside it from 1024px; the purposes are two columns from 1024px and one below.
   - **Accounts:** Where you stand leads at every width; on desktop the ledger aligns account, balance, verification and Action in shared, evenly spaced columns; on phones a row's actions wrap onto their own lines, keep their words and a 40px touch height.
   - **Overview:** Available now leads at every width. From 1024px, Available now and Month at a glance sit side by side, sharing one top edge, with Attention, This month and Where you stand each spanning the page under them. Below 1024px the five zones stack in the same order; at 768px Available now and Month at a glance each keep their figure beside their drawing. This month sets Left over beside Where it went from 1024px and stacks them below; on phones each category's line sits under its name. The page's height does not follow the number of signals: the preview holds at most 3. Attention's links keep a 40px touch height on phones.
-- **Navigation:** top navigation from 768px, with five destinations: **Overview · Activity · Accounts · Cash flow · Available**. Below 768px, a bottom tab bar with four around a centred coral **+**: **Overview · Activity · + · Accounts · Available**. Cash flow has no phone tab (P-3, [roadmap.md §8.5](roadmap.md)): on phones it is reached from the Overview's This month, Attention and Activity, and on `/cash-flow`, `/trends` and `/calendar` no tab is current; on desktop Cash flow is current on all three. The logo leads to `/`.
+- **Navigation:** five sections, each named for what it holds: **Overview · Transactions** (Activity, Categories) **· Accounts · Insights** (Cash flow, Trends, Calendar) **· Plan** (Available, Commitments, Set aside); Settings is the gear. Every page is in the main navigation.
+  - **From 768px:** the sections across the top bar; the current one is a `mist` pill with navy text, the rest take a warm tint on hover. A section's label leads to its first page; a chevron beside a multi-page section opens a menu of its pages, each with its icon and one line on what it answers. From 768px to 1024px the wordmark gives way to the mark so the five fit.
+  - **The section row:** inside a section with several pages, a row under the header on `surface-subtle` names the section and lists its pages, the current one a raised white chip (§4). It belongs to the shell and scrolls with the page. Below 640px its icons drop so Plan's three pages fit at 390px; narrower still it scrolls sideways, starting with the current page in view.
+  - **Below 768px:** a bottom tab bar, **Overview · Transactions · + · Plan · Menu**, with the coral **+** centred. **Menu** opens a sheet listing every section and page with its line, then Settings; Menu is current on Accounts, Insights and Settings, so one tab always marks where you are. The current tab's icon sits in a `mist` capsule.
+  - The logo leads to `/`.
 - **Editing:** side panels on desktop; Quick Add as a bottom sheet on phones, the amount focused first (a decimal keypad) and its lists opening inside the sheet; below 640px a transfer fee's amount sits over its category.
 - **The first viewport states the page's primary answer** (Available on the Overview and on Available, Left over on Cash flow, Net worth on Accounts, Due now on Commitments, Kept aside on Set aside).
 - **No horizontal page scroll at 390px.** Checked at 390, 820 and 1280px for every change to the core pages and their overlays (the Overview also at 1024 and 1920px).
@@ -309,3 +314,4 @@ Earlier entries are history. Where an entry describes a visual system, the curre
 | 2026-10-01 | **UI refinement pass** (`c35d777`, `c81ab59`, `46925d1`, `8538d40`, `3bb2c1f`, `88705a8`, `2993c6b`): §2 adds `line-soft` (card edges) and `line-control` (a softer toolbar control edge, still ≥ 3:1), and records that solid coral stays brand, action and orientation while **soft coral tints are the warm spending family** in visualisations, that What changed draws **navy higher to the right and tide lower to the left**, and that amber is used sparingly with **no large yellow-filled surfaces**; §3 `hero` is the headline figure of a hero card; §4 replaces "never nested cards" with: **elevated cards never nest; flat inset surfaces may group evidence**, and records hero cards, quiet washes, equation cards, table bands and list heights; §5 replaces "the only ring" with **rings only for a composition or concentration question**, recording Cash flow's concentration ring (top three plus one neutral remainder), the shared What changed bars, Available's waterfall and Trends' Month by month; §6 records every core screen as built, adds Commitments, and records Activity's pages of 25; §7 adds the soft and quiet buttons; §8 the responsive order of every core page; §9 D4 resolved. | The pages were refined one by one against review and mocks; this file had fallen behind them. The owner asked for a simpler Trends with each figure shown once, so the Journey and its separate table became one chart-table; its totals card may show monthly averages and the share of Came in left over, while What changed stays exact. |
 | 2026-10-01 | **This month redesigned:** §6 replaces the journey (Came in → Went out → Left over with warm columns rising to a line) with Left over on a mist panel, the month in one sentence and one bar, beside Where it went as a statement of category lines measured against what came in, five before "N more"; §8 its responsive order. §2 and §4 name the category lines and month bar instead of columns. | The owner's review: the journey misread the month — spending filled two thirds of the width while most of the money was left, the columns were scaled to the largest category instead of to what came in, and the drawing needed a caption to explain it. |
 | 2026-10-01 | **Quick Add redesigned** (`8d42599`, `ee2beb2`, `2790ede`): §2 entry types reuse the money-direction families as small marks, and Quick Add's type switch is the one raised selected state; §3 `hero` also sets the Quick Add amount (`display` no longer does); §6 adds Quick Add (type → amount → what it will do → the relationship rows and their in-dialog lists → date and description → Save); §7 and §8 its overlay and phone behaviour. No dependency was added. | Categories and accounts were two identical walls of chips, Transfer switched to dropdowns, and nothing showed what an entry would do before saving. The three types now share one structure, and the effect is shown before it is recorded. |
+| 2026-10-01 | **Navigation redesigned:** §4 adds navigation chips (`shadow-chip`); §6 drops the area's local switch from page headers; §8 records five sections (Overview · Transactions · Accounts · Insights · Plan) with a menu per multi-page section, a section row under the header, and a phone bar of Overview · Transactions · + · Plan · Menu with a Menu sheet. No underlines. | Five pages were reachable only through a pill inside their parent page that read as a filter, and sections were named after their first page. Chosen from mockups (concept A, soft-pill style). |
