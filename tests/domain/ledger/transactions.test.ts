@@ -11,6 +11,7 @@ import { formatPercent, savingsRate } from "@/domain/ledger/analytics";
 import { compareLedgerOrder } from "@/domain/ledger/ordering";
 import { liabilityStanding, summarizePosition } from "@/domain/ledger/position";
 import {
+  balanceDeltas,
   countsAsIncome,
   countsAsSpending,
   requiredCategoryKind,
@@ -131,6 +132,37 @@ describe("toLedgerRow: positive amounts in, signed effect on the account out", (
       "shopping",
     );
     expect(row).toMatchObject({ categoryId: "shopping", refundOfId: "x" });
+  });
+});
+
+describe("balanceDeltas: the row's effect on each account", () => {
+  const amount = fromMajor(500);
+
+  it("moves one account for income and expenses, by the signed amount", () => {
+    expect(
+      balanceDeltas(
+        toLedgerRow({ type: "expense", amount, accountId: "a", categoryId: "c", occurredOn: on }),
+      ),
+    ).toEqual([{ accountId: "a", delta: -50_000 }]);
+    expect(
+      balanceDeltas(
+        toLedgerRow({ type: "income", amount, accountId: "a", categoryId: "c", occurredOn: on }),
+      ),
+    ).toEqual([{ accountId: "a", delta: 50_000 }]);
+  });
+
+  it("takes a transfer out of From and puts the same amount into To", () => {
+    const row = toLedgerRow({
+      type: "transfer",
+      amount,
+      accountId: "a",
+      counterAccountId: "b",
+      occurredOn: on,
+    });
+    expect(balanceDeltas(row)).toEqual([
+      { accountId: "a", delta: -50_000 },
+      { accountId: "b", delta: 50_000 },
+    ]);
   });
 });
 

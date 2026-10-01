@@ -159,6 +159,23 @@ export function toLedgerRow(
   }
 }
 
+export interface BalanceDelta {
+  readonly accountId: string;
+  readonly delta: Money;
+}
+
+/**
+ * How a stored row moves balances: its signed amount on its account and, for a
+ * transfer, the opposite on the counter account. The pure mirror of the
+ * account_entries view, which a differential test keeps in agreement.
+ */
+export function balanceDeltas(row: LedgerRow): readonly BalanceDelta[] {
+  const own = { accountId: row.accountId, delta: row.amountMinor };
+  return row.counterAccountId === null
+    ? [own]
+    : [own, { accountId: row.counterAccountId, delta: negate(row.amountMinor) }];
+}
+
 function row(
   type: TransactionType,
   amountMinor: Money,
