@@ -1,156 +1,220 @@
-import { ArrowDownLeft, ArrowUpRight, ChevronRight, type LucideIcon } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import type { DateRange } from "@/domain/calendar-date";
 import { formatPercent } from "@/domain/ledger/analytics";
-import type { CashFlowSummary } from "@/domain/ledger/cash-flow";
-import type { Money as MoneyValue } from "@/domain/money";
+import type { CashFlowSummary, IncomeSource, SpendingComposition } from "@/domain/ledger/cash-flow";
 
 import { activityHref } from "../activity/links";
 import { rangeLabel } from "../format";
+import { linkClass } from "../ui/button";
 import { cn } from "../ui/cn";
 import { Money } from "../ui/money";
-import { CARD } from "./labels";
+import { CARD, perHundred, rateWidth } from "./labels";
 
 /**
- * One card, read left to right: the month's outcome (what was left over, and
- * the savings rate), then the two facts it comes from. Income and Spending
- * open the Activity rows behind them; each whole row is the target.
+ * The month as one equation, read left to right: what came in (and from
+ * where), what went out (and its largest part), and what was left over, with
+ * the savings rate. Each side opens the Activity rows behind it. Every figure
+ * is the domain's; the rate bar and "per ৳100" only restate the savings rate.
  */
 export function Summary({
   summary,
+  sources,
+  composition,
   range,
+  title,
 }: {
+  /** The month's name ("September 2026"): the card's heading. */
+  readonly title: string;
   readonly summary: CashFlowSummary;
+  readonly sources: readonly IncomeSource[];
+  readonly composition: SpendingComposition;
   readonly range: DateRange;
 }) {
+  const largest = composition.spent[0];
+  const categories = composition.spent.length;
   return (
-    <section
-      aria-labelledby="cash-flow-period"
-      className={cn(CARD, "grid overflow-clip md:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]")}
-    >
-      <LeftOver summary={summary} />
-      {/* Phones: the two facts side by side under the outcome. md and up: stacked beside it. */}
-      <div className="grid grid-cols-2 divide-x divide-line border-t border-line md:grid-cols-1 md:divide-x-0 md:divide-y md:border-t-0 md:border-l">
-        <Fact
-          term="Income"
-          icon={ArrowDownLeft}
-          amount={summary.income}
-          sign="none"
-          label={`Income, ${rangeLabel(range)}`}
-          href={activityHref({ type: "income", range })}
-        />
-        {/* No type filter: Activity's Spent total is expenses net of refunds,
-            exactly this figure; the other rows in the range are not counted. */}
-        <Fact
-          term="Spending"
-          icon={ArrowUpRight}
-          amount={summary.spending}
-          sign="negative"
-          label={`Spending, ${rangeLabel(range)}`}
-          href={activityHref({ range })}
-        />
+    // The same card as Trends' totals: a heading, then three panels in one equation.
+    <section aria-labelledby="cash-flow-summary" className={cn(CARD, "p-5 md:p-7")}>
+      <h2 id="cash-flow-summary" className="text-heading font-bold text-navy">
+        {title}
+      </h2>
+      <p className="mt-1 text-meta text-ink-2">What came in and went out, added up.</p>
+      <div className="mt-5 grid items-stretch gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1.15fr)] lg:gap-2.5">
+        <Side
+          term="Came in"
+          amount={<Money amount={summary.income} sign="none" />}
+          link={
+            summary.income !== 0
+              ? {
+                  href: activityHref({ type: "income", range }),
+                  text: "Income transactions",
+                  label: `Income, ${rangeLabel(range)}`,
+                }
+              : null
+          }
+        >
+          {sources.length > 0 && (
+            <ul className="divide-y divide-line-soft">
+              {sources.map((s) => (
+                <Line key={s.categoryId} name={s.name}>
+                  <Money amount={s.amount} sign="none" />
+                </Line>
+              ))}
+            </ul>
+          )}
+        </Side>
+
+        <Operator>−</Operator>
+
+        {/* No type filter: Activity's Spent total is expenses net of refunds, exactly this figure. */}
+        <Side
+          term="Went out"
+          amount={<Money amount={summary.spending} />}
+          link={
+            summary.spending !== 0
+              ? {
+                  href: activityHref({ range }),
+                  text: "Spending transactions",
+                  label: `Spending, ${rangeLabel(range)}`,
+                }
+              : null
+          }
+        >
+          {categories > 0 && (
+            <ul className="divide-y divide-line-soft">
+              {largest && largest.amount > 0 && (
+                <Line name={`Largest: ${largest.name}`}>
+                  <Money amount={largest.amount} sign="none" />
+                </Line>
+              )}
+              <Line name="Categories">{categories}</Line>
+            </ul>
+          )}
+        </Side>
+
+        <Operator>=</Operator>
+
+        <LeftOver summary={summary} />
       </div>
     </section>
   );
 }
 
-function LeftOver({ summary }: { readonly summary: CashFlowSummary }) {
-  const { income, leftOver, savingsRate } = summary;
+/**
+ * One side of the equation. The term and its amount are a term and definition
+ * (the page's figures are read that way); the rows under it are evidence.
+ */
+function Side({
+  term,
+  amount,
+  link,
+  children,
+}: {
+  readonly term: string;
+  readonly amount: ReactNode;
+  readonly link: {
+    readonly href: string;
+    readonly text: string;
+    /** What a screen reader hears before the figure ("Spending, 1–30 Sep 2026"). */
+    readonly label: string;
+  } | null;
+  readonly children: ReactNode;
+}) {
   return (
-    <div className="bg-mist px-5 py-5 md:px-7 md:py-6">
-      <dl className="flex items-start justify-between gap-x-6 gap-y-3">
-        <div>
-          <dt className="text-body font-semibold text-navy">Left over</dt>
-          <dd className="mt-1 text-display font-bold text-navy">
-            <Money amount={leftOver} />
-          </dd>
-          <dd className="mt-1 text-body text-ink-2">
-            {income === 0 ? (
-              "Income − spending"
-            ) : leftOver < 0 ? (
-              "Spending was more than came in"
-            ) : (
-              <>
-                Of <Money amount={income} sign="none" className="font-semibold text-ink" /> that
-                came in
-              </>
-            )}
-          </dd>
-        </div>
-        <div className="shrink-0 text-right">
-          <dt className="text-body text-ink-2">Savings rate</dt>
-          <dd className="mt-1 text-figure font-bold text-navy">
-            {savingsRate ? formatPercent(savingsRate) : "—"}
-          </dd>
-          {!savingsRate && <dd className="text-meta text-ink-2">No income this month</dd>}
-        </div>
-      </dl>
+    <dl className="flex min-w-0 flex-col rounded-[12px] bg-surface-subtle px-4 py-3.5 shadow-[inset_0_0_0_1px_var(--color-line-soft)]">
+      <div>
+        <dt className="text-micro font-semibold tracking-[0.08em] text-ink-2 uppercase">{term}</dt>
+        <dd className="mt-1 text-figure font-bold whitespace-nowrap text-navy tabular-nums md:text-[2rem] md:leading-tight">
+          {link ? (
+            // The figure opens its transactions; it names its period for a screen reader.
+            <Link href={link.href} className={cn("outline-none", linkClass)}>
+              <span className="sr-only">{link.label}: </span>
+              {amount}
+            </Link>
+          ) : (
+            amount
+          )}
+        </dd>
+      </div>
+      <div className="mt-3 flex-1 text-meta">{children}</div>
+      {link && (
+        <Link
+          href={link.href}
+          className={cn(
+            "mt-3 inline-flex items-center gap-1.5 self-start text-meta font-medium text-ocean",
+            linkClass,
+          )}
+        >
+          {link.text}
+          <ArrowRight aria-hidden className="size-3.5" />
+        </Link>
+      )}
+    </dl>
+  );
+}
+
+function Line({ name, children }: { readonly name: string; readonly children: ReactNode }) {
+  return (
+    <li className="flex items-baseline justify-between gap-3 py-1.5">
+      <span className="min-w-0 truncate text-ink-2">{name}</span>
+      <span className="shrink-0 font-semibold text-ink tabular-nums">{children}</span>
+    </li>
+  );
+}
+
+/** The operator between two sides: a chip in the gap from 1024px, hidden when the sides stack. */
+function Operator({ children }: { readonly children: ReactNode }) {
+  return (
+    <div aria-hidden className="grid place-items-center max-lg:hidden">
+      <span className="grid size-7 place-items-center rounded-full bg-surface text-body font-bold text-ink-2 shadow-[0_0_0_1px_var(--color-line),0_2px_6px_rgb(31_56_90/0.08)]">
+        {children}
+      </span>
     </div>
   );
 }
 
-/**
- * A supporting figure. When it is not zero the row opens the transactions
- * behind it: the link sits on the amount and stretches over the row.
- */
-function Fact({
-  term,
-  icon: Icon,
-  amount,
-  sign,
-  label,
-  href,
-}: {
-  readonly term: string;
-  readonly icon: LucideIcon;
-  readonly amount: MoneyValue;
-  readonly sign: "negative" | "none";
-  /** What a screen reader hears before the amount ("Spending, 1–22 Sep 2026"). */
-  readonly label: string;
-  readonly href: string;
-}) {
-  const linked = amount !== 0;
+/** The outcome, on the area's flat mist: what was left over, and the savings rate. */
+function LeftOver({ summary }: { readonly summary: CashFlowSummary }) {
+  const { income, leftOver, savingsRate } = summary;
+  const hundred = perHundred(savingsRate);
   return (
-    <dl className="min-w-0">
-      <div
-        className={cn(
-          // Phones: label, amount, affordance stacked. md and up: a row, the
-          // label and affordance on the left and the amount on the right.
-          "relative flex h-full flex-col px-4 py-4 transition-colors md:grid md:grid-cols-[minmax(0,1fr)_auto] md:content-center md:items-center md:gap-x-4 md:px-6",
-          linked &&
-            "hover:bg-canvas has-[a:focus-visible]:outline-2 has-[a:focus-visible]:-outline-offset-2 has-[a:focus-visible]:outline-ocean",
-        )}
-      >
-        <dt className="flex items-center gap-2 text-body font-semibold text-ink-2">
-          <span
-            aria-hidden
-            className="grid size-7 shrink-0 place-items-center rounded-full bg-mist text-ocean"
-          >
-            <Icon className="size-4" strokeWidth={2} />
-          </span>
-          {term}
+    <dl className="flex min-w-0 flex-col rounded-[12px] bg-mist/35 px-4 py-3.5 shadow-[inset_0_0_0_1px_rgb(70_103_141/0.14)]">
+      <div>
+        <dt className="text-micro font-semibold tracking-[0.08em] text-ocean uppercase">
+          Left over
         </dt>
-        <dd className="mt-2 text-figure font-bold text-navy md:col-start-2 md:row-span-2 md:row-start-1 md:mt-0">
-          {linked ? (
-            <Link href={href} className="outline-none after:absolute after:inset-0">
-              <span className="sr-only">{label}: </span>
-              <Money amount={amount} sign={sign} />
-            </Link>
-          ) : (
-            <Money amount={amount} sign={sign} />
-          )}
+        {/* A true minus when more went out; never berry: it is direction, not an error. */}
+        <dd className="mt-1 text-figure font-bold whitespace-nowrap text-navy tabular-nums md:text-[2rem] md:leading-tight">
+          <Money amount={leftOver} />
         </dd>
-        {linked && (
-          <dd
-            aria-hidden
-            className="mt-1 flex items-center gap-0.5 text-body font-medium text-ocean md:col-start-1 md:row-start-2 md:pl-9"
-          >
-            Transactions
-            <ChevronRight className="size-4" strokeWidth={2.25} />
-          </dd>
-        )}
       </div>
+      <div className="mt-3 flex items-baseline justify-between gap-3 text-meta">
+        <dt className="text-ink-2">Savings rate</dt>
+        <dd className="font-bold text-navy tabular-nums">
+          {savingsRate ? formatPercent(savingsRate) : "—"}
+        </dd>
+      </div>
+      <span aria-hidden className="mt-1.5 block h-1.5 rounded-full bg-surface">
+        <span
+          className="block h-full rounded-full bg-navy"
+          style={{ width: `${rateWidth(savingsRate) * 100}%` }}
+        />
+      </span>
+      <p className="mt-2.5 text-meta text-ink-2">
+        {income === 0 ? (
+          "Nothing came in this month, so there's no savings rate."
+        ) : leftOver < 0 ? (
+          "More went out than came in."
+        ) : (
+          <>
+            You kept about <Money amount={hundred} sign="none" className="font-semibold text-ink" />{" "}
+            of every <Money amount={10_000 as typeof hundred} sign="none" /> that came in.
+          </>
+        )}
+      </p>
     </dl>
   );
 }

@@ -26,28 +26,24 @@ export function MonthSwitcher({
 }) {
   const running = period.kind === "month_to_date";
   return (
-    // Phones: the switcher full width, the period under it. md and up: the
-    // period chip sits just before the switcher, one control group.
-    <div className="flex flex-col gap-2 md:flex-row-reverse md:items-center md:gap-3">
-      <div className={cn(CARD, "flex items-center p-1")}>
-        <MonthLink month={previous} current={current} direction="previous" />
-        <h2
-          id="cash-flow-period"
-          className="min-w-0 flex-1 px-2 text-center text-heading font-bold text-navy md:w-48 md:flex-none"
-        >
+    // One control: the month and whether it is still running, between its neighbours.
+    <div className={cn(CARD, "flex items-center p-1")}>
+      <MonthLink month={previous} current={current} direction="previous" />
+      <div className="min-w-0 flex-1 px-2 text-center md:w-44 md:flex-none">
+        <h2 id="cash-flow-period" className="text-body leading-tight font-bold text-navy">
           {monthLabel(period.month)}
         </h2>
-        <MonthLink month={next} current={current} direction="next" />
+        <p
+          className={cn(
+            "inline-flex items-center gap-1.5 text-micro font-medium",
+            running ? "text-ocean" : "text-ink-2",
+          )}
+        >
+          {running && <span aria-hidden className="size-1.5 rounded-full bg-ocean" />}
+          {periodNote(period)}
+        </p>
       </div>
-      <p
-        className={cn(
-          "inline-flex items-center gap-1.5 self-center rounded-full px-3 py-1 text-body font-medium",
-          running ? "bg-mist text-ocean" : "bg-surface-hover text-ink-2",
-        )}
-      >
-        {running && <span aria-hidden className="size-1.5 rounded-full bg-ocean" />}
-        {periodNote(period)}
-      </p>
+      <MonthLink month={next} current={current} direction="next" />
     </div>
   );
 }

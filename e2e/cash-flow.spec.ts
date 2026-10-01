@@ -8,7 +8,7 @@ import { expect, test, type Page } from "@playwright/test";
  * particular demo numbers.
  */
 
-/** A figure on the Cash flow page ("Income", "Spending", "Left over"), in taka. */
+/** A figure on the Cash flow page ("Came in", "Went out", "Left over"), in taka. */
 async function figure(page: Page, term: string): Promise<number> {
   await page.goto("/cash-flow");
   const text = await page
@@ -92,13 +92,13 @@ async function spendingChange(page: Page): Promise<number> {
 }
 
 test("an expense shows up in this month's spending and what was left over", async ({ page }) => {
-  const spending = await figure(page, "Spending");
+  const spending = await figure(page, "Went out");
   const leftOver = await figure(page, "Left over");
   await expect(page.getByText(/so far$/)).toBeVisible();
 
   await addCashExpense(page, "123", "Cash flow check");
 
-  expect(await figure(page, "Spending")).toBe(spending + 123);
+  expect(await figure(page, "Went out")).toBe(spending + 123);
   expect(await figure(page, "Left over")).toBe(leftOver - 123);
   await expect(
     page.getByRole("list", { name: "Spending by category" }).getByText("Food & Dining"),
@@ -266,8 +266,8 @@ async function activityIncome(page: Page): Promise<number> {
 
 test("Spending and Income open the transactions behind them, and lead back", async ({ page }) => {
   await addCashExpense(page, "432", "Evidence of spending");
-  const spending = await figure(page, "Spending");
-  const income = await figure(page, "Income");
+  const spending = await figure(page, "Went out");
+  const income = await figure(page, "Came in");
 
   await page.getByRole("link", { name: /^Spending, / }).click();
   await expect(page).toHaveURL(/\/activity\?from=\d{4}-\d{2}-01&to=\d{4}-\d{2}-\d{2}$/);
@@ -325,7 +325,7 @@ test("smaller changes open, and each one leads to its transactions", async ({ pa
   await smaller.click();
   const row = list.getByRole("listitem").filter({ hasText: name });
   await expect(row).toBeVisible();
-  expect(amountIn(await row.locator("span.w-28").innerText())).toBe(10);
+  expect(amountIn(await row.locator('[data-cell="change"]').innerText())).toBe(10);
 
   await row
     .getByRole("link", { name: new RegExp(`^${name}, `) })
