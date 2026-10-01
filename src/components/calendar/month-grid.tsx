@@ -22,12 +22,15 @@ const CHIPS = 2;
  */
 export function MonthGrid({
   calendar,
+  open,
   className,
 }: {
   readonly calendar: MonthCalendar;
+  /** The day whose drawer is open, if any: the only day marked as chosen. */
+  readonly open: CalendarDate | null;
   readonly className?: string;
 }) {
-  const { weekStartsOn, weeks, days, month, selected, today, when } = calendar;
+  const { weekStartsOn, weeks, days, month, today, when } = calendar;
   const order = [
     ...WEEKDAYS.slice(WEEKDAYS.indexOf(weekStartsOn)),
     ...WEEKDAYS.slice(0, WEEKDAYS.indexOf(weekStartsOn)),
@@ -39,9 +42,9 @@ export function MonthGrid({
           Each day of the month: what came in, what went out and the payments due
         </caption>
         <thead>
-          <tr className="border-b border-line text-meta text-ink-2">
+          <tr className="border-b border-line-soft text-micro tracking-[0.08em] text-ink-2 uppercase">
             {order.map((w) => (
-              <th key={w} scope="col" className="px-2.5 py-2 text-left font-semibold">
+              <th key={w} scope="col" className="px-3 py-3 text-left font-semibold">
                 <abbr title={weekdayLong(w)} className="no-underline">
                   {weekdayShort(w)}
                 </abbr>
@@ -49,7 +52,7 @@ export function MonthGrid({
             ))}
             <th
               scope="col"
-              className="w-24 border-l border-line-strong/40 bg-surface-subtle px-3 py-2 text-right font-semibold"
+              className="w-28 border-l border-line-soft bg-surface-subtle px-3 py-3 text-right font-semibold"
             >
               Week out
             </th>
@@ -61,30 +64,25 @@ export function MonthGrid({
             const lead = weekdayIndex(inWeek[0]!.date, weekStartsOn);
             const trail = 7 - lead - inWeek.length;
             return (
-              <tr key={week.range.start} className="border-b border-line last:border-b-0">
+              <tr key={week.range.start} className="border-b border-line-soft last:border-b-0">
                 {Array.from({ length: lead }, (_, i) => (
-                  <td key={`l${i}`} className="border-r border-line bg-surface-subtle" />
+                  <td key={`l${i}`} className="border-r border-line-soft bg-surface-subtle/60" />
                 ))}
                 {inWeek.map((day) => (
                   <td
                     key={day.date}
                     className={cn(
-                      "h-[106px] border-r border-line p-0 align-top",
+                      "h-28 border-r border-line-soft p-0 align-top",
                       !day.scheduled && "bg-surface-subtle",
                     )}
                   >
-                    <DayCell
-                      day={day}
-                      month={month}
-                      today={today}
-                      selected={day.date === selected}
-                    />
+                    <DayCell day={day} month={month} today={today} selected={day.date === open} />
                   </td>
                 ))}
                 {Array.from({ length: trail }, (_, i) => (
-                  <td key={`t${i}`} className="border-r border-line bg-surface-subtle" />
+                  <td key={`t${i}`} className="border-r border-line-soft bg-surface-subtle/60" />
                 ))}
-                <td className="border-l border-line-strong/40 bg-surface-subtle px-3 py-2.5 text-right align-top">
+                <td className="border-l border-line-soft bg-surface-subtle px-3 py-3 text-right align-top">
                   <span className="block text-micro text-ink-2">{weekLabel(week.range)}</span>
                   {when === "future" ? (
                     <span className="text-meta text-ink-2">—</span>
@@ -125,14 +123,14 @@ function DayCell({
       scroll={false}
       aria-current={isToday ? "date" : undefined}
       className={cn(
-        "flex h-full flex-col gap-1 px-2.5 pt-2 pb-2 transition-colors outline-none hover:bg-surface-hover",
+        "flex h-full flex-col gap-1 px-3 pt-2.5 pb-2 transition-colors outline-none hover:bg-mist/25",
         "focus-visible:shadow-[inset_0_0_0_2px_var(--color-ocean)]",
         selected && "bg-mist/40 shadow-[inset_0_0_0_2px_var(--color-ocean)] hover:bg-mist/50",
       )}
     >
       <span className="sr-only">
         {weekdayLong(weekdayOf(day.date))}, {dayMonth(day.date)}
-        {selected ? ", shown" : ""}
+        {selected ? ", open" : ""}
       </span>
       <span aria-hidden className="flex items-center gap-1.5">
         <span

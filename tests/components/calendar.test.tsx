@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { Agenda, MonthStrip } from "@/components/calendar/agenda";
-import { DayEvidence, MonthDue } from "@/components/calendar/day-evidence";
+import { DayEvidence } from "@/components/calendar/day-evidence";
 import { calendarHref, weekLabel, WEEK_STARTS_ON } from "@/components/calendar/describe";
 import { MonthLine } from "@/components/calendar/month-header";
 import { MonthGrid } from "@/components/calendar/month-grid";
@@ -109,7 +109,7 @@ describe("the month grid", () => {
   it("starts the week on Saturday and sets the week column apart", async () => {
     const { ctx } = await ledger();
     const cal = await getMonthCalendar(ctx, WEEK_STARTS_ON);
-    const html = renderToStaticMarkup(<MonthGrid calendar={cal} />);
+    const html = renderToStaticMarkup(<MonthGrid calendar={cal} open={null} />);
     const heads = [...html.matchAll(/<abbr title="(\w+)"/g)].map((m) => m[1]);
     expect(heads).toEqual([
       "Saturday",
@@ -127,7 +127,9 @@ describe("the month grid", () => {
   it("puts money first after the date, naming in and out only where a day has both", async () => {
     const { ctx } = await ledger();
     const words = text(
-      renderToStaticMarkup(<MonthGrid calendar={await getMonthCalendar(ctx, WEEK_STARTS_ON)} />),
+      renderToStaticMarkup(
+        <MonthGrid calendar={await getMonthCalendar(ctx, WEEK_STARTS_ON)} open={null} />,
+      ),
     );
     expect(words).toContain("Tuesday, 1 Sep 1 + ৳ 60,000 in ৳ 980 out");
     // The 5th: only spending, so no label.
@@ -137,21 +139,28 @@ describe("the month grid", () => {
   it("names two payments due in a day and summarises the rest", async () => {
     const { ctx } = await ledger();
     const words = text(
-      renderToStaticMarkup(<MonthGrid calendar={await getMonthCalendar(ctx, WEEK_STARTS_ON)} />),
+      renderToStaticMarkup(
+        <MonthGrid calendar={await getMonthCalendar(ctx, WEEK_STARTS_ON)} open={null} />,
+      ),
     );
     expect(words).toMatch(/Sunday, 20 Sep 20 Internet , overdue Phone , overdue \+1 due/);
     expect(words).toContain("Rent , paid");
   });
 
-  it("links every day to itself, marks today, and outlines the day shown", async () => {
+  it("links every day to itself, marks today, and outlines the day whose drawer is open", async () => {
     const { ctx } = await ledger();
     const cal = await getMonthCalendar(ctx, WEEK_STARTS_ON, "2026-09", "2026-09-05");
-    const html = renderToStaticMarkup(<MonthGrid calendar={cal} />);
+    const html = renderToStaticMarkup(
+      <MonthGrid calendar={cal} open={"2026-09-05" as CalendarDate} />,
+    );
     expect(html).toContain(
       `href="${calendarHref("2026-09" as YearMonth, "2026-09-05" as CalendarDate).replace(/&/g, "&amp;")}"`,
     );
     expect(html).toMatch(/aria-current="date"[^>]*>.*?Tuesday, 22 Sep/);
-    expect(text(html)).toContain("Saturday, 5 Sep, shown");
+    expect(text(html)).toContain("Saturday, 5 Sep, open");
+    // With no drawer open, no day is marked, not even today.
+    const closed = text(renderToStaticMarkup(<MonthGrid calendar={cal} open={null} />));
+    expect(closed).not.toContain(", open");
   });
 });
 
@@ -223,8 +232,9 @@ describe("the month line and a future month", () => {
     const words = text(
       renderToStaticMarkup(<MonthLine calendar={await getMonthCalendar(ctx, WEEK_STARTS_ON)} />),
     );
+    expect(words).toContain("September so far What was recorded, and what is still to pay.");
     expect(words).toContain(
-      "September so far Came in + ৳ 60,000 Went out ৳ 21,073 Still due this month ৳ 3,500 · 3 payments",
+      "Came in + ৳ 60,000 Went out ৳ 21,073 Still due this month ৳ 3,500 3 payments",
     );
     expect(words).not.toContain("%");
   });
@@ -233,14 +243,12 @@ describe("the month line and a future month", () => {
     const { ctx } = await ledger();
     const october = await getMonthCalendar(ctx, WEEK_STARTS_ON, "2026-10");
     const line = text(renderToStaticMarkup(<MonthLine calendar={october} />));
+    expect(line).toContain("October 2026");
     expect(line).toContain(
-      "October 2026 Nothing has come in or gone out yet Due this month ৳ 23,500 · 4 payments",
+      "Nothing has come in or gone out yet Due this month ৳ 23,500 4 payments",
     );
     expect(line).not.toContain("Open in Cash flow");
-    const panel = text(renderToStaticMarkup(<MonthDue calendar={october} />));
-    expect(panel).toContain("Choose a day to see what happened on it.");
-    expect(panel).toContain("Rent Upcoming ৳ 20,000 Due 3 Oct · expected");
-    const grid = text(renderToStaticMarkup(<MonthGrid calendar={october} />));
+    const grid = text(renderToStaticMarkup(<MonthGrid calendar={october} open={null} />));
     expect(grid).not.toMatch(/৳/);
   });
 });

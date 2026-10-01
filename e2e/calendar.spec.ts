@@ -24,14 +24,16 @@ function amountIn(text: string): number {
   return match[1] === "−" ? -value : value;
 }
 
-const monthLine = (page: Page) => page.getByRole("region", { name: "The month" });
-const panel = (page: Page) => page.getByRole("complementary");
+/** The month's summary card ("September so far", or the month's name). */
+const monthLine = (page: Page) => page.locator('section[aria-labelledby="calendar-summary"]');
+/** A chosen day's drawer (a bottom sheet on phones). */
+const drawer = (page: Page) => page.getByRole("dialog");
 
 async function lineFigure(page: Page, term: string): Promise<number> {
   return amountIn(
     await monthLine(page)
-      .locator("div")
-      .filter({ has: page.getByRole("term").filter({ hasText: term }) })
+      .locator("dl > div")
+      .filter({ has: page.getByRole("term").filter({ hasText: new RegExp(`^${term}$`) }) })
       .getByRole("definition")
       .innerText(),
   );
@@ -62,17 +64,17 @@ test("Calendar sits in the Cash flow area, and its month is Cash flow's", async 
         .first()
         .innerText(),
     );
-  expect(await fact("Income")).toBe(cameIn);
-  expect(await fact("Spending")).toBe(wentOut);
+  expect(await fact("Came in")).toBe(cameIn);
+  expect(await fact("Went out")).toBe(wentOut);
 });
 
-test("today is shown by default; a chosen day lives in the URL, through back and reload", async ({
+test("no day opens on arrival; a clicked day opens its drawer, kept in the URL through reload and back", async ({
   page,
 }) => {
   await page.goto("/calendar");
   const t = today();
   await expect(page.getByRole("table").locator("a[aria-current=date]")).toBeVisible();
-  await expect(panel(page).getByRole("heading", { level: 2 })).toContainText(dayMonth(t));
+  await expect(drawer(page)).toHaveCount(0);
 
   const earlier = addDays(t, -1) >= `${yearMonthOf(t)}-01` ? addDays(t, -1) : t;
   await page
@@ -80,13 +82,23 @@ test("today is shown by default; a chosen day lives in the URL, through back and
     .getByRole("link", { name: new RegExp(`, ${dayMonth(earlier)}\\b`) })
     .click();
   await expect(page).toHaveURL(new RegExp(`day=${earlier}`));
-  await expect(panel(page).getByRole("heading", { level: 2 })).toContainText(dayMonth(earlier));
+  await expect(drawer(page).getByRole("heading", { level: 3 })).toContainText(dayMonth(earlier));
 
   await page.reload();
-  await expect(panel(page).getByRole("heading", { level: 2 })).toContainText(dayMonth(earlier));
+  await expect(drawer(page).getByRole("heading", { level: 3 })).toContainText(dayMonth(earlier));
   await page.goBack();
   await expect(page).toHaveURL(/\/calendar$/);
-  await expect(panel(page).getByRole("heading", { level: 2 })).toContainText(dayMonth(t));
+  await expect(drawer(page)).toHaveCount(0);
+
+  // Closing the drawer leaves the day out of the URL.
+  await page
+    .getByRole("table")
+    .getByRole("link", { name: new RegExp(`, ${dayMonth(earlier)}\\b`) })
+    .click();
+  await expect(drawer(page)).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(drawer(page)).toBeHidden();
+  await expect(page).not.toHaveURL(/day=/);
 });
 
 test("a day's Went out opens exactly its Activity rows", async ({ page }) => {
@@ -94,14 +106,14 @@ test("a day's Went out opens exactly its Activity rows", async ({ page }) => {
   const first = `${yearMonthOf(today())}-01`;
   await page.goto(`/calendar?month=${yearMonthOf(today())}&day=${first}`);
   const figure = amountIn(
-    await panel(page)
+    await drawer(page)
       .locator("dl > div")
       .filter({ hasText: "Went out" })
       .getByRole("definition")
       .first()
       .innerText(),
   );
-  await panel(page).getByRole("link", { name: "This day in Activity" }).click();
+  await drawer(page).getByRole("link", { name: "This day in Activity" }).click();
   await expect(page).toHaveURL(new RegExp(`/activity\\?from=${first}&to=${first}$`));
   expect(amountIn(await page.getByText(/^Spent/).innerText())).toBe(figure);
 });
@@ -109,7 +121,7 @@ test("a day's Went out opens exactly its Activity rows", async ({ page }) => {
 test("an earlier month opens with no day chosen; the next month has no money", async ({ page }) => {
   const previous = addMonths(yearMonthOf(today()), -1);
   await page.goto(`/calendar?month=${previous}`);
-  await expect(panel(page).getByText("Choose a day to see what happened on it.")).toBeVisible();
+  await expect(drawer(page)).toHaveCount(0);
 
   await page.goto("/calendar");
   await page.getByRole("link", { name: /^Next month/ }).click();

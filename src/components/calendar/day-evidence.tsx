@@ -6,14 +6,9 @@ import { addDays, daysBetween, type CalendarDate } from "@/domain/calendar-date"
 import type { Money as MoneyValue } from "@/domain/money";
 import { weekdayOf } from "@/domain/calendar-weeks";
 import type { ActivityRow } from "@/server/services/activity-service";
-import type {
-  CalendarDayDetail,
-  CalendarDue,
-  MonthCalendar,
-} from "@/server/services/calendar-service";
+import type { CalendarDayDetail, CalendarDue } from "@/server/services/calendar-service";
 
 import { activityHref } from "../activity/links";
-import { monthLabel } from "../format";
 import { cn } from "../ui/cn";
 import { Money } from "../ui/money";
 import { dayMonth, dueNote, rowHref, rowName, weekdayLong } from "./describe";
@@ -50,7 +45,7 @@ export function DayEvidence({
     detail.verifications.length === 0;
   return (
     <div>
-      <div className="border-b border-line px-5 pt-4 pb-3">
+      <div className="border-b border-line-soft px-5 pt-4 pb-3">
         <H id="calendar-day" className="text-heading font-bold text-navy">
           {weekdayLong(weekdayOf(date))}, {dayMonth(date)}
         </H>
@@ -58,7 +53,7 @@ export function DayEvidence({
       </div>
 
       {money && (
-        <dl className="grid grid-cols-2 border-b border-line">
+        <dl className="grid grid-cols-2 border-b border-line-soft">
           <Figure
             term="Came in"
             amount={money.income}
@@ -72,7 +67,7 @@ export function DayEvidence({
             sign="negative"
             href={money.spending !== 0 ? activityHref({ range }) : null}
             link="This day in Activity"
-            className="border-l border-line"
+            className="border-l border-line-soft"
           />
         </dl>
       )}
@@ -156,30 +151,6 @@ export function DayEvidence({
   );
 }
 
-/** When no day is chosen: the month's payments due, each with its state. */
-export function MonthDue({ calendar }: { readonly calendar: MonthCalendar }) {
-  const { due, month } = calendar;
-  return (
-    <div>
-      <div className="border-b border-line px-5 pt-4 pb-3">
-        <h2 id="calendar-day" className="text-heading font-bold text-navy">
-          {monthLabel(month)}
-        </h2>
-        <p className="mt-0.5 text-body text-ink-2">Choose a day to see what happened on it.</p>
-      </div>
-      {due.occurrences.length === 0 ? (
-        <p className="px-5 py-5 text-body text-ink-2">No commitments fall due this month.</p>
-      ) : (
-        <Group title="Commitments due this month" H="h3">
-          {due.occurrences.map((d) => (
-            <DueRow key={d.occurrenceId} due={d} withDate />
-          ))}
-        </Group>
-      )}
-    </div>
-  );
-}
-
 function Figure({
   term,
   amount,
@@ -235,7 +206,7 @@ function Group({
 }) {
   const Heading = H === "h2" ? "h3" : "h4";
   return (
-    <section className="border-b border-line px-5 pt-3.5 pb-1 last:border-b-0">
+    <section className="border-b border-line-soft px-5 pt-3.5 pb-1 last:border-b-0">
       <Heading className="flex items-baseline justify-between gap-3 text-meta font-semibold text-ink-2">
         <span>{title}</span>
         {count !== undefined && (
@@ -313,20 +284,14 @@ function EntryRow({ row }: { readonly row: ActivityRow }) {
   );
 }
 
-function DueRow({
-  due,
-  withDate = false,
-}: {
-  readonly due: CalendarDue;
-  readonly withDate?: boolean;
-}) {
+function DueRow({ due }: { readonly due: CalendarDue }) {
   const paid = due.display === "paid" && due.payment;
   return (
     <Row
       href={paid ? `/activity?tx=${due.payment!.transactionId}` : "/commitments"}
       title={due.name}
       tag={<DueTag state={due.display} />}
-      meta={withDate ? `Due ${dayMonth(due.dueOn)} · ${dueNote(due).toLowerCase()}` : dueNote(due)}
+      meta={dueNote(due)}
       amount={
         <Money amount={paid ? due.payment!.amount : due.expectedAmount} className="text-ink-2" />
       }

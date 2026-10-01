@@ -25,12 +25,16 @@ export const dueStateLabel = (state: OccurrenceDisplayState): string => STATES[s
 
 export function DueTag({ state }: { readonly state: OccurrenceDisplayState }) {
   const { label, Icon } = STATES[state];
-  const tone =
-    state === "overdue"
-      ? "warning"
-      : state === "due_today" || state === "upcoming"
-        ? "info"
-        : "neutral";
+  // Overdue: the warning ink on white, never a yellow fill (as on Commitments).
+  if (state === "overdue") {
+    return (
+      <span className="inline-flex h-5 items-center gap-1 rounded-full bg-surface px-2 text-micro font-semibold whitespace-nowrap text-warning shadow-[inset_0_0_0_1px_var(--color-line)]">
+        <Icon aria-hidden className="size-3.5" />
+        <span>{label}</span>
+      </span>
+    );
+  }
+  const tone = state === "due_today" || state === "upcoming" ? "info" : "neutral";
   return (
     <Tag tone={tone} icon={<Icon aria-hidden className="size-3.5" />}>
       {label}
@@ -54,7 +58,8 @@ export function DueChip({
       title={`${name} · ${label}`}
       className={cn(
         "flex min-w-0 items-center gap-1 rounded-[5px] px-1.5 py-0.5 text-micro leading-none",
-        state === "overdue" && "bg-warning-soft font-semibold text-warning",
+        state === "overdue" &&
+          "bg-surface font-semibold text-warning shadow-[inset_0_0_0_1px_var(--color-line)]",
         state === "due_today" && "bg-mist font-semibold text-ocean",
         state === "upcoming" && "text-ocean shadow-[inset_0_0_0_1px_var(--color-tide)]",
         state === "paid" &&
