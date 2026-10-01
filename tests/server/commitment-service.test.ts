@@ -519,13 +519,13 @@ describe("payOccurrence", () => {
     });
   });
 
-  it("reports an archived category (the archive guard is not in this slice)", async () => {
+  it("pays into the commitment's own category even once it is archived", async () => {
     const { ctx, create, occurrences, bank, housing } = await commitmentLedger();
     const rent = (await occurrences(await create()))["2026-09-01"]!;
     ok(await archiveCategory(ctx, housing));
-    expect(errorCode(await payOccurrence(ctx, rent.id, { accountId: bank }))).toBe(
-      "category_archived",
-    );
+    ok(await payOccurrence(ctx, rent.id, { accountId: bank }));
+    const paid = (await occurrences(rent.commitmentId))["2026-09-01"]!;
+    expect(paid.state).toBe("paid");
   });
 
   it("rejects an unknown or skipped occurrence", async () => {

@@ -65,7 +65,12 @@ export function accountFacts(tx: SyncDb, ownerId: string, id: string): AccountFa
     : undefined;
 }
 
-function loadFacts(tx: SyncDb, ctx: WriteContext, draft: TransactionDraft): LedgerFacts {
+function loadFacts(
+  tx: SyncDb,
+  ctx: WriteContext,
+  draft: TransactionDraft,
+  keptCategoryId: string | null,
+): LedgerFacts {
   const refundOfId = draft.type === "refund" ? (draft.refundOfId ?? null) : null;
   const refundTarget = refundOfId
     ? tx
@@ -88,6 +93,7 @@ function loadFacts(tx: SyncDb, ctx: WriteContext, draft: TransactionDraft): Ledg
     counterAccount:
       draft.type === "transfer" ? accountFacts(tx, ctx.ownerId, draft.counterAccountId) : undefined,
     refundTarget,
+    keptCategoryId,
   };
 
   const categoryId = resolvedCategoryId(draft, partial);
@@ -107,9 +113,18 @@ function loadFacts(tx: SyncDb, ctx: WriteContext, draft: TransactionDraft): Ledg
   };
 }
 
-/** Validates a draft against the current facts and returns its stored row. */
-function validatedRow(tx: SyncDb, ctx: WriteContext, draft: TransactionDraft) {
-  const facts = loadFacts(tx, ctx, draft);
+/**
+ * Validates a draft against the current facts and returns its stored row.
+ * `keptCategoryId` is the category the record already carries, which may be
+ * archived (see LedgerFacts).
+ */
+function validatedRow(
+  tx: SyncDb,
+  ctx: WriteContext,
+  draft: TransactionDraft,
+  keptCategoryId: string | null = null,
+) {
+  const facts = loadFacts(tx, ctx, draft, keptCategoryId);
   const rejected = checkLedgerRules(draft, facts);
   if (rejected) throw new LedgerRuleError(rejected.code, rejected.message);
   const row = toLedgerRow(draft, resolvedCategoryId(draft, facts));
@@ -133,14 +148,19 @@ function nextSequence(tx: SyncDb, ownerId: string): number {
   return updated.next - 1;
 }
 
-/** Inserts one validated draft. Must be called inside a write transaction. */
+/**
+ * Inserts one validated draft. Must be called inside a write transaction.
+ * `keptCategoryId`: a category the draft carries over from an existing record
+ * (a commitment's, when paying it), valid even if since archived.
+ */
 export function insertDraft(
   tx: SyncDb,
   ctx: WriteContext,
   draft: TransactionDraft,
   groupId: string | null = null,
+  keptCategoryId: string | null = null,
 ): string {
-  const row = validatedRow(tx, ctx, draft);
+  const row = validatedRow(tx, ctx, draft, keptCategoryId);
   const id = ctx.ids.next();
   tx.insert(transactions)
     .values({
@@ -286,7 +306,7 @@ export function updateTransaction(
       throw new LedgerRuleError("refund_target_invalid", "A refund cannot refer to itself.");
     }
 
-    const row = validatedRow(tx, ctx, draft);
+    const row = validatedRow(tx, ctx, draft, existing.categoryId);
     tx.update(transactions)
       .set({
         type: row.type,

@@ -112,7 +112,7 @@ function checkDraft(
     .get();
   if (!category) throw new LedgerRuleError("category_not_found", "The category does not exist.");
   if (category.kind !== "expense") {
-    throw new LedgerRuleError("category_kind_mismatch", "A commitment needs a spending category.");
+    throw new LedgerRuleError("category_kind_mismatch", "A commitment needs an expense category.");
   }
   if (category.archivedAt !== null && category.id !== existing?.categoryId) {
     throw new LedgerRuleError("category_archived", "The category is archived.");
@@ -381,7 +381,7 @@ function assertPending(state: OccurrenceState): void {
 /**
  * Pay: the explicit act that records an occurrence's payment. It creates a real
  * expense through the ledger's own insertDraft, so every ledger rule applies
- * (no future date, an active account and category, not before the account
+ * (no future date, an active account, not before the account
  * opened), and links it in the same transaction. A dead link — a payment since
  * deleted or edited into something that is not spending — is replaced by the
  * new one; the old transaction is left exactly as it is.
@@ -396,14 +396,21 @@ export function payOccurrence(
     const { occurrence, commitment, state } = occurrenceFacts(tx, ctx.ownerId, occurrenceId);
     assertPending(state);
 
-    const transactionId = insertDraft(tx, ctx, {
-      type: "expense",
-      amount: draft.amount ?? money(occurrence.expectedAmountMinor),
-      accountId: draft.accountId,
-      categoryId: commitment.categoryId,
-      occurredOn: draft.occurredOn ?? ctx.today,
-      description: commitment.name,
-    });
+    // The payment keeps the commitment's own category, archived or not.
+    const transactionId = insertDraft(
+      tx,
+      ctx,
+      {
+        type: "expense",
+        amount: draft.amount ?? money(occurrence.expectedAmountMinor),
+        accountId: draft.accountId,
+        categoryId: commitment.categoryId,
+        occurredOn: draft.occurredOn ?? ctx.today,
+        description: commitment.name,
+      },
+      null,
+      commitment.categoryId,
+    );
     tx.update(commitmentOccurrences)
       .set({ transactionId, updatedAt: ctx.nowIso })
       .where(

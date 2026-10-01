@@ -87,6 +87,41 @@ describe("checkLedgerRules", () => {
     expect(code(draft, f)).toBe(expected);
   });
 
+  describe("archived categories: chosen vs kept", () => {
+    const archived = { ...facts, category: { ...shopping, archived: true } };
+
+    it("accepts an archived category the record already carries", () => {
+      expect(code(expense, { ...archived, keptCategoryId: "shopping" })).toBeNull();
+    });
+
+    it("rejects an archived category the record does not already carry", () => {
+      expect(code(expense, { ...archived, keptCategoryId: "groceries" })).toBe("category_archived");
+    });
+
+    it("accepts a linked refund into its expense's archived category", () => {
+      const refund: TransactionDraft = {
+        type: "refund",
+        amount: fromMajor(40),
+        accountId: "bank",
+        refundOfId: "purchase",
+        occurredOn: d("2026-09-16"),
+      };
+      const target = { id: "purchase", type: "expense", categoryId: "shopping" };
+      expect(code(refund, { ...archived, refundTarget: target })).toBeNull();
+    });
+
+    it("rejects an unlinked refund into an archived category", () => {
+      const refund: TransactionDraft = {
+        type: "refund",
+        amount: fromMajor(40),
+        accountId: "bank",
+        categoryId: "shopping",
+        occurredOn: d("2026-09-16"),
+      };
+      expect(code(refund, archived)).toBe("category_archived");
+    });
+  });
+
   it("accepts today's date and the opening date itself", () => {
     expect(code({ ...expense, occurredOn: d("2026-09-22") })).toBeNull();
     expect(code({ ...expense, occurredOn: d("2026-08-01") })).toBeNull();

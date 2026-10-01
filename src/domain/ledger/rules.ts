@@ -59,12 +59,29 @@ export interface LedgerFacts {
   readonly category?: CategoryFacts | undefined;
   /** Active (non-deleted) refund target, if refundOfId was given and found. */
   readonly refundTarget?: RefundTargetFacts | undefined;
+  /**
+   * The category the record already carries (the transaction being edited, the
+   * commitment being paid). Keeping it chooses nothing new, so it stays valid
+   * once archived; only choosing an archived category is refused.
+   */
+  readonly keptCategoryId?: string | null | undefined;
 }
 
 const violation = (code: LedgerRuleCode, message: string): LedgerRuleViolation => ({
   code,
   message,
 });
+
+/**
+ * The category a draft keeps rather than chooses: the one its record already
+ * carries, or, for a linked refund, its expense's (a refund must share it).
+ */
+function keptCategoryId(draft: TransactionDraft, facts: LedgerFacts): string | null {
+  if (draft.type === "refund" && draft.refundOfId && facts.refundTarget) {
+    return facts.refundTarget.categoryId;
+  }
+  return facts.keptCategoryId ?? null;
+}
 
 /** The category a draft will be stored with (a linked refund inherits its expense's). */
 export function resolvedCategoryId(draft: TransactionDraft, facts: LedgerFacts): string | null {
@@ -158,7 +175,11 @@ export function checkLedgerRules(
     if (!category || category.id !== resolvedCategoryId(draft, facts)) {
       return violation("category_not_found", "The category does not exist.");
     }
-    if (category.archived) return violation("category_archived", "The category is archived.");
+    // Archiving stops a category being chosen for new activity; records that
+    // already use it keep it (docs/domain-model.md §6).
+    if (category.archived && category.id !== keptCategoryId(draft, facts)) {
+      return violation("category_archived", "The category is archived.");
+    }
     if (category.kind !== requiredKind) {
       return violation(
         "category_kind_mismatch",
