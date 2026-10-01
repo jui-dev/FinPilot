@@ -10,7 +10,16 @@ import { cn } from "./cn";
 export const linkClass =
   "underline decoration-ocean/50 underline-offset-4 transition-colors hover:decoration-ocean";
 
-type Variant = "primary" | "accent" | "secondary" | "ghost" | "danger" | "destructive" | "link";
+type Variant =
+  | "primary"
+  | "accent"
+  | "secondary"
+  | "soft"
+  | "quiet"
+  | "ghost"
+  | "danger"
+  | "destructive"
+  | "link";
 type Size = "sm" | "md" | "icon";
 
 const base =
@@ -23,6 +32,10 @@ const variants: Record<Variant, string> = {
   accent: "bg-coral text-ink hover:bg-coral/85",
   secondary:
     "border border-line-strong bg-surface text-ink hover:border-ink-2 hover:bg-surface-hover",
+  /** A row's main action on a quiet list: mist and ocean, the page's own blues. */
+  soft: "bg-mist/70 text-ocean shadow-[inset_0_0_0_1px_rgb(70_103_141/0.22)] hover:bg-mist hover:text-navy",
+  /** A row's secondary action: a neutral chip, present but never louder than the main one. */
+  quiet: "bg-surface-hover/70 text-ink-2 hover:bg-surface-hover hover:text-ink",
   ghost: "text-ink-2 hover:bg-surface-hover hover:text-ink",
   /** An inline destructive action (e.g. a row's Delete). */
   danger: "text-negative hover:bg-negative-soft",

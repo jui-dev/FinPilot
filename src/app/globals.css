@@ -15,8 +15,12 @@
   --color-surface-subtle: #faf7f2;
   --color-surface-hover: #f1ece3;
   --color-line: #e7e1d6;
+  /* Card edges on the Overview: a whisper of the line, so panels float rather than box. */
+  --color-line-soft: #f1ede6;
   /* Control edges: 3:1 against white (WCAG 1.4.11). */
   --color-line-strong: #9c9485;
+  /* Control edges in a toolbar that wants a softer look (Activity's filters): cooler, still 3:1 against white. */
+  --color-line-control: #8193a8;
 
   /* Text and figures. ink-3 is for icons and placeholders, never for text a person must read. */
   --color-ink: #172033;
@@ -122,6 +126,32 @@
     sans-serif;
   /* The FinPilot wordmark only. */
   --font-brand: var(--font-serif), Georgia, serif;
+}
+
+/*
+ * A scroll area inside a card: a 4px thumb in the line colour, no track,
+ * darker while hovered. Chromium ignores the ::-webkit rules once
+ * scrollbar-width is set, so the standard properties are for the rest (Firefox).
+ */
+@utility scrollbar-subtle {
+  &::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-line);
+    border-radius: 9999px;
+  }
+  &:hover::-webkit-scrollbar-thumb {
+    background: var(--color-line-strong);
+  }
+  @supports not selector(::-webkit-scrollbar) {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line) transparent;
+  }
 }
 
 @layer base {

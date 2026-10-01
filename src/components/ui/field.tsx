@@ -19,21 +19,35 @@ const controlSizes: Record<ControlSize, string> = {
 export function controlClass({
   size = "md",
   selected = false,
-}: { readonly size?: ControlSize; readonly selected?: boolean } = {}): string {
+  subtle = false,
+}: {
+  readonly size?: ControlSize;
+  readonly selected?: boolean;
+  /**
+   * A softer, cooler edge than the default for a toolbar (Activity's filters),
+   * still meeting the 3:1 control-edge contrast against white.
+   */
+  readonly subtle?: boolean;
+} = {}): string {
   return cn(
-    "w-full rounded-control border px-3 placeholder:text-ink-3 transition-colors hover:border-ink-2",
+    "w-full rounded-control border px-3 placeholder:text-ink-3 transition-colors",
+    subtle ? "hover:border-ocean" : "hover:border-ink-2",
     "focus-visible:border-ocean focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ocean",
     "aria-[invalid=true]:border-negative disabled:opacity-45",
     controlSizes[size],
     selected
       ? "border-ocean bg-mist font-medium text-ocean"
-      : "border-line-strong bg-surface text-ink",
+      : subtle
+        ? "border-line-control bg-surface text-ink"
+        : "border-line-strong bg-surface text-ink",
   );
 }
 
 interface ControlOptions {
   readonly controlSize?: ControlSize;
   readonly selected?: boolean;
+  /** A soft edge: see `controlClass`. */
+  readonly subtle?: boolean;
 }
 
 export function Field({
@@ -76,10 +90,14 @@ export function Input({
   className,
   controlSize,
   selected,
+  subtle,
   ...rest
 }: InputHTMLAttributes<HTMLInputElement> & ControlOptions) {
   return (
-    <input className={cn(controlClass({ size: controlSize, selected }), className)} {...rest} />
+    <input
+      className={cn(controlClass({ size: controlSize, selected, subtle }), className)}
+      {...rest}
+    />
   );
 }
 
@@ -87,6 +105,7 @@ export function Select({
   className,
   controlSize,
   selected,
+  subtle,
   children,
   ...rest
 }: SelectHTMLAttributes<HTMLSelectElement> & ControlOptions) {
@@ -94,7 +113,7 @@ export function Select({
     <div className="relative">
       <select
         className={cn(
-          controlClass({ size: controlSize, selected }),
+          controlClass({ size: controlSize, selected, subtle }),
           "appearance-none pr-9",
           className,
         )}
