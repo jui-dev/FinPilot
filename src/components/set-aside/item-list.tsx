@@ -198,7 +198,7 @@ function Headline({ state }: { readonly state: Backing }) {
 }
 
 /**
- * Covered is filled; a shortfall is an outlined gap after it; the rest of the
+ * Covered is filled; a shortfall is a muted berry fill after it; the rest of the
  * target is a quiet track. Decorative: the figures above carry the meaning.
  */
 function TargetBar({ cover }: { readonly cover: ItemCover }) {
@@ -206,12 +206,12 @@ function TargetBar({ cover }: { readonly cover: ItemCover }) {
   if (!shares) return null;
   return (
     <div aria-hidden className="flex h-2.5 w-full overflow-hidden rounded-full bg-surface-hover/80">
-      <span className="h-full rounded-full bg-navy" style={{ width: `${shares.covered * 100}%` }} />
+      <span
+        className={cn("h-full bg-navy", shares.short === 0 && "rounded-full")}
+        style={{ width: `${shares.covered * 100}%` }}
+      />
       {shares.short > 0 && (
-        <span
-          className="h-full rounded-r-full bg-negative-soft shadow-[inset_0_0_0_1px_var(--color-negative)]"
-          style={{ width: `${shares.short * 100}%` }}
-        />
+        <span className="h-full bg-negative/45" style={{ width: `${shares.short * 100}%` }} />
       )}
     </div>
   );

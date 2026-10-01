@@ -119,7 +119,7 @@ export function SetAsideSummary({
           </li>
           {accounts.some((a) => a.short > 0) && (
             <li className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-sm bg-negative-soft shadow-[inset_0_0_0_1px_var(--color-negative)]" />{" "}
+              <span className="size-2.5 rounded-sm bg-negative/45" />{" "}
               Short
             </li>
           )}
@@ -140,7 +140,7 @@ function Fact({ term, children }: { readonly term: string; readonly children: Re
 
 /**
  * One account: what is set aside on it (covered in tide, any shortfall as a
- * berry outline) against what is still free. The bar is decorative; the
+ * muted berry fill) against what is still free. The bar is decorative; the
  * figures beside it carry the meaning.
  */
 function AccountLine({
@@ -171,10 +171,7 @@ function AccountLine({
       <span aria-hidden className="flex h-2 overflow-hidden rounded-full bg-surface-hover/80">
         <span className="h-full bg-tide" style={{ width: `${covered * 100}%` }} />
         {short > 0 && (
-          <span
-            className="h-full rounded-r-full bg-negative-soft shadow-[inset_0_0_0_1px_var(--color-negative)]"
-            style={{ width: `${short * 100}%` }}
-          />
+          <span className="h-full bg-negative/45" style={{ width: `${short * 100}%` }} />
         )}
       </span>
       <p className="text-right text-meta whitespace-nowrap text-ink-2">
