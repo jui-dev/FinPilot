@@ -55,7 +55,7 @@ export function ActivityList({
         aria-hidden
         className={cn(
           COLUMNS,
-          "hidden border-y border-line bg-surface-subtle px-5 py-2.5 text-micro font-semibold tracking-wider text-navy uppercase md:grid",
+          "hidden border-b border-line-soft bg-[linear-gradient(90deg,color-mix(in_srgb,var(--color-mist)_80%,transparent)_0%,color-mix(in_srgb,var(--color-mist)_15%,transparent)_100%)] px-5 py-3 text-micro font-bold tracking-[0.08em] text-ocean uppercase md:grid",
         )}
       >
         <span className="col-start-2">Description</span>
@@ -65,8 +65,14 @@ export function ActivityList({
       </div>
       {[...days].map(([day, dayItems]) => (
         <section key={day}>
-          <h3 className="sticky top-14 z-10 border-b border-line/60 bg-surface px-4 pt-2 pb-1 text-meta font-medium text-ink-2 md:px-5">
-            {dayLabel(day, today)}
+          {/* A warm band (opaque, as it sticks over the rows) with the day's count. */}
+          <h3 className="sticky top-14 z-10 flex items-baseline justify-between gap-3 border-b border-line-soft bg-[linear-gradient(90deg,var(--color-surface-hover)_0%,var(--color-surface-subtle)_45%,var(--color-surface)_100%)] px-4 py-2 md:px-5">
+            <span className="text-micro font-semibold tracking-[0.08em] text-navy uppercase">
+              {dayLabel(day, today)}
+            </span>
+            <span className="text-micro font-medium text-ink-2">
+              {dayItems.length === 1 ? "1 entry" : `${dayItems.length} entries`}
+            </span>
           </h3>
           <ul>
             {dayItems.map((item) => (
@@ -105,7 +111,7 @@ function ActivityRow({
   const titledByCategory = !item.primary.description && event.title === event.category;
   const meta = titledByCategory ? event.meta.filter((part) => part !== event.category) : event.meta;
   return (
-    <li className="border-b border-line last:border-b-0">
+    <li className="border-b border-line-soft last:border-b-0">
       <Link
         href={href}
         scroll={false}
@@ -115,7 +121,7 @@ function ActivityRow({
           // The inset outline stays inside the panel's clipped edge; the scroll
           // margin keeps a focused row clear of the header and the day band.
           "scroll-mt-24 items-center gap-y-0.5 px-4 py-3 transition-colors focus-visible:-outline-offset-2 md:px-5 md:py-2 lg:py-2.5",
-          open ? "bg-mist" : "hover:bg-surface-hover",
+          open ? "bg-mist" : "hover:bg-mist/25",
         )}
       >
         {/* One treatment for every row, as on Cash flow: the icon names the kind;

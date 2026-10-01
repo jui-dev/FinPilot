@@ -237,3 +237,29 @@ test("a note is searchable and shown under its transaction", async ({ page }) =>
   await expect(page.getByText("Nothing matches these filters")).toBeVisible();
   await expect(page.getByText(/^0 entries in this view/)).toBeVisible();
 });
+
+test("the list pages through its view; a row opens over its page, and a filter starts again at page 1", async ({
+  page,
+}) => {
+  await page.goto("/activity");
+  const pages = page.getByRole("navigation", { name: "Pages" });
+  await expect(pages).toContainText(/1–25 of \d+ entries/);
+
+  await pages.getByRole("link", { name: "Next page" }).click();
+  await expect(page).toHaveURL(/\/activity\?page=2$/);
+  await expect(pages).toContainText(/26–50 of \d+ entries/);
+  await expect(pages.getByRole("link", { name: "Page 2" })).toHaveAttribute("aria-current", "page");
+
+  // A row opens over the page it is on, and closing it stays there.
+  await page.locator('section[aria-labelledby="activity-scope"] ul li a').first().click();
+  await expect(page).toHaveURL(/\/activity\?page=2&tx=/);
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(/\/activity\?page=2$/);
+
+  // A filter changes the view, so the list starts again at its first page.
+  await filtersReady(page);
+  await page.getByLabel("Type").selectOption("expense");
+  await expect(page).toHaveURL(/\/activity\?type=expense$/);
+  await expect(pages).toContainText(/^1–/);
+});

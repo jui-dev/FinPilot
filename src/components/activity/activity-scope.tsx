@@ -32,7 +32,7 @@ export function ActivityScope({
   readonly cashFlow: { readonly href: string; readonly label: string } | null;
 }) {
   return (
-    <div className="flex flex-col gap-2 bg-mist/45 px-4 py-3 md:flex-row md:items-center md:justify-between md:gap-x-8 md:px-5 md:py-3.5">
+    <div className="flex flex-col gap-2 bg-[radial-gradient(120%_160%_at_0%_0%,color-mix(in_srgb,var(--color-coral)_9%,var(--color-surface-subtle))_0%,var(--color-surface-subtle)_45%,var(--color-surface)_100%)] px-4 py-3.5 md:flex-row md:items-center md:justify-between md:gap-x-8 md:px-5 md:py-4">
       <div className="min-w-0">
         <h2 id={id} className="text-heading font-bold text-navy">
           Showing <span>{scope.join(" · ")}</span>
@@ -54,8 +54,9 @@ export function ActivityScope({
         </p>
       </div>
       {/* Each label shares its element with its amount, so the pair reads as one. */}
-      <div className="flex shrink-0 flex-wrap items-baseline gap-x-6 gap-y-1 text-body text-ink-2">
-        <p>
+      {/* Two soft pills, the view's totals: what went out, and what came in. */}
+      <div className="flex shrink-0 flex-wrap items-center gap-2 text-meta text-ink-2">
+        <p className="rounded-full bg-surface/85 px-3.5 py-1.5 shadow-[inset_0_0_0_1px_var(--color-line-soft)]">
           Spent{" "}
           <Money
             amount={spending}
@@ -63,7 +64,7 @@ export function ActivityScope({
             className="ml-1 text-heading font-bold text-navy"
           />
         </p>
-        <p>
+        <p className="rounded-full bg-mist/45 px-3.5 py-1.5 shadow-[inset_0_0_0_1px_rgb(70_103_141/0.12)]">
           Income{" "}
           <Money amount={income} sign="none" className="ml-1 text-heading font-bold text-navy" />
         </p>

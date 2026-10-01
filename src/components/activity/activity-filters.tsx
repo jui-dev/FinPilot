@@ -129,6 +129,7 @@ export function ActivityFilters({
         }
         controlSize="sm"
         selected={Boolean(value)}
+        subtle
         className="min-w-0 max-md:h-10"
       >
         {children}
@@ -141,7 +142,7 @@ export function ActivityFilters({
     // two. Tablets and small desktops: search on its own line, the four filters
     // in one row. Wide desktops: everything in one row, the search taking the
     // width the filters leave, so the controls read as one toolbar.
-    <div className="flex flex-col gap-3 border-b border-line bg-surface px-4 py-4 md:px-5 xl:flex-row xl:items-center xl:gap-2">
+    <div className="flex flex-col gap-3 px-4 py-4 md:px-5 xl:flex-row xl:items-center xl:gap-2">
       <div className="relative min-w-0 flex-1">
         <Search
           aria-hidden
@@ -155,7 +156,7 @@ export function ActivityFilters({
           onChange={(event) => setText(event.target.value)}
           placeholder="Search description, category, account or amount"
           aria-label="Search transactions"
-          className={cn(controlClass({ size: "sm" }), "pr-9 pl-9 max-md:h-10")}
+          className={cn(controlClass({ size: "sm", subtle: true }), "pr-9 pl-9 max-md:h-10")}
         />
         {pending && (
           <LoaderCircle
