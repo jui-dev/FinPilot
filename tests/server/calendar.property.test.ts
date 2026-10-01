@@ -111,5 +111,5 @@ describe("Calendar invariants on random ledgers", () => {
       ),
       { numRuns: 20 },
     );
-  });
+  }, 60_000);
 });

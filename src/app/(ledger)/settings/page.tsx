@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 
 import { getRequestContext } from "@/app/_server/context";
 import { CategoriesManager } from "@/components/settings/categories-manager";
+import { DataControls } from "@/components/settings/data-controls";
 import { PageHeader } from "@/components/ui/panel";
+import { dataControlsEnabled } from "@/server/data-controls";
 import { getCategories, getCategoryReferenceCounts } from "@/server/services/setup-service";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -32,6 +34,7 @@ export default async function SettingsPage() {
           uses: uses.get(category.id) ?? 0,
         }))}
       />
+      {dataControlsEnabled() && <DataControls />}
     </div>
   );
 }

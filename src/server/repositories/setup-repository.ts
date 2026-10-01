@@ -23,6 +23,27 @@ import { insertDraft, type SyncDb } from "./ledger-repository";
 
 const IMMEDIATE = { behavior: "immediate" } as const;
 
+/** Inserts the default categories every owner starts with. */
+export function insertDefaultCategories(
+  tx: SyncDb,
+  ownerId: string,
+  ids: IdGenerator,
+  nowIso: string,
+): void {
+  tx.insert(categories)
+    .values(
+      DEFAULT_CATEGORIES.map((c) => ({
+        id: ids.next(),
+        ownerId,
+        name: c.name,
+        kind: c.kind,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      })),
+    )
+    .run();
+}
+
 /** Creates an owner with the default categories, atomically. */
 export function insertOwner(
   db: AppDatabase,
@@ -35,18 +56,7 @@ export function insertOwner(
     tx.insert(owners)
       .values({ id: ownerId, ...input, createdAt: nowIso, updatedAt: nowIso })
       .run();
-    tx.insert(categories)
-      .values(
-        DEFAULT_CATEGORIES.map((c) => ({
-          id: ids.next(),
-          ownerId,
-          name: c.name,
-          kind: c.kind,
-          createdAt: nowIso,
-          updatedAt: nowIso,
-        })),
-      )
-      .run();
+    insertDefaultCategories(tx, ownerId, ids, nowIso);
     return ownerId;
   }, IMMEDIATE);
 }

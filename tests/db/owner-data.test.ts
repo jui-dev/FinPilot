@@ -1,17 +1,28 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { DatabaseHandle } from "@/db/client";
 import { OWNED_TABLES } from "@/db/owned-tables";
 import { resetToDemo } from "@/db/seed/demo-reset";
 import { seedDemo } from "@/db/seed/demo-seed";
 import { calendarDateFromIso } from "@/domain/calendar-date";
+import { CLEAR_CONFIRMATION } from "@/domain/clear-confirmation";
 import { fixedClock } from "@/domain/clock";
-import { fromMajor } from "@/domain/money";
+import { DEFAULT_CATEGORIES } from "@/domain/ledger/categories";
+import { fromMajor, ZERO } from "@/domain/money";
 import { getTableName } from "drizzle-orm";
-import { recordEntry } from "@/server/commands";
+import { clearAllData, recordEntry, resetDemoData } from "@/server/commands";
 import { writeContext, type ServiceContext } from "@/server/context";
 import { uuidV7Generator } from "@/server/ids";
+import { getCurrentOwner } from "@/server/owner";
 import { dismiss } from "@/server/repositories/signal-dismissal-repository";
+import { getActivity } from "@/server/services/activity-service";
+import { getMonthlyCashFlow, getTrends } from "@/server/services/analysis-service";
+import { getAttention } from "@/server/services/attention-service";
+import { getAvailable } from "@/server/services/available-service";
+import { getMonthCalendar } from "@/server/services/calendar-service";
+import { getCommitments, getOccurrences } from "@/server/services/commitment-service";
+import { getAccountBalances, getPosition } from "@/server/services/ledger-service";
+import { getItems } from "@/server/services/protected-money-service";
 import {
   createAccount,
   createCategory,
@@ -23,12 +34,16 @@ import {
 import { freshDatabase } from "../support/database";
 
 /**
- * Resetting an owner's data to the demo: the shared path npm run db:reset and
- * the end-to-end specs take. Every comparison is over a
+ * Settings' Data & demo operations (reset to the demo, clear to a fresh start)
+ * and the shared path npm run db:reset takes. Every comparison is over a
  * projection of the whole ledger — every column of every owned row, with ids
  * replaced by their order of first appearance — so "the same data" means the
  * same rows and the same references between them, whatever ids they were given.
  */
+
+// Nearly every test seeds a full year of demo (about a second each, several in
+// some tests), so the default 5s is too tight when the whole suite runs at once.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
 
 const TODAY = calendarDateFromIso("2026-09-22");
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -38,6 +53,7 @@ afterAll(() => {
   for (const h of handles) h.close();
   handles = [];
 });
+afterEach(() => vi.unstubAllEnvs());
 
 function open(): DatabaseHandle {
   const handle = freshDatabase();
@@ -193,6 +209,97 @@ describe("reset to demo", () => {
   });
 });
 
+describe("clear all data", () => {
+  async function clearedDemo() {
+    const handle = open();
+    const { ownerId } = await resetToDemo(handle.db, null, TODAY);
+    const ctx = context(handle, ownerId);
+    const before = handle.sqlite.prepare("SELECT * FROM owners").get() as Record<string, unknown>;
+    const result = await clearAllDataEnabled(ctx);
+    expect(result.ok).toBe(true);
+    return { handle, ctx, ownerId, before };
+  }
+
+  async function clearAllDataEnabled(ctx: ServiceContext) {
+    vi.stubEnv("FINPILOT_DATA_CONTROLS", "enabled");
+    return clearAllData(ctx, CLEAR_CONFIRMATION);
+  }
+
+  it("leaves the owner and the default categories, and nothing else", async () => {
+    const { handle, ctx, ownerId, before } = await clearedDemo();
+
+    const owner = handle.sqlite.prepare("SELECT * FROM owners").get() as Record<string, unknown>;
+    expect(owner).toMatchObject({
+      id: ownerId,
+      name: before.name,
+      time_zone: before.time_zone,
+      base_currency: before.base_currency,
+      next_transaction_sequence: 1,
+    });
+    expect(ownerCount(handle)).toBe(1);
+
+    const { tables } = projection(handle, ownerId);
+    const { categories, ...rest } = tables;
+    for (const [name, rows] of Object.entries(rest)) expect(rows, name).toEqual([]);
+    expect(
+      (await getCategories(ctx)).map((c) => ({
+        name: c.name,
+        kind: c.kind,
+        archived: c.archivedAt,
+      })),
+    ).toEqual(expect.arrayContaining(DEFAULT_CATEGORIES.map((c) => ({ ...c, archived: null }))));
+    expect(categories).toHaveLength(DEFAULT_CATEGORIES.length);
+    expect(brokenReferences(handle)).toEqual([]);
+  });
+
+  it("restores renamed, archived and custom categories to the defaults", async () => {
+    const { handle, ctx, ownerId } = await ownLedger();
+    expect((await clearAllDataEnabled(ctx)).ok).toBe(true);
+    const names = (await getCategories(ctx)).map((c) => c.name).sort();
+    expect(names).toEqual(DEFAULT_CATEGORIES.map((c) => c.name).sort());
+    expect(projection(handle, ownerId).tables.transactions).toEqual([]);
+  });
+
+  it("is a usable new installation: the owner resolves and every read works on it", async () => {
+    const { handle, ctx } = await clearedDemo();
+    expect(getCurrentOwner(handle).ok).toBe(true);
+
+    expect(await getAccountBalances(ctx)).toEqual([]);
+    expect((await getPosition(ctx)).netWorth).toEqual(ZERO);
+    expect((await getAvailable(ctx)).available).toEqual(ZERO);
+    expect(await getAttention(ctx)).toEqual([]);
+    expect(await getOccurrences(ctx)).toEqual([]);
+    expect(await getCommitments(ctx)).toEqual([]);
+    expect(await getItems(ctx)).toEqual([]);
+    await expect(getMonthCalendar(ctx, "saturday")).resolves.toBeDefined();
+    await expect(getMonthlyCashFlow(ctx)).resolves.toBeDefined();
+    await expect(getTrends(ctx)).resolves.toBeDefined();
+    await expect(getActivity(ctx)).resolves.toBeDefined();
+  });
+
+  it("can record again from sequence 1", async () => {
+    const { handle, ctx } = await clearedDemo();
+    const cash = await createAccount(ctx, {
+      name: "Cash",
+      type: "cash",
+      openedOn: calendarDateFromIso("2026-09-01"),
+      openingBalance: fromMajor(100),
+    });
+    expect(cash.ok).toBe(true);
+    const [row] = handle.sqlite.prepare("SELECT sequence FROM transactions").all() as {
+      sequence: number;
+    }[];
+    expect(row?.sequence).toBe(1);
+  });
+
+  it("is followed by a reset that restores the demo exactly", async () => {
+    const { handle, ownerId } = await clearedDemo();
+    await resetToDemo(handle.db, ownerId, TODAY);
+    expect(projection(handle, ownerId)).toEqual(reference);
+    expect(brokenReferences(handle)).toEqual([]);
+  });
+});
+
 describe("owner scoping", () => {
   it("never touches another owner's data", async () => {
     const { handle, ownerId: mine } = await ownLedger("Me");
@@ -216,6 +323,9 @@ describe("owner scoping", () => {
     await resetToDemo(handle.db, mine, TODAY);
     expect(projection(handle, other.value)).toEqual(untouched);
 
+    vi.stubEnv("FINPILOT_DATA_CONTROLS", "enabled");
+    expect((await clearAllData(context(handle, mine), CLEAR_CONFIRMATION)).ok).toBe(true);
+    expect(projection(handle, other.value)).toEqual(untouched);
     expect(ownerCount(handle)).toBe(2);
     expect(brokenReferences(handle)).toEqual([]);
   });
@@ -236,5 +346,73 @@ describe("atomicity", () => {
     expect(projection(handle, ownerId)).toEqual(before);
     expect(handle.sqlite.inTransaction).toBe(false);
     expect(brokenReferences(handle)).toEqual([]);
+  });
+
+  it("rolls a clear back completely when it fails part-way", async () => {
+    const { handle, ctx, ownerId } = await ownLedger();
+    const before = projection(handle, ownerId);
+    // Fails after every delete, as the default categories go back in.
+    handle.sqlite.exec(
+      "CREATE TRIGGER fail_clear BEFORE INSERT ON categories BEGIN SELECT RAISE(ABORT, 'forced failure'); END",
+    );
+    vi.stubEnv("FINPILOT_DATA_CONTROLS", "enabled");
+
+    const failure = await clearAllData(ctx, CLEAR_CONFIRMATION).catch((e: unknown) => e);
+    expect(messages(failure)).toMatch(/forced failure/);
+
+    expect(projection(handle, ownerId)).toEqual(before);
+    expect(handle.sqlite.inTransaction).toBe(false);
+  });
+});
+
+describe("the commands' guards", () => {
+  it.each([undefined, "", "disabled", "true", "1", "ENABLED", " enabled"])(
+    "refuse both operations when FINPILOT_DATA_CONTROLS is %j",
+    async (value) => {
+      const { handle, ctx, ownerId } = await ownLedger();
+      if (value === undefined) vi.stubEnv("FINPILOT_DATA_CONTROLS", undefined);
+      else vi.stubEnv("FINPILOT_DATA_CONTROLS", value);
+      const before = projection(handle, ownerId);
+
+      const reset = await resetDemoData(ctx);
+      const clear = await clearAllData(ctx, CLEAR_CONFIRMATION);
+
+      expect(reset.ok).toBe(false);
+      expect(clear.ok).toBe(false);
+      expect(projection(handle, ownerId)).toEqual(before);
+    },
+  );
+
+  it.each([
+    "",
+    "clear",
+    "Clear",
+    " CLEAR",
+    "CLEAR ",
+    "CLEAR\n",
+    null,
+    undefined,
+    1,
+    ["CLEAR"],
+    { value: "CLEAR" },
+  ])("refuse to clear without the exact confirmation (%j)", async (confirmation) => {
+    vi.stubEnv("FINPILOT_DATA_CONTROLS", "enabled");
+    const { handle, ctx, ownerId } = await ownLedger();
+    const before = projection(handle, ownerId);
+
+    const result = await clearAllData(ctx, confirmation);
+
+    expect(result).toMatchObject({
+      ok: false,
+      fieldErrors: { confirmation: "Type CLEAR to confirm." },
+    });
+    expect(projection(handle, ownerId)).toEqual(before);
+  });
+
+  it("reset the demo through the command when enabled", async () => {
+    vi.stubEnv("FINPILOT_DATA_CONTROLS", "enabled");
+    const { handle, ctx, ownerId } = await ownLedger();
+    expect((await resetDemoData(ctx)).ok).toBe(true);
+    expect(projection(handle, ownerId)).toEqual(reference);
   });
 });

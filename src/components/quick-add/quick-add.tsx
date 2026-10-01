@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 
 import { recordEntryAction, removeEntryAction } from "@/app/_server/actions";
@@ -11,7 +12,7 @@ import type { FieldErrors, RecordedTransaction } from "@/server/commands";
 import type { EntryDefaults } from "@/server/services/activity-service";
 
 import { shortDate } from "../format";
-import { Button } from "../ui/button";
+import { Button, linkClass } from "../ui/button";
 import { Chip, Segmented } from "../ui/choice";
 import { errorProps, Field, FormMessage, Input, Select } from "../ui/field";
 import { Money as Amount } from "../ui/money";
@@ -214,6 +215,16 @@ export function QuickAdd({
             </p>
           )}
         </div>
+
+        {accounts.length === 0 && (
+          // A fresh start (Settings → Clear all data) has no account to record against yet.
+          <p className="rounded-control bg-surface-subtle px-3 py-2 text-meta text-ink-2">
+            Nothing can be recorded until there is an account.{" "}
+            <Link href="/accounts" className={linkClass} onClick={onClose}>
+              Open one in Accounts
+            </Link>
+          </p>
+        )}
 
         {type === "transfer" ? (
           <>

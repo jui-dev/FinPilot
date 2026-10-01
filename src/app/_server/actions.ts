@@ -1,6 +1,6 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 
 import * as commands from "@/server/commands";
 import type { CommandResult, RecordedTransaction } from "@/server/commands";
@@ -162,4 +162,28 @@ export async function dismissSignalAction(key: unknown): Promise<CommandResult> 
 /** Shows a hidden signal again (Undo). */
 export async function undismissSignalAction(key: unknown): Promise<CommandResult> {
   return run((ctx) => commands.undismissSignal(ctx, key));
+}
+
+// Data & demo
+
+/**
+ * Every page and the ledger layout (Quick Add's accounts and categories) read
+ * the data these replace, so all of them are revalidated, not just this route.
+ */
+async function runWholeLedger(
+  command: (ctx: ServiceContext) => Promise<CommandResult>,
+): Promise<CommandResult> {
+  const result = await command(actionContext());
+  if (result.ok) revalidatePath("/", "layout");
+  return result;
+}
+
+/** Replaces everything with the demo ledger. */
+export async function resetDemoDataAction(): Promise<CommandResult> {
+  return runWholeLedger((ctx) => commands.resetDemoData(ctx));
+}
+
+/** Removes every financial record; `confirmation` must be exactly "CLEAR". */
+export async function clearAllDataAction(confirmation: unknown): Promise<CommandResult> {
+  return runWholeLedger((ctx) => commands.clearAllData(ctx, confirmation));
 }

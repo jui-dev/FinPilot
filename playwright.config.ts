@@ -25,6 +25,7 @@ export default defineConfig({
     url: `http://localhost:${PORT}/activity`,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
-    env: { DATABASE_PATH: E2E_DATABASE_PATH },
+    // Settings' Data & demo controls are off unless enabled (src/server/data-controls.ts).
+    env: { DATABASE_PATH: E2E_DATABASE_PATH, FINPILOT_DATA_CONTROLS: "enabled" },
   },
 });

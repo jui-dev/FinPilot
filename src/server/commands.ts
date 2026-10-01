@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { CLEAR_CONFIRMATION } from "@/domain/clear-confirmation";
 import {
   commitmentFieldForRule,
   commitmentInputSchema,
@@ -24,10 +25,12 @@ import {
   protectedMoneyItemInputSchema,
 } from "@/domain/protected-money/input";
 import type { ServiceContext } from "@/server/context";
+import { dataControlsEnabled } from "@/server/data-controls";
 import type { ServiceResult } from "@/server/errors";
 import { getActivityItem } from "@/server/services/activity-service";
 import * as attention from "@/server/services/attention-service";
 import * as commitments from "@/server/services/commitment-service";
+import * as data from "@/server/services/data-service";
 import * as ledger from "@/server/services/ledger-service";
 import * as protectedMoney from "@/server/services/protected-money-service";
 import * as reconciliation from "@/server/services/reconciliation-service";
@@ -455,4 +458,38 @@ export async function undismissSignal(ctx: ServiceContext, raw: unknown): Promis
   const parsed = signalKeySchema.safeParse(raw);
   if (!parsed.success) return unknownSignal;
   return fromService(await attention.undismissSignal(ctx, parsed.data));
+}
+
+// ---------------------------------------------------------------------------
+// Data & demo (Settings): whole-ledger operations, off unless the environment
+// enables them (src/server/data-controls.ts).
+// ---------------------------------------------------------------------------
+
+const dataControlsOff: CommandResult<never> = {
+  ok: false,
+  message: "Resetting and clearing data are turned off here.",
+  fieldErrors: {},
+};
+
+/** Replaces everything with the demo ledger. */
+export async function resetDemoData(ctx: ServiceContext): Promise<CommandResult> {
+  if (!dataControlsEnabled()) return dataControlsOff;
+  return fromService(await data.resetDemoData(ctx));
+}
+
+/**
+ * Removes every financial record, leaving a fresh start. The confirmation is
+ * checked here as well as in the dialog, so nothing that skips the dialog
+ * clears the data without it.
+ */
+export async function clearAllData(
+  ctx: ServiceContext,
+  confirmation: unknown,
+): Promise<CommandResult> {
+  if (!dataControlsEnabled()) return dataControlsOff;
+  if (confirmation !== CLEAR_CONFIRMATION) {
+    const message = `Type ${CLEAR_CONFIRMATION} to confirm.`;
+    return { ok: false, message, fieldErrors: { confirmation: message } };
+  }
+  return fromService(await data.clearOwnerData(ctx));
 }

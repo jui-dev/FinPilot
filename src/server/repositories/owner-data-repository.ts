@@ -3,15 +3,17 @@ import { eq, getTableColumns, sql } from "drizzle-orm";
 import type { AppDatabase, SyncDb } from "@/db/client";
 import { OWNED_TABLES, OWNED_TABLES_CHILDREN_FIRST } from "@/db/owned-tables";
 import { owners } from "@/db/schema";
+import type { IdGenerator } from "@/domain/ids";
 import { LedgerRuleError } from "@/server/errors";
 import { IMMEDIATE } from "@/server/repositories/ledger-repository";
+import { insertDefaultCategories } from "@/server/repositories/setup-repository";
 
 /**
- * Whole-ledger operations on one owner's data: replace it with another
- * database's ledger (the staged demo). It runs in a single IMMEDIATE
- * transaction with foreign keys enforced, touches only the given owner's rows,
- * and keeps the owner's id, so it either happens completely or not at all, and
- * never reaches another owner.
+ * Whole-ledger operations on one owner's data: return it to a fresh start, or
+ * replace it with another database's ledger (the staged demo). Each runs in a
+ * single IMMEDIATE transaction with foreign keys enforced, touches only the
+ * given owner's rows, and keeps the owner's id, so either one either happens
+ * completely or not at all, and never reaches another owner.
  */
 
 /**
@@ -56,6 +58,30 @@ function assertNoBrokenReferences(tx: SyncDb): void {
 function requireOwner(tx: SyncDb, ownerId: string): void {
   const owner = tx.select({ id: owners.id }).from(owners).where(eq(owners.id, ownerId)).get();
   if (!owner) throw new LedgerRuleError("owner_not_found", "The owner does not exist.");
+}
+
+/**
+ * Returns the owner to a new installation's state: the owner (its id, name,
+ * time zone and currency) and the default categories, and nothing else. Custom,
+ * renamed or archived categories are replaced by the defaults, and the
+ * recording sequence starts again at 1.
+ */
+export function resetOwnerToFreshStart(
+  db: AppDatabase,
+  ownerId: string,
+  ids: IdGenerator,
+  nowIso: string,
+): void {
+  db.transaction((tx) => {
+    requireOwner(tx, ownerId);
+    deleteOwnerData(tx, ownerId);
+    insertDefaultCategories(tx, ownerId, ids, nowIso);
+    tx.update(owners)
+      .set({ nextTransactionSequence: 1, updatedAt: nowIso })
+      .where(eq(owners.id, ownerId))
+      .run();
+    assertNoBrokenReferences(tx);
+  }, IMMEDIATE);
 }
 
 type CopiedTable = (typeof OWNED_TABLES)[number] | typeof owners;
