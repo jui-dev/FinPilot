@@ -167,18 +167,19 @@ Deferred to V1.1: expected income (runway), split transactions, CSV import/expor
 
 ## 6. Overview hierarchy (information architecture only, not a design)
 
-**Narrowed 2026-09-27; completed 2026-09-28 (Stage 10 Slice 0).** The Overview answers *what can I use right now, what needs me, and how does that sit against this month and where I stand?* It owns no financial truth and composes existing answers, each linking to the page that explains it. Four zones, in one fixed order, the same in the DOM and on screen at every width:
+**Narrowed 2026-09-27; completed 2026-09-28 (Stage 10 Slice 0).** The Overview answers *what can I use right now, what needs me, and how does that sit against this month and where I stand?* It owns no financial truth and composes existing answers, each linking to the page that explains it. Five zones, in one fixed order, the same in the DOM and on screen at every width:
 
-1. **Available:** the one headline, as the entry point to its bridge. The Overview surfaces Available; it does not own it, and never redraws its bridge or spoken-for bar.
-2. **Attention:** a preview of the ranked signals (the first 3; the complete list opens in a sheet). This zone absorbs upcoming and overdue commitments, protected-money shortfalls and verification issues, so they get no widgets of their own.
-3. **This month:** a concise current-month outcome from Cash flow — what came in, what went out, what was left over — drawn as a proportional flow of the amounts, linking to Cash flow and to the rows behind it. No savings rate, no percentage and no comparison.
-4. **Where you stand:** net worth with Own and Owe, and how much of what you own counts toward Available, as **secondary context**. Net worth is never a second headline.
+1. **Available:** the one headline, as the entry point to its bridge. The Overview surfaces Available; it does not own it, and never redraws its bridge.
+2. **Month at a glance:** the current month as a glance from the Calendar — the days money moved and the days a payment is still due, with what is still due this month — each day opening the Calendar's own evidence for it. No day shows an amount.
+3. **Attention:** a preview of the ranked signals (the first 3; the complete list opens in a sheet). This zone absorbs upcoming and overdue commitments, protected-money shortfalls and verification issues, so they get no widgets of their own.
+4. **This month:** a concise current-month outcome from Cash flow — what came in, what went out, what was left over, and where it went — linking to Cash flow and to the rows behind it. No savings rate, no percentage and no comparison.
+5. **Where you stand:** net worth, then what you own less what you owe (or plus a card's credit), as **secondary context**. Net worth is never a second headline.
 
 **The one headline is still Available** (§3.1).
 
 **Not on the Overview:** recent activity (Activity exists), copies of Cash flow's charts, a full commitment list, protected-money or commitment widgets that repeat Attention, Overview-only metrics, a savings rate, a month comparison, any time series, separate commitment or set-aside totals, an assets-vs-liabilities chart, and any card added to fill space.
 
-*(Superseded 2026-09-27: the earlier five zones, which included the cash-flow bridge and month-over-month story, a "Plans" zone of budget health and goal trajectory, and Recent activity. Until 2026-09-28 the zones were Available, Attention and This month only.)*
+*(Superseded 2026-09-27: the earlier five zones, which included the cash-flow bridge and month-over-month story, a "Plans" zone of budget health and goal trajectory, and Recent activity. Until 2026-09-28 the zones were Available, Attention and This month only; until 2026-09-29 there was no Month at a glance, and Where you stand showed how much of what you own counts toward Available.)*
 
 Each zone answers a different question. No two charts may communicate the same thing.
 
@@ -281,7 +282,7 @@ FinPilot must immediately read as a serious **money-management** product. It mus
   - a warm off-white foundation and clean white financial surfaces
   - navy-tinted near-black type
   - deep navy for identity and emphasis; an ocean blue for interaction; the blue family, not red or coral, for financial direction; a light cyan for quiet highlighted surfaces
-  - coral only as the brand accent and the global Add action, never for spending, direction, status or errors
+  - solid coral only as the brand accent, the global Add action and orientation (today in the Overview's month glance); soft coral tints may draw spending in visualisations; never direction, status or errors
   - restrained semantic green/amber/red
 - **Feel:** serious, polished, modern, financial, trustworthy, calm, data-driven, premium, but not boring, old-fashioned, cluttered, gimmicky, childish or decorative.
 - **Layout:** excellent whitespace, subtle borders and shadows, strong information hierarchy, serious financial charts.
@@ -293,6 +294,7 @@ FinPilot must immediately read as a serious **money-management** product. It mus
 
 | Date | Change | Reason |
 |---|---|---|
+| 2026-10-01 | **§6 corrected to the Overview as built** (redesigned 2026-09-29 in `5b536f2` and `b8e14f4`): five zones, with Month at a glance second; This month includes where the money went; Where you stand is net worth with what you own less what you owe, without the counts-toward-Available part; the retired spoken-for bar is no longer named. §11: solid coral also marks today in the month glance, and soft coral tints may draw spending in visualisations ([design-direction.md §2](design-direction.md)). | §6 described an Overview that no longer exists; §11 contradicted the implemented colour roles. |
 | 2026-09-29 | **Stage 10 Overview redesign** (`8b5eb2b`; recorded in full in [roadmap.md Stage 10](roadmap.md) and [design-direction.md §5, §6](design-direction.md)). §6: Attention previews the first 3 signals and the complete list opens in a sheet; This month is drawn as a proportional flow of its three amounts instead of a statement, still with no savings rate, percentage or comparison. The four zones, their order and Available as the one headline are unchanged. No acceptance value changed. | The first Overview let Attention grow with every signal and outweigh the headline; a flow of the amounts shows the month's outcome without a rate. |
 | 2026-09-28 | **Stage 10 Slice 0: the Overview** (recorded in full in [roadmap.md Stage 10](roadmap.md)). §2.1: the Overview's question becomes "what can I use right now, what needs me, and how does that sit against this month and where I stand?". §6: four zones in a fixed order — Available, Attention, This month, Where you stand — with Where you stand as secondary context; the list of what is not on the Overview grows. §3.1 is unchanged: Available stays the one headline. No acceptance value changed. | The Overview can't answer "where do I stand" without position, and the gap between net worth and Available is the confusion Available exists to resolve; showing it as context, not as a second headline, keeps the thesis intact. |
 | 2026-09-28 | **Stage 8 Slice 0: Available decisions** (recorded in full in [domain-model.md §10](domain-model.md)). §5: the V1 asset eligibility flag is set from the type default, with no user-facing toggle. §7: Available subtracts commitments whatever their expected account (O-1 resolved), and covered set-aside money rather than the nominal reserved amount. Archived accounts follow the same rules. No acceptance value changed. | O-1 had to be resolved before Available froze; "backed" needed to be stated as binding against "reserved". |
