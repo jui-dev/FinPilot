@@ -1,15 +1,8 @@
-import path from "node:path";
-
 import { expect, test, type Page } from "@playwright/test";
 
-import { openDatabase } from "@/db/client";
-import { migrateDatabase } from "@/db/migrate";
-import { DEMO_TIME_ZONE, seedDemo } from "@/db/seed/demo-seed";
-import { clearAllData } from "@/db/seed/reset";
 import { formatMoney, money } from "@/domain/money";
-import { systemClock } from "@/server/clock";
 
-import { E2E_DATABASE_PATH } from "../playwright.config";
+import { resetDemoInPlace } from "./demo-ledger";
 
 /**
  * Roadmap flow 4: Quick Add → the Overview updates (Available, signals).
@@ -26,17 +19,6 @@ import { E2E_DATABASE_PATH } from "../playwright.config";
  * as in overview.spec.ts) so no commitment left by an earlier spec can outrank
  * the new signal in Attention's preview, and restores it afterwards.
  */
-
-async function resetDemoInPlace() {
-  const handle = openDatabase(path.resolve(E2E_DATABASE_PATH));
-  try {
-    migrateDatabase(handle);
-    clearAllData(handle);
-    await seedDemo(handle, systemClock(DEMO_TIME_ZONE).today(), { situations: false });
-  } finally {
-    handle.close();
-  }
-}
 
 test.beforeAll(resetDemoInPlace);
 test.afterAll(resetDemoInPlace);

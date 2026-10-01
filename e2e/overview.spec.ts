@@ -1,14 +1,6 @@
-import path from "node:path";
-
 import { expect, test, type Page } from "@playwright/test";
 
-import { openDatabase } from "@/db/client";
-import { migrateDatabase } from "@/db/migrate";
-import { DEMO_TIME_ZONE, seedDemo } from "@/db/seed/demo-seed";
-import { clearAllData } from "@/db/seed/reset";
-import { systemClock } from "@/server/clock";
-
-import { E2E_DATABASE_PATH } from "../playwright.config";
+import { resetDemoInPlace } from "./demo-ledger";
 
 /**
  * Stage 10: the Overview at "/" — Available, Attention, This month and Where
@@ -21,17 +13,6 @@ import { E2E_DATABASE_PATH } from "../playwright.config";
  * thing Attention can raise is a month's spending increase. Every other
  * situation is built here through the UI.
  */
-
-async function resetDemoInPlace() {
-  const handle = openDatabase(path.resolve(E2E_DATABASE_PATH));
-  try {
-    migrateDatabase(handle);
-    clearAllData(handle);
-    await seedDemo(handle, systemClock(DEMO_TIME_ZONE).today(), { situations: false });
-  } finally {
-    handle.close();
-  }
-}
 
 test.describe.configure({ mode: "serial" });
 test.beforeAll(resetDemoInPlace);

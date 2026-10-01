@@ -7,6 +7,9 @@
  * it (a dev server, an end-to-end run), the data is cleared in place instead,
  * so the demo can be reset without stopping anything.
  *
+ * Either way the demo itself is written by resetToDemo, the same path as
+ * Settings' "Reset to demo data".
+ *
  * `--ledger-only` leaves out the demo situations (commitments, set-aside
  * money, verifications): the plain ledger the end-to-end suite builds on.
  */
@@ -15,7 +18,8 @@ import path from "node:path";
 
 import { databasePath, openDatabase } from "@/db/client";
 import { migrateDatabase } from "@/db/migrate";
-import { DEMO_TIME_ZONE, seedDemo } from "@/db/seed/demo-seed";
+import { DEMO_TIME_ZONE } from "@/db/seed/demo-seed";
+import { resetToDemo } from "@/db/seed/demo-reset";
 import { clearAllData } from "@/db/seed/reset";
 import { formatMoney } from "@/domain/money";
 import { systemClock } from "@/server/clock";
@@ -50,7 +54,7 @@ async function main() {
     migrateDatabase(handle);
     if (!replaced) clearAllData(handle);
     const today = systemClock(DEMO_TIME_ZONE).today();
-    const result = await seedDemo(handle, today, {
+    const result = await resetToDemo(handle.db, null, today, {
       situations: !process.argv.includes("--ledger-only"),
     });
     const how = replaced ? "Reset" : "Reset in place (the file was in use)";
