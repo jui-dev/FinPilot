@@ -14,7 +14,7 @@ const KINDS: readonly CategoryKind[] = ["expense", "income"];
  * kind has its own URL (expense at the bare path). Each option carries its
  * kind's mark (warm, money out; cool, money in) and the chosen one takes its
  * kind's tint, so the kind on screen is plain at a glance; the words still
- * carry it on their own. Sized like the page's other switches (AreaSwitch).
+ * carry it on their own. Sized like the other page controls (h-8).
  */
 export function KindSwitch({ current }: { readonly current: CategoryKind }) {
   return (

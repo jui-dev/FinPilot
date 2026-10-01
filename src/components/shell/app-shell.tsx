@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownUp, CircleGauge, House, Plus, Receipt, Settings, Wallet } from "lucide-react";
+import { Menu, Plus, Settings, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -13,24 +13,22 @@ import { buttonClass } from "../ui/button";
 import { cn } from "../ui/cn";
 import { Tag } from "../ui/panel";
 import { ToastProvider } from "../ui/toast";
+import { MenuSheet } from "./menu-sheet";
+import { SECTION_ICONS } from "./nav-icons";
 import {
   ariaCurrent,
+  currentSection,
   HOME_PATH,
   isActive,
+  menuTabCurrent,
   navState,
   PHONE_TABS,
-  PRIMARY_NAV,
+  SECTIONS,
+  sectionHref,
   SETTINGS_PATH,
-  type NavItem,
 } from "./navigation";
-
-const TAB_ICONS = {
-  "/": House,
-  "/activity": Receipt,
-  "/accounts": Wallet,
-  "/cash-flow": ArrowDownUp,
-  "/available": CircleGauge,
-} as const;
+import { SectionLink, SectionMenu } from "./section-menu";
+import { SectionNav } from "./section-nav";
 
 /**
  * The one workspace width the navigation and every page share: a desktop
@@ -39,13 +37,13 @@ const TAB_ICONS = {
  */
 const SHELL_WIDTH = "mx-auto w-full max-w-[1360px] px-4 md:px-6 lg:px-8";
 
-/** Tabs before the centred + on phones; the rest follow it. */
-const TABS_BEFORE_ADD = Math.ceil(PHONE_TABS.length / 2);
+/** Tabs before the centred + on phones; the rest, then Menu, follow it. */
+const TABS_BEFORE_ADD = 2;
 
 /**
- * The application frame: top navigation on desktop, a bottom tab bar with a
- * centred + on phones, and Quick Add as the one global action (the N key).
- * Only destinations that exist are shown; later stages add their own.
+ * The application frame: the sections across the top on desktop, a row of the
+ * current section's pages under the header, a bottom tab bar with a centred +
+ * and a Menu sheet on phones, and Quick Add as the one global action (the N key).
  */
 export function AppShell({
   today,
@@ -58,6 +56,8 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const [adding, setAdding] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const section = currentSection(pathname);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -81,30 +81,20 @@ export function AppShell({
                 <span className="block h-[3px] w-3.5 rounded-full bg-coral" />
                 <span className="sr-only">FinPilot</span>
               </span>
-              <span className="font-brand text-figure font-bold text-navy">FinPilot</span>
+              {/* From 768px to 1024px the mark alone (the name stays for screen readers), so the five sections fit. */}
+              <span className="font-brand text-figure font-bold text-navy md:max-lg:sr-only">
+                FinPilot
+              </span>
             </Link>
 
-            <nav aria-label="Main" className="hidden h-full items-stretch md:flex">
-              {PRIMARY_NAV.map((item) => {
-                const state = navState(pathname, item);
-                const active = state !== null;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    aria-current={ariaCurrent(state)}
-                    className={cn(
-                      // Five destinations fit from 768px: tighter until 1024px, never wrapping.
-                      "-mb-px flex items-center border-b-2 px-2 text-body font-medium whitespace-nowrap transition-colors lg:px-3.5",
-                      active
-                        ? "border-navy text-navy"
-                        : "border-transparent text-ink-2 hover:text-ink",
-                    )}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
+            <nav aria-label="Main" className="hidden items-center gap-0.5 md:flex">
+              {SECTIONS.map((s) =>
+                s.pages.length > 1 ? (
+                  <SectionMenu key={s.label} section={s} pathname={pathname} />
+                ) : (
+                  <SectionLink key={s.label} section={s} pathname={pathname} />
+                ),
+              )}
             </nav>
 
             <div className="ml-auto flex items-center gap-2 md:gap-3">
@@ -134,15 +124,25 @@ export function AppShell({
           </div>
         </header>
 
+        {section && section.pages.length > 1 && (
+          <SectionNav section={section} pathname={pathname} className={SHELL_WIDTH} />
+        )}
+
         <main className={cn(SHELL_WIDTH, "flex-1 pt-6 pb-28 md:pb-12")}>{children}</main>
 
         <nav
           aria-label="Main"
           className="fixed inset-x-0 bottom-0 z-30 grid border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
-          style={{ gridTemplateColumns: `repeat(${PHONE_TABS.length + 1}, minmax(0, 1fr))` }}
+          style={{ gridTemplateColumns: `repeat(${PHONE_TABS.length + 2}, minmax(0, 1fr))` }}
         >
-          {PHONE_TABS.slice(0, TABS_BEFORE_ADD).map((item) => (
-            <TabLink key={item.href} item={item} pathname={pathname} />
+          {PHONE_TABS.slice(0, TABS_BEFORE_ADD).map((s) => (
+            <TabLink
+              key={s.label}
+              href={sectionHref(s)}
+              label={s.label}
+              icon={SECTION_ICONS[s.label]!}
+              state={navState(pathname, s)}
+            />
           ))}
           <button
             type="button"
@@ -154,38 +154,83 @@ export function AppShell({
               <Plus className="size-6" strokeWidth={2.25} />
             </span>
           </button>
-          {PHONE_TABS.slice(TABS_BEFORE_ADD).map((item) => (
-            <TabLink key={item.href} item={item} pathname={pathname} />
+          {PHONE_TABS.slice(TABS_BEFORE_ADD).map((s) => (
+            <TabLink
+              key={s.label}
+              href={sectionHref(s)}
+              label={s.label}
+              icon={SECTION_ICONS[s.label]!}
+              state={navState(pathname, s)}
+            />
           ))}
+          {/* Every page, two taps away; current wherever no other tab is (Accounts, Insights, Settings). */}
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            aria-haspopup="dialog"
+            className={tabClass}
+          >
+            <TabFace icon={Menu} label="Menu" active={menuOpen || menuTabCurrent(pathname)} />
+          </button>
         </nav>
       </div>
 
+      <MenuSheet open={menuOpen} onOpenChange={setMenuOpen} pathname={pathname} />
       {/* Mounted only while open, so every entry starts from the remembered defaults. */}
       {adding && <QuickAdd onClose={() => setAdding(false)} data={quickAdd} />}
     </ToastProvider>
   );
 }
 
-function TabLink({ item, pathname }: { readonly item: NavItem; readonly pathname: string }) {
-  const { href, label } = item;
-  const state = navState(pathname, item);
-  const active = state !== null;
-  const Icon = TAB_ICONS[href as keyof typeof TAB_ICONS] ?? Receipt;
+const tabClass = "flex flex-col items-center gap-0.5 pt-1.5 pb-2";
+
+function TabLink({
+  href,
+  label,
+  icon,
+  state,
+}: {
+  readonly href: string;
+  readonly label: string;
+  readonly icon: LucideIcon;
+  readonly state: "page" | "area" | null;
+}) {
   return (
-    <Link
-      href={href}
-      aria-current={ariaCurrent(state)}
-      className={cn(
-        "relative flex flex-col items-center gap-0.5 py-2 text-micro font-medium transition-colors",
-        active ? "text-ink" : "text-ink-2",
-      )}
-    >
-      {/* The active destination: a navy mark and icon, as well as darker text. */}
-      {active && (
-        <span aria-hidden className="absolute inset-x-5 top-0 h-0.5 rounded-b-full bg-navy" />
-      )}
-      <Icon className={cn("size-[19px]", active && "text-navy")} strokeWidth={active ? 2 : 1.75} />
-      {label}
+    <Link href={href} aria-current={ariaCurrent(state)} className={tabClass}>
+      <TabFace icon={icon} label={label} active={state !== null} />
     </Link>
+  );
+}
+
+/** A tab's icon and label; the current tab's icon sits in a mist capsule. */
+function TabFace({
+  icon: Icon,
+  label,
+  active,
+}: {
+  readonly icon: LucideIcon;
+  readonly label: string;
+  readonly active: boolean;
+}) {
+  return (
+    <>
+      <span
+        aria-hidden
+        className={cn(
+          "grid h-7 w-13 place-items-center rounded-full transition-colors",
+          active ? "bg-mist text-navy" : "text-ink-2",
+        )}
+      >
+        <Icon className="size-[19px]" strokeWidth={active ? 2 : 1.75} />
+      </span>
+      <span
+        className={cn(
+          "text-micro transition-colors",
+          active ? "font-semibold text-navy" : "font-medium text-ink-2",
+        )}
+      >
+        {label}
+      </span>
+    </>
   );
 }

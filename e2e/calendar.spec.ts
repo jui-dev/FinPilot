@@ -5,7 +5,7 @@ import { addDays, addMonths, yearMonthOf } from "@/domain/calendar-date";
 import { systemClock } from "@/server/clock";
 
 /**
- * Calendar: reached from Cash flow's local switch; the month's figures are
+ * Calendar: in the Insights section beside Cash flow; the month's figures are
  * Cash flow's; a day is chosen through the URL (back and reload keep it);
  * future months show only what falls due; a day's figure opens its Activity
  * rows; phones get the agenda and a sheet. Built on the plain demo ledger;
@@ -39,16 +39,16 @@ async function lineFigure(page: Page, term: string): Promise<number> {
   );
 }
 
-test("Calendar sits in the Cash flow area, and its month is Cash flow's", async ({ page }) => {
+test("Calendar sits in the Insights section, and its month is Cash flow's", async ({ page }) => {
   await page.goto("/cash-flow");
   await page
-    .getByRole("navigation", { name: "Cash flow" })
+    .getByRole("navigation", { name: "Insights" })
     .getByRole("link", { name: "Calendar" })
     .click();
   await expect(page).toHaveURL(/\/calendar$/);
   await expect(page.getByRole("heading", { level: 1, name: "Calendar" })).toBeVisible();
   await expect(
-    page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Cash flow" }),
+    page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Insights" }),
   ).toHaveAttribute("aria-current", "true");
 
   const cameIn = await lineFigure(page, "Came in");

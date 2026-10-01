@@ -111,12 +111,12 @@ const mainNav = (page: Page, width: number) => {
   return width < 768 ? navs.last() : navs.first();
 };
 
-test("the Available destination lands on the Available page", async ({ page }) => {
+test("the Plan section lands on the Available page", async ({ page }) => {
   await page.goto("/activity");
-  await mainNav(page, 1280).getByRole("link", { name: "Available" }).click();
+  await mainNav(page, 1280).getByRole("link", { name: "Plan", exact: true }).click();
   await expect(page).toHaveURL(/\/available$/);
   await expect(page.getByRole("heading", { level: 1, name: "Available" })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Available" }).getByRole("link")).toHaveText([
+  await expect(page.getByRole("navigation", { name: "Plan" }).getByRole("link")).toHaveText([
     "Available",
     "Commitments",
     "Set aside",
@@ -124,23 +124,23 @@ test("the Available destination lands on the Available page", async ({ page }) =
 });
 
 for (const width of [390, 1280]) {
-  test(`Available is current across its whole area at ${width}px`, async ({ page }) => {
+  test(`Plan is current across its whole section at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     for (const path of AREA) {
       await page.goto(path);
       const nav = mainNav(page, width);
-      await expect(nav.getByRole("link", { name: "Available" })).toHaveAttribute(
+      await expect(nav.getByRole("link", { name: "Plan", exact: true })).toHaveAttribute(
         "aria-current",
         path === "/available" ? "page" : "true",
       );
-      // Cash flow has no phone tab (P-3).
-      const others = ["Overview", "Activity", "Accounts", ...(width < 768 ? [] : ["Cash flow"])];
+      // Accounts and Insights have no phone tab.
+      const others = ["Overview", "Transactions", ...(width < 768 ? [] : ["Accounts", "Insights"])];
       for (const other of others) {
         await expect(nav.getByRole("link", { name: other, exact: true })).not.toHaveAttribute(
           "aria-current",
         );
       }
-      const area = page.getByRole("navigation", { name: "Available" });
+      const area = page.getByRole("navigation", { name: "Plan" });
       for (const [href, name] of Object.entries(PAGE_NAME)) {
         const link = area.getByRole("link", { name });
         if (href === path) await expect(link).toHaveAttribute("aria-current", "page");
@@ -150,18 +150,21 @@ for (const width of [390, 1280]) {
   });
 }
 
-test("the phone tab bar keeps four destinations around the centred Add", async ({ page }) => {
+test("the phone tab bar keeps two tabs either side of the centred Add, Menu last", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/available");
   const bar = mainNav(page, 390);
   const cells = bar.locator(":scope > *");
   await expect(cells).toHaveCount(5);
   await expect(cells.nth(2)).toHaveAttribute("aria-label", "Add a transaction");
-  await expect(bar.getByRole("link")).toHaveText(["Overview", "Activity", "Accounts", "Available"]);
+  await expect(bar.getByRole("link")).toHaveText(["Overview", "Transactions", "Plan"]);
+  await expect(cells.nth(4)).toHaveAccessibleName("Menu");
 });
 
 for (const width of [390, 820, 1024, 1280, 1920]) {
-  test(`the Available area fits ${width}px with the switch on one line`, async ({ page }) => {
+  test(`the Plan section fits ${width}px with its row on one line`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     for (const path of AREA) {
       await page.goto(path);
@@ -169,10 +172,10 @@ for (const width of [390, 820, 1024, 1280, 1920]) {
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       );
       expect(overflow, `horizontal overflow on ${path} at ${width}px`).toBe(0);
-      const links = page.getByRole("navigation", { name: "Available" }).getByRole("link");
+      const links = page.getByRole("navigation", { name: "Plan" }).getByRole("link");
       const first = await links.first().boundingBox();
       const last = await links.last().boundingBox();
-      expect(last!.y, `switch wraps on ${path} at ${width}px`).toBe(first!.y);
+      expect(last!.y, `row wraps on ${path} at ${width}px`).toBe(first!.y);
       await expect(links.last()).toBeInViewport();
     }
     // The answer is on the first screen at every width.

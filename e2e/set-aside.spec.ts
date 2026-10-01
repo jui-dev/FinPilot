@@ -186,15 +186,13 @@ test("an archived account is never offered for setting money aside", async ({ pa
   expect(options.some((o) => o.startsWith("Visa card"))).toBe(false);
 });
 
-test("the Available area switches between Available, Commitments and Set aside", async ({
-  page,
-}) => {
+test("the Plan section moves between Available, Commitments and Set aside", async ({ page }) => {
   await page.goto("/commitments");
-  const area = page.getByRole("navigation", { name: "Available" });
+  const area = page.getByRole("navigation", { name: "Plan" });
   const available = page
     .getByRole("navigation", { name: "Main" })
     .first()
-    .getByRole("link", { name: "Available" });
+    .getByRole("link", { name: "Plan", exact: true });
 
   await area.getByRole("link", { name: "Set aside" }).click();
   await expect(page).toHaveURL(/\/set-aside$/);
@@ -203,7 +201,7 @@ test("the Available area switches between Available, Commitments and Set aside",
     "aria-current",
     "page",
   );
-  // The global Available destination stays current for its whole area.
+  // The Plan section stays current on all of its pages.
   await expect(available).toHaveAttribute("aria-current", "true");
 
   await area.getByRole("link", { name: "Available" }).click();

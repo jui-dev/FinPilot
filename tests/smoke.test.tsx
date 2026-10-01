@@ -2,12 +2,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { SetupRequired } from "@/components/shell/setup-required";
-import { HOME_PATH, PRIMARY_NAV } from "@/components/shell/navigation";
+import { HOME_PATH, SECTIONS, sectionHref } from "@/components/shell/navigation";
 
 describe("smoke", () => {
-  it("makes / home: the Overview, the first destination", () => {
+  it("makes / home: the Overview, the first section", () => {
     expect(HOME_PATH).toBe("/");
-    expect(PRIMARY_NAV[0]!.href).toBe(HOME_PATH);
+    expect(sectionHref(SECTIONS[0]!)).toBe(HOME_PATH);
   });
 
   it("resolves the @/ alias and renders a page that needs no database", () => {

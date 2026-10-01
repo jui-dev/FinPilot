@@ -6,7 +6,6 @@ import { holdingsByAccount } from "@/components/set-aside/describe";
 import { ArchivedItems, ItemList, type ItemRow } from "@/components/set-aside/item-list";
 import { NewPurposeButton, type Source } from "@/components/set-aside/panels";
 import { SetAsideSummary } from "@/components/set-aside/summary";
-import { AreaSwitch, AVAILABLE_AREA } from "@/components/shell/area-switch";
 import { EmptyState } from "@/components/ui/panel";
 import { getItems, getReserveSources } from "@/server/services/protected-money-service";
 import { getAccounts } from "@/server/services/setup-service";
@@ -69,7 +68,6 @@ export default async function SetAsidePage() {
           </p>
         </header>
         <div className="flex flex-wrap items-center gap-3">
-          <AreaSwitch area={AVAILABLE_AREA} current="/set-aside" />
           <NewPurposeButton emphasized />
         </div>
       </div>

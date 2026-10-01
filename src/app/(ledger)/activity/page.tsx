@@ -9,7 +9,6 @@ import { cashFlowHref, cashFlowMonthOf } from "@/components/activity/links";
 import { TransactionPanel } from "@/components/activity/transaction-panel";
 import { monthLabel, rangeLabel } from "@/components/format";
 import { EmptyState } from "@/components/ui/panel";
-import { ACTIVITY_AREA, AreaSwitch } from "@/components/shell/area-switch";
 import { inclusiveRange, yearMonthOf, type YearMonth } from "@/domain/calendar-date";
 import {
   ACTIVITY_TYPE_FILTERS,
@@ -115,7 +114,6 @@ export default async function ActivityPage({
           <h1 className="text-title font-bold text-navy">Activity</h1>
           <p className="mt-1 text-body text-ink-2">Every transaction, newest first.</p>
         </header>
-        <AreaSwitch area={ACTIVITY_AREA} current="/activity" />
       </div>
 
       {/* One workspace in three cards, apart: the filters, what they select, then the rows. */}

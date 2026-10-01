@@ -43,10 +43,10 @@ const openQuickAdd = async (page: Page) => {
   return page.getByRole("dialog", { name: "Add a transaction" });
 };
 
-test("Categories sits in the Activity area, one kind at a time", async ({ page }) => {
+test("Categories sits in the Transactions section, one kind at a time", async ({ page }) => {
   await page.goto("/activity");
   await page
-    .getByRole("navigation", { name: "Activity" })
+    .getByRole("navigation", { name: "Transactions" })
     .getByRole("link", { name: "Categories" })
     .click();
   await expect(page).toHaveURL(/\/categories$/);
@@ -54,7 +54,7 @@ test("Categories sits in the Activity area, one kind at a time", async ({ page }
     page
       .getByRole("navigation", { name: "Main" })
       .first()
-      .getByRole("link", { name: "Activity", exact: true }),
+      .getByRole("link", { name: "Transactions", exact: true }),
   ).toHaveAttribute("aria-current", "true");
   await expect(page.getByRole("heading", { level: 2, name: "Expense Categories" })).toBeVisible();
 

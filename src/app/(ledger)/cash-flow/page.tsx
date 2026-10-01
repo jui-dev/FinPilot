@@ -6,7 +6,6 @@ import { Summary } from "@/components/cash-flow/summary";
 import { WhatChanged } from "@/components/cash-flow/what-changed";
 import { WhereItWent } from "@/components/cash-flow/where-it-went";
 import { monthLabel } from "@/components/format";
-import { AreaSwitch, CASH_FLOW_AREA } from "@/components/shell/area-switch";
 import { getMonthlyCashFlow } from "@/server/services/analysis-service";
 
 export const metadata: Metadata = { title: "Cash flow" };
@@ -43,7 +42,6 @@ export default async function CashFlowPage({
           <p className="mt-1 text-body text-ink-2">What came in, and where it went.</p>
         </header>
         <div className="flex flex-wrap items-center gap-3">
-          <AreaSwitch area={CASH_FLOW_AREA} current="/cash-flow" />
           <MonthSwitcher
             period={period}
             previous={months[index + 1]}

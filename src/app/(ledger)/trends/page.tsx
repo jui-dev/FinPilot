@@ -4,7 +4,6 @@ import Link from "next/link";
 import { getRequestContext } from "@/app/_server/context";
 import { CARD } from "@/components/cash-flow/labels";
 import { monthLabel } from "@/components/format";
-import { AreaSwitch, CASH_FLOW_AREA } from "@/components/shell/area-switch";
 import { monthsCount } from "@/components/trends/describe";
 import { MonthByMonth } from "@/components/trends/month-by-month";
 import { RangeSwitch } from "@/components/trends/range-switch";
@@ -56,7 +55,6 @@ export default async function TrendsPage({
           </p>
         </header>
         <div className="flex flex-wrap items-center gap-3">
-          <AreaSwitch area={CASH_FLOW_AREA} current="/trends" />
           <RangeSwitch current={length} />
         </div>
       </div>

@@ -61,9 +61,9 @@ const mainNav = (page: Page, width: number) => {
   return width < 768 ? navs.last() : navs.first();
 };
 
-/** P-3: five destinations on desktop; four phone tabs around the +, without Cash flow. */
-const DESKTOP = ["Overview", "Activity", "Accounts", "Cash flow", "Available"];
-const PHONE = ["Overview", "Activity", "Accounts", "Available"];
+/** Five sections on desktop; on phones three section tabs around the +, then Menu. */
+const DESKTOP = ["Overview", "Transactions", "Accounts", "Insights", "Plan"];
+const PHONE = ["Overview", "Transactions", "Plan"];
 const destinations = (width: number) => (width < 768 ? PHONE : DESKTOP);
 
 /** Exactly `current` is marked as the current page among the destinations shown. */
@@ -131,17 +131,17 @@ test("the logo leads to the Overview: five zones in order, and Overview is curre
 });
 
 for (const width of [390, 1280]) {
-  test(`P-3 navigation at ${width}px: each destination current on its page; none on a phone's Cash flow`, async ({
+  test(`navigation at ${width}px: each section current on its first page; Menu on a phone's Insights`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 844 });
     const pages: [string, string | null][] = [
       ["/", "Overview"],
-      ["/activity", "Activity"],
-      ["/accounts", "Accounts"],
-      // Cash flow stays its own page: current on desktop, and with no phone tab, nothing is current there.
-      ["/cash-flow", width < 768 ? null : "Cash flow"],
-      ["/available", "Available"],
+      ["/activity", "Transactions"],
+      // Accounts and Insights have no phone tab: there, the Menu tab is current.
+      ["/accounts", width < 768 ? null : "Accounts"],
+      ["/cash-flow", width < 768 ? null : "Insights"],
+      ["/available", "Plan"],
     ];
     for (const [path, current] of pages) {
       await page.goto(path);
@@ -516,11 +516,11 @@ for (const width of [390, 768, 820, 1024, 1280, 1920]) {
     const journey = (await story.getByTestId("month-journey").boundingBox())!;
     expect(journey.x + journey.width).toBeLessThanOrEqual(storyBox.x + storyBox.width);
 
-    // Five destinations on desktop, four phone tabs around the +; Overview is current.
+    // Five sections on desktop, three tabs around the + and Menu on phones; Overview is current.
     await expectCurrent(page, width, "Overview");
     const nav = mainNav(page, width);
     if (width >= 768) {
-      // Every desktop destination stays on one line ("Cash flow" once wrapped at 820px).
+      // Every desktop section stays on one line.
       const wrapped = await page.evaluate(() =>
         [...document.querySelectorAll("header nav a")]
           .filter((a) => {
@@ -535,6 +535,7 @@ for (const width of [390, 768, 820, 1024, 1280, 1920]) {
     if (width < 768) {
       const cells = nav.locator(":scope > *");
       await expect(cells).toHaveCount(5);
+      await expect(cells.nth(4)).toHaveAccessibleName("Menu");
       await expect(cells.nth(2)).toHaveAttribute("aria-label", "Add a transaction");
     }
   });

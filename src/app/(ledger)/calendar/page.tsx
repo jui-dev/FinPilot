@@ -12,7 +12,6 @@ import {
 } from "@/components/calendar/describe";
 import { CalendarMonthSwitcher, MonthLine } from "@/components/calendar/month-header";
 import { MonthGrid } from "@/components/calendar/month-grid";
-import { AreaSwitch, CASH_FLOW_AREA } from "@/components/shell/area-switch";
 import { weekdayOf } from "@/domain/calendar-weeks";
 import { getMonthCalendar } from "@/server/services/calendar-service";
 
@@ -56,7 +55,6 @@ export default async function CalendarPage({
           <p className="mt-1 text-body text-ink-2">When money moved, and when payments fall due.</p>
         </header>
         <div className="flex flex-wrap items-center gap-3">
-          <AreaSwitch area={CASH_FLOW_AREA} current="/calendar" />
           <CalendarMonthSwitcher calendar={calendar} />
         </div>
       </div>

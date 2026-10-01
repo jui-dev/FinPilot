@@ -17,7 +17,6 @@ import {
   type PendingRow,
 } from "@/components/commitments/occurrence-list";
 import { shortDate } from "@/components/format";
-import { AreaSwitch, AVAILABLE_AREA } from "@/components/shell/area-switch";
 import { EmptyState } from "@/components/ui/panel";
 import { materialisedThrough } from "@/domain/commitments/occurrences";
 import { sum } from "@/domain/money";
@@ -74,7 +73,6 @@ export default async function CommitmentsPage() {
         </p>
       </header>
       <div className="flex flex-wrap items-center gap-3">
-        <AreaSwitch area={AVAILABLE_AREA} current="/commitments" />
         <NewCommitmentButton {...formChoices} emphasized />
       </div>
     </div>

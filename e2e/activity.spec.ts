@@ -147,9 +147,8 @@ test("the search field follows the URL when it changes from elsewhere", async ({
 
   // A link into Activity without a search, then Back and Forward.
   await page
-    .getByRole("navigation", { name: "Main" })
+    .getByRole("navigation", { name: "Transactions" })
     .getByRole("link", { name: "Activity", exact: true })
-    .first()
     .click();
   await expect(page).toHaveURL(/\/activity$/);
   await expect(search(page)).toHaveValue("");

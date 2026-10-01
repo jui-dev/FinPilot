@@ -4,7 +4,6 @@ import { getRequestContext } from "@/app/_server/context";
 import { CategoryGuide, CategoryList } from "@/components/categories/category-list";
 import type { CategoryView } from "@/components/categories/describe";
 import { KindSwitch } from "@/components/categories/kind-switch";
-import { ACTIVITY_AREA, AreaSwitch } from "@/components/shell/area-switch";
 import type { CategoryKind } from "@/domain/ledger/transactions";
 import {
   getCategories,
@@ -59,16 +58,11 @@ export default async function CategoriesPage({
 
   return (
     <div className="flex flex-col gap-5 md:gap-6">
-      {/* The title, then the page's switches at the line's end: the area, and
-          rightmost the kind on screen, which wraps under them on phones. */}
+      {/* The title, then the kind on screen at the line's end. */}
       <header>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-3">
           <h1 className="mr-3 text-title font-bold text-navy">Categories</h1>
           <div className="ml-auto">
-            <AreaSwitch area={ACTIVITY_AREA} current="/categories" />
-          </div>
-          {/* On its own line on phones, it stays at the right edge. */}
-          <div className="max-md:ml-auto">
             <KindSwitch current={kind} />
           </div>
         </div>

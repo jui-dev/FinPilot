@@ -6,7 +6,7 @@ import { addMonths, yearMonthOf, type YearMonth } from "@/domain/calendar-date";
 import { systemClock } from "@/server/clock";
 
 /**
- * Trends (Stage 12): reached from Cash flow's local switch, complete months
+ * Trends (Stage 12): in the Insights section beside Cash flow, complete months
  * only, the months added up once, each month's chart and exact figures in one
  * table, and the rows behind What changed. Built on the plain
  * demo ledger (a year of history); assertions compare the page with itself
@@ -48,21 +48,19 @@ async function total(page: Page, term: string): Promise<number> {
   return amountIn(text);
 }
 
-test("Trends sits behind Cash flow's local switch, and Cash flow stays current", async ({
-  page,
-}) => {
+test("Trends sits in the Insights section, which stays current", async ({ page }) => {
   await page.goto("/cash-flow");
   await page
-    .getByRole("navigation", { name: "Cash flow" })
+    .getByRole("navigation", { name: "Insights" })
     .getByRole("link", { name: "Trends" })
     .click();
   await expect(page).toHaveURL(/\/trends$/);
   await expect(page.getByRole("heading", { level: 1, name: "Trends" })).toBeVisible();
   await expect(
-    page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Cash flow" }),
+    page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Insights" }),
   ).toHaveAttribute("aria-current", "true");
   await expect(
-    page.getByRole("navigation", { name: "Cash flow" }).getByRole("link", { name: "Trends" }),
+    page.getByRole("navigation", { name: "Insights" }).getByRole("link", { name: "Trends" }),
   ).toHaveAttribute("aria-current", "page");
 
   // And back: the current month is Cash flow's.
