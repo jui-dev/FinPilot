@@ -29,9 +29,43 @@ export function MoneyInput({
 }: Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "size"> & {
   readonly value: string;
   readonly onValueChange: (value: string) => void;
-  readonly size?: "md" | "lg";
+  /** "hero": Quick Add's centred amount, the dialog's one large figure. */
+  readonly size?: "md" | "lg" | "hero";
   readonly ref?: Ref<HTMLInputElement>;
 }) {
+  if (size === "hero") {
+    return (
+      // The underline appears only while the amount has focus (or is wrong), under the figure alone.
+      <div className={cn("flex justify-center", className)}>
+        <div
+          className={cn(
+            "inline-flex items-baseline gap-1.5 border-b-2 px-1 pb-0.5 transition-colors",
+            rest["aria-invalid"]
+              ? "border-negative"
+              : "border-transparent focus-within:border-ocean",
+          )}
+        >
+          <span aria-hidden className="text-title font-semibold text-ocean">
+            ৳
+          </span>
+          <input
+            ref={ref}
+            inputMode="decimal"
+            autoComplete="off"
+            // As wide as what is typed, so the figure stays centred.
+            style={{
+              width: `${Math.max(1, (value || String(rest.placeholder ?? "")).length) + 0.4}ch`,
+            }}
+            className="min-w-[1.4ch] bg-transparent text-hero font-bold text-navy tabular-nums outline-none placeholder:text-line focus-visible:outline-none"
+            value={value}
+            onChange={(e) => onValueChange(e.target.value.replace(/[^\d.,]/g, ""))}
+            onBlur={(e) => onValueChange(formatTypedAmount(e.target.value))}
+            {...rest}
+          />
+        </div>
+      </div>
+    );
+  }
   const large = size === "lg";
   return (
     <div

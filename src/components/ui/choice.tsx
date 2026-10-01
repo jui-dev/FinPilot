@@ -21,6 +21,7 @@ export function Segmented<T extends string>({
   onChange,
   className,
   size = "md",
+  appearance = "tint",
 }: {
   readonly label: string;
   readonly options: readonly Option<T>[];
@@ -28,6 +29,12 @@ export function Segmented<T extends string>({
   readonly onChange: (value: T) => void;
   readonly className?: string;
   readonly size?: "sm" | "md";
+  /**
+   * "tint": the chosen option in mist and ocean. "raised": a white, bolder tab
+   * that reads as chosen by its shape and weight alone, so an option's own mark
+   * can carry its meaning (Quick Add's entry types).
+   */
+  readonly appearance?: "tint" | "raised";
 }) {
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
   const enabled = options.filter((o) => !o.disabled);
@@ -75,7 +82,9 @@ export function Segmented<T extends string>({
               "inline-flex flex-1 items-center justify-center gap-1.5 rounded-[6px] font-medium whitespace-nowrap transition-colors disabled:opacity-40",
               size === "sm" ? "h-7 px-2.5 text-meta" : "h-8 px-3 text-body",
               selected
-                ? "bg-mist text-ocean shadow-[0_0_0_1px_var(--color-ocean)]"
+                ? appearance === "raised"
+                  ? "bg-surface font-semibold text-ink shadow-[0_1px_2px_rgb(23_32_51/0.1),0_0_0_1px_var(--color-line-strong)]"
+                  : "bg-mist text-ocean shadow-[0_0_0_1px_var(--color-ocean)]"
                 : "text-ink-2 hover:text-ink",
             )}
           >

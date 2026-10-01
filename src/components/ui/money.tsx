@@ -1,4 +1,4 @@
-import { formatMoney, type Money as MoneyValue } from "@/domain/money";
+import { formatMoney, type Money as MoneyValue, type MoneyPrecision } from "@/domain/money";
 
 import { cn } from "./cn";
 
@@ -10,14 +10,17 @@ import { cn } from "./cn";
 export function Money({
   amount,
   sign = "negative",
+  precision = "major",
   className,
 }: {
   readonly amount: MoneyValue;
   /** "negative": only a minus. "always": + or −. "none": the magnitude only. */
   readonly sign?: "negative" | "always" | "none";
+  /** "major" (the default) rounds to whole taka; "minor" shows exact poisha. */
+  readonly precision?: MoneyPrecision;
   readonly className?: string;
 }) {
-  const text = formatMoney(amount);
+  const text = formatMoney(amount, precision);
   const negative = text.startsWith("−");
   const digits = text.replace(/^−?৳/, "");
   const prefix =

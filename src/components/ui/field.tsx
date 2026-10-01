@@ -1,5 +1,5 @@
 import { ChevronDown } from "lucide-react";
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
+import type { InputHTMLAttributes, ReactNode, Ref, SelectHTMLAttributes } from "react";
 
 import { cn } from "./cn";
 
@@ -92,7 +92,8 @@ export function Input({
   selected,
   subtle,
   ...rest
-}: InputHTMLAttributes<HTMLInputElement> & ControlOptions) {
+}: InputHTMLAttributes<HTMLInputElement> &
+  ControlOptions & { readonly ref?: Ref<HTMLInputElement> }) {
   return (
     <input
       className={cn(controlClass({ size: controlSize, selected, subtle }), className)}

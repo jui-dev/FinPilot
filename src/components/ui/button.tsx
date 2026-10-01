@@ -20,7 +20,7 @@ type Variant =
   | "danger"
   | "destructive"
   | "link";
-type Size = "sm" | "md" | "icon";
+type Size = "sm" | "md" | "lg" | "icon";
 
 const base =
   "inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold transition-colors " +
@@ -47,6 +47,8 @@ const variants: Record<Variant, string> = {
 const sizes: Record<Size, string> = {
   sm: "h-8 rounded-control px-3 text-meta",
   md: "h-10 rounded-control px-4 text-body",
+  /** A dialog's one full-width action (Quick Add's Save). */
+  lg: "h-12 rounded-panel px-5 text-heading",
   /** Icon-only: a 32px square with no horizontal padding, so a 16px icon keeps its size. */
   icon: "size-8 rounded-control",
 };

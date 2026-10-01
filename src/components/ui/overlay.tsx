@@ -32,6 +32,8 @@ interface OverlayProps {
   readonly footer?: ReactNode;
   readonly className?: string;
   readonly onOpenAutoFocus?: (event: Event) => void;
+  /** Escape before it closes the overlay: preventDefault keeps it open (e.g. to step back). */
+  readonly onEscapeKeyDown?: (event: KeyboardEvent) => void;
 }
 
 const overlayClass = "fixed inset-0 z-40 bg-ink/30 animate-fade-in";
@@ -89,7 +91,10 @@ function Frame({
   header,
   children,
   footer,
-}: Omit<OverlayProps, "open" | "onOpenChange" | "className" | "onOpenAutoFocus">) {
+}: Omit<
+  OverlayProps,
+  "open" | "onOpenChange" | "className" | "onOpenAutoFocus" | "onEscapeKeyDown"
+>) {
   return (
     <>
       <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3">
@@ -118,7 +123,14 @@ function Frame({
   );
 }
 
-export function Modal({ open, onOpenChange, className, onOpenAutoFocus, ...frame }: OverlayProps) {
+export function Modal({
+  open,
+  onOpenChange,
+  className,
+  onOpenAutoFocus,
+  onEscapeKeyDown,
+  ...frame
+}: OverlayProps) {
   const focus = useOverlayFocus();
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -127,6 +139,7 @@ export function Modal({ open, onOpenChange, className, onOpenAutoFocus, ...frame
         <Dialog.Content
           {...focus}
           onOpenAutoFocus={onOpenAutoFocus}
+          onEscapeKeyDown={onEscapeKeyDown}
           className={cn(
             "fixed z-50 flex max-h-[92dvh] flex-col bg-surface shadow-overlay outline-none",
             // Phone: bottom sheet. Larger screens: centred dialog near the top.
