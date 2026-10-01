@@ -10,7 +10,12 @@ import {
 import { NewCommitmentButton, type Choice } from "@/components/commitments/commitment-panel";
 import { CommitmentsSummary } from "@/components/commitments/commitments-summary";
 import { pluralPayments } from "@/components/commitments/describe";
-import { CARD, OccurrenceList, type PendingRow } from "@/components/commitments/occurrence-list";
+import {
+  byMonth,
+  CARD,
+  OccurrenceList,
+  type PendingRow,
+} from "@/components/commitments/occurrence-list";
 import { shortDate } from "@/components/format";
 import { AreaSwitch, AVAILABLE_AREA } from "@/components/shell/area-switch";
 import { EmptyState } from "@/components/ui/panel";
@@ -61,18 +66,18 @@ export default async function CommitmentsPage() {
   };
 
   const header = (
-    <>
-      <AreaSwitch area={AVAILABLE_AREA} current="/commitments" />
-      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1">
+    <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+      <header>
         <h1 className="text-title font-bold text-navy">Commitments</h1>
-        <div className="md:row-span-2">
-          <NewCommitmentButton {...formChoices} emphasized={commitments.length === 0} />
-        </div>
-        <p className="col-span-2 text-body text-ink-2 md:col-span-1">
+        <p className="mt-1 text-body text-ink-2">
           What you owe on a schedule, and when each payment is due.
         </p>
       </header>
-    </>
+      <div className="flex flex-wrap items-center gap-3">
+        <AreaSwitch area={AVAILABLE_AREA} current="/commitments" />
+        <NewCommitmentButton {...formChoices} emphasized />
+      </div>
+    </div>
   );
 
   if (commitments.length === 0) {
@@ -125,7 +130,7 @@ export default async function CommitmentsPage() {
           : null,
     }));
 
-  const rules: CommitmentRow[] = commitments.map((c) => {
+  const rules: CommitmentRow[] = commitments.map((c): CommitmentRow => {
     const next = occurrences.find(
       (o) => o.commitmentId === c.id && o.state === "pending" && o.dueOn >= today,
     );
@@ -148,7 +153,17 @@ export default async function CommitmentsPage() {
     };
   });
 
+  // What comes next first; rules with nothing due in the window after them, in their own order.
+  rules.sort((a, b) =>
+    a.nextDue === b.nextDue ? 0 : !a.nextDue ? 1 : !b.nextDue ? -1 : a.nextDue < b.nextDue ? -1 : 1,
+  );
+
   const nextUp = occurrences.find((o) => o.display === "upcoming");
+  const months = byMonth(comingUp, today).map((g) => ({
+    label: g.label,
+    total: sum(g.rows.map((r) => r.expectedAmount)),
+    count: g.rows.length,
+  }));
 
   return (
     <div className="flex flex-col gap-5 md:gap-6">
@@ -161,6 +176,7 @@ export default async function CommitmentsPage() {
           overdue: attention.filter((r) => r.timing === "overdue").length,
         }}
         comingUp={{ total: sum(comingUp.map((r) => r.expectedAmount)), count: comingUp.length }}
+        months={months}
         through={through}
         next={
           nextUp ? { name: nextUp.name, dueOn: nextUp.dueOn, amount: nextUp.expectedAmount } : null
@@ -168,35 +184,46 @@ export default async function CommitmentsPage() {
         today={today}
       />
 
-      <div className="grid items-start gap-5 lg:grid-cols-12">
-        <div className="flex flex-col gap-5 lg:col-span-7">
-          {attention.length > 0 && (
-            <OccurrenceList
-              id="needs-attention"
-              title="Needs attention"
-              note={`${pluralPayments(attention.length)} overdue or due today`}
-              rows={attention}
-              empty={null}
-              accounts={activeAccounts}
-              today={today}
-              attention
-            />
-          )}
-          <OccurrenceList
-            id="coming-up"
-            title="Coming up"
-            note={`Through ${shortDate(through, today)}`}
-            rows={comingUp}
-            empty={`Nothing else is due through ${shortDate(through, today)}.`}
-            accounts={activeAccounts}
-            today={today}
-            attention={false}
-          />
-        </div>
-        <div className="flex flex-col gap-5 lg:col-span-5">
-          <CommitmentList commitments={rules} today={today} through={through} />
-          <RecentlyResolved rows={resolved} today={today} />
-        </div>
+      {/* Two by two from 1024px, every card one size: what to settle on the left, the rules and history on the right. */}
+      <div className="grid gap-5 lg:grid-cols-12 lg:gap-6">
+        <OccurrenceList
+          id="needs-attention"
+          title="Needs attention"
+          note={
+            attention.length > 0
+              ? `${pluralPayments(attention.length)} overdue or due today`
+              : "Nothing waiting"
+          }
+          rows={attention}
+          empty="Nothing is overdue or due today."
+          accounts={activeAccounts}
+          today={today}
+          attention
+          footnote="Pay records the expense in Activity. Skip records nothing."
+          className="lg:col-span-7 lg:row-start-1"
+        />
+        <OccurrenceList
+          id="coming-up"
+          title="Coming up"
+          note={`Through ${shortDate(through, today)}`}
+          rows={comingUp}
+          empty={`Nothing else is due through ${shortDate(through, today)}.`}
+          accounts={activeAccounts}
+          today={today}
+          attention={false}
+          className="lg:col-span-7 lg:row-start-2"
+        />
+        <CommitmentList
+          commitments={rules}
+          today={today}
+          through={through}
+          className="lg:col-span-5 lg:col-start-8 lg:row-start-1"
+        />
+        <RecentlyResolved
+          rows={resolved}
+          today={today}
+          className="lg:col-span-5 lg:col-start-8 lg:row-start-2"
+        />
       </div>
     </div>
   );

@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 
 import { getRequestContext } from "@/app/_server/context";
 import { CARD } from "@/components/commitments/occurrence-list";
-import { summary } from "@/components/set-aside/describe";
+import { holdingsByAccount } from "@/components/set-aside/describe";
 import { ArchivedItems, ItemList, type ItemRow } from "@/components/set-aside/item-list";
 import { NewPurposeButton, type Source } from "@/components/set-aside/panels";
+import { SetAsideSummary } from "@/components/set-aside/summary";
 import { AreaSwitch, AVAILABLE_AREA } from "@/components/shell/area-switch";
-import { Money } from "@/components/ui/money";
 import { EmptyState } from "@/components/ui/panel";
 import { getItems, getReserveSources } from "@/server/services/protected-money-service";
 import { getAccounts } from "@/server/services/setup-service";
@@ -55,21 +55,24 @@ export default async function SetAsidePage() {
     .filter((i) => i.archived)
     .map((i) => ({ id: i.id, name: i.name, target: i.cover.target }));
 
-  const total = summary(active.map((i) => i.cover));
+  const types = new Map(accounts.map((a) => [a.id, a.type]));
+  const free = new Map(reserveSources.map((s) => [s.accountId, s.reservable]));
 
   return (
     <div className="flex flex-col gap-5 md:gap-6">
-      <AreaSwitch area={AVAILABLE_AREA} current="/set-aside" />
-      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1">
-        <h1 className="text-title font-bold text-navy">Set aside</h1>
-        <div className="md:row-span-2">
-          <NewPurposeButton emphasized={active.length === 0} />
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+        <header>
+          <h1 className="text-title font-bold text-navy">Set aside</h1>
+          <p className="mt-1 text-body text-ink-2">
+            Money in your accounts you&apos;re keeping for something. It stays where it is — nothing
+            moves.
+          </p>
+        </header>
+        <div className="flex flex-wrap items-center gap-3">
+          <AreaSwitch area={AVAILABLE_AREA} current="/set-aside" />
+          <NewPurposeButton emphasized />
         </div>
-        <p className="col-span-2 text-body text-ink-2 md:col-span-1">
-          Money in your accounts you&apos;re keeping for something. It stays where it is — nothing
-          moves.
-        </p>
-      </header>
+      </div>
 
       {active.length === 0 ? (
         <section className={CARD} aria-label="Set aside">
@@ -81,25 +84,13 @@ export default async function SetAsidePage() {
         </section>
       ) : (
         <>
-          {active.length > 1 && total.kind !== "empty" && (
-            <p className="text-body text-ink-2">
-              {total.kind === "covered" ? (
-                <>
-                  <Money amount={total.setAside} sign="none" className="font-semibold text-ink" />{" "}
-                  set aside in total.
-                </>
-              ) : (
-                <>
-                  <Money amount={total.covered} sign="none" className="font-semibold text-ink" /> of{" "}
-                  <Money amount={total.setAside} sign="none" /> still covered ·{" "}
-                  <span className="text-negative">
-                    <Money amount={total.short} sign="none" /> short
-                  </span>
-                </>
-              )}
-            </p>
-          )}
-          <ItemList items={active} sources={sources} />
+          <SetAsideSummary
+            covers={active.map((i) => i.cover)}
+            accounts={holdingsByAccount(active)}
+            free={free}
+            types={types}
+          />
+          <ItemList items={active} sources={sources} types={types} />
         </>
       )}
 

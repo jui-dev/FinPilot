@@ -70,7 +70,7 @@ export default async function OverviewPage({
 
       <section
         aria-labelledby="overview-attention"
-        className="rounded-panel border border-line bg-surface p-5 shadow-card md:p-7"
+        className="rounded-panel border border-line-soft bg-surface p-5 shadow-card md:p-7"
       >
         <ZoneHeader
           id="overview-attention"

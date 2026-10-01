@@ -315,7 +315,7 @@ export function ItemActions({
     <div className="flex flex-wrap items-center gap-2">
       <Button
         size="sm"
-        variant={nothingYet ? "primary" : "secondary"}
+        variant="soft"
         icon={<Plus className="size-4" strokeWidth={2.25} />}
         onClick={reserve.start}
       >
@@ -323,7 +323,12 @@ export function ItemActions({
         <span className="sr-only"> for {item.name}</span>
       </Button>
       {!nothingYet && (
-        <Button size="sm" icon={<LockOpen className="size-4" />} onClick={release.start}>
+        <Button
+          size="sm"
+          variant="quiet"
+          icon={<LockOpen className="size-4" />}
+          onClick={release.start}
+        >
           Release
           <span className="sr-only"> money set aside for {item.name}</span>
         </Button>

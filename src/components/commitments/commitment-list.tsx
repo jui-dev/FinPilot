@@ -12,7 +12,7 @@ import { Money } from "../ui/money";
 import { Tag } from "../ui/panel";
 import { EditCommitmentButton, type Choice, type EditableCommitment } from "./commitment-panel";
 import { describeRecurrence, ruleEnded, ruleTiming } from "./describe";
-import { CARD, DateTile } from "./occurrence-list";
+import { CARD, DateTile, FIXED, SCROLL } from "./occurrence-list";
 
 export interface CommitmentRow extends EditableCommitment {
   readonly categoryName: string;
@@ -33,74 +33,83 @@ export function CommitmentList({
   commitments,
   today,
   through,
+  className,
 }: {
   readonly commitments: readonly CommitmentRow[];
   readonly today: CalendarDate;
   /** The last day occurrences are known for. */
   readonly through: CalendarDate;
+  /** Where the card sits in the page's grid. */
+  readonly className?: string;
 }) {
+  const active = commitments.filter((c) => !ruleEnded(c, today)).length;
   return (
-    <section aria-labelledby="commitments-rules" className={CARD}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-line px-4 py-3 md:px-5">
-        <h2 id="commitments-rules" className="text-heading font-semibold text-navy">
+    <section aria-labelledby="commitments-rules" className={cn(CARD, FIXED, className)}>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 shrink-0 border-b border-line-soft px-4 py-3.5 md:px-5">
+        <h2 id="commitments-rules" className="text-heading font-bold text-navy">
           Your commitments
         </h2>
-        <p className="text-meta text-ink-2">Select one to edit it</p>
+        <p className="text-meta text-ink-2">{active} active · select one to edit it</p>
       </div>
-      <ul>
-        {commitments.map((c) => (
-          <li key={c.id} className="border-b border-line last:border-b-0">
-            <EditCommitmentButton
-              commitment={c}
-              categories={c.categories}
-              accounts={c.accounts}
-              today={today}
-              // The button is named "Edit <name>"; its details stay announced.
-              describedBy={`${c.id}-amount ${c.id}-recurrence ${c.id}-details`}
-              className="group grid w-full grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-3 text-left transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ocean md:px-5"
-            >
-              {/* Neutral, not mist: rules are management, quieter than what is due. */}
-              <Glyph icon={categoryIcon(c.categoryName)} className="row-span-3" />
-              <span className="col-start-2 row-start-1 min-w-0 truncate font-semibold text-ink">
-                {c.name}
-              </span>
-              <span className="col-start-3 row-start-1 flex items-center gap-1 justify-self-end">
-                <span id={`${c.id}-amount`}>
-                  <Money
-                    amount={c.expectedAmount}
-                    sign="none"
-                    className="text-body font-semibold text-ink"
+      <ul className={SCROLL}>
+        {commitments.map((c) => {
+          const timing = ruleTiming(c, today, through);
+          return (
+            <li key={c.id} className="border-b border-line-soft last:border-b-0">
+              <EditCommitmentButton
+                commitment={c}
+                categories={c.categories}
+                accounts={c.accounts}
+                today={today}
+                // The button is named "Edit <name>"; its details stay announced.
+                describedBy={`${c.id}-amount ${c.id}-recurrence ${c.id}-details${timing ? ` ${c.id}-next` : ""}`}
+                className="group grid w-full grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-3 text-left transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ocean md:px-5"
+              >
+                {/* Neutral, not mist: rules are management, quieter than what is due. */}
+                <Glyph icon={categoryIcon(c.categoryName)} className="row-span-2" />
+                <span className="col-start-2 row-start-1 min-w-0 truncate font-semibold text-ink">
+                  {c.name}
+                </span>
+                <span className="col-start-3 row-start-1 flex items-center gap-1 justify-self-end">
+                  <span id={`${c.id}-amount`}>
+                    <Money
+                      amount={c.expectedAmount}
+                      sign="none"
+                      className="text-body font-bold text-ink"
+                    />
+                  </span>
+                  <ChevronRight
+                    aria-hidden
+                    className="size-4 text-ink-3 transition-colors group-hover:text-ink-2"
                   />
                 </span>
-                <ChevronRight
-                  aria-hidden
-                  className="size-4 text-ink-3 transition-colors group-hover:text-ink-2"
-                />
-              </span>
-              <span
-                id={`${c.id}-recurrence`}
-                className="col-[2/-1] row-start-2 min-w-0 text-meta text-ink"
-              >
-                {describeRecurrence(c)}
-              </span>
-              <span
-                id={`${c.id}-details`}
-                className="col-[2/-1] row-start-3 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-meta text-ink-2"
-              >
-                <span className="min-w-0 truncate">
-                  {[
-                    c.categoryName,
-                    c.accountName && `from ${c.accountName}`,
-                    ruleTiming(c, today, through),
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
+                <span className="col-start-2 row-start-2 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-meta text-ink-2">
+                  <span id={`${c.id}-recurrence`} className="text-ink">
+                    {describeRecurrence(c)}
+                  </span>
+                  <span id={`${c.id}-details`} className="contents">
+                    {[c.categoryName, c.accountName && `from ${c.accountName}`]
+                      .filter(Boolean)
+                      .map((part) => (
+                        <span key={part} className="min-w-0 truncate">
+                          · {part}
+                        </span>
+                      ))}
+                    {ruleEnded(c, today) && <Tag>Ended {shortDate(c.endOn!, today)}</Tag>}
+                  </span>
                 </span>
-                {ruleEnded(c, today) && <Tag>Ended {shortDate(c.endOn!, today)}</Tag>}
-              </span>
-            </EditCommitmentButton>
-          </li>
-        ))}
+                {timing && (
+                  <span
+                    id={`${c.id}-next`}
+                    className="col-start-3 row-start-2 pr-5 text-right text-meta whitespace-nowrap text-ink-2"
+                  >
+                    {timing}
+                  </span>
+                )}
+              </EditCommitmentButton>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );
@@ -128,28 +137,31 @@ export interface ResolvedRow {
 export function RecentlyResolved({
   rows,
   today,
+  className,
 }: {
   readonly rows: readonly ResolvedRow[];
   readonly today: CalendarDate;
+  /** Where the card sits in the page's grid. */
+  readonly className?: string;
 }) {
   return (
-    <section aria-labelledby="commitments-resolved" className={CARD}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-line px-4 py-3 md:px-5">
-        <h2 id="commitments-resolved" className="text-heading font-semibold text-navy">
+    <section aria-labelledby="commitments-resolved" className={cn(CARD, FIXED, className)}>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 shrink-0 border-b border-line-soft px-4 py-3.5 md:px-5">
+        <h2 id="commitments-resolved" className="text-heading font-bold text-navy">
           Recently paid or skipped
         </h2>
         {rows.length > 0 && <p className="text-meta text-ink-2">Latest {rows.length}</p>}
       </div>
       {rows.length === 0 ? (
-        <p className="px-4 py-6 text-body text-ink-2 md:px-5">
+        <p className="flex-1 px-4 py-6 text-body text-ink-2 md:px-5">
           Nothing paid or skipped yet. Payments you record here appear with a link to the expense.
         </p>
       ) : (
-        <ul>
+        <ul className={SCROLL}>
           {rows.map((row) => (
             <li
               key={row.id}
-              className="grid grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 border-b border-line px-4 py-3 last:border-b-0 md:px-5"
+              className="grid grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 border-b border-line-soft px-4 py-3 last:border-b-0 md:px-5"
             >
               <DateTile date={row.dueOn} muted className="row-span-2" />
               <p className="col-start-2 min-w-0 truncate font-semibold text-ink">
@@ -188,6 +200,11 @@ export function RecentlyResolved({
             </li>
           ))}
         </ul>
+      )}
+      {rows.some((r) => r.payment) && (
+        <p className="shrink-0 border-t border-line-soft px-4 py-3 text-meta text-ink-2 md:px-5">
+          An underlined date opens the expense it recorded.
+        </p>
       )}
     </section>
   );

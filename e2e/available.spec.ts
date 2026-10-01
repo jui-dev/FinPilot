@@ -35,7 +35,7 @@ async function bridge(page: Page) {
   const out: { label: string; amount: number }[] = [];
   for (const row of await rows.all()) {
     const label = (await row.locator("th").innerText()).split("\n")[0]!.trim();
-    out.push({ label, amount: toTaka(await row.locator("td").innerText()) });
+    out.push({ label, amount: toTaka(await row.locator('td[data-cell="amount"]').innerText()) });
   }
   return out;
 }

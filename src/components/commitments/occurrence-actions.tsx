@@ -55,9 +55,10 @@ export function OccurrenceActions({
   const [skipping, setSkipping] = useState(false);
   const due = shortDate(occurrence.dueOn, today);
   return (
-    <div className="flex items-center justify-end gap-1">
+    <div className="flex items-center justify-end gap-1.5">
       <Button
-        variant={emphasized ? "secondary" : "ghost"}
+        // Soft mist everywhere: Needs attention already stands out by its card and labelled Skip.
+        variant="soft"
         size="sm"
         className={ROW_ACTION}
         icon={<HandCoins className="size-4" />}
@@ -75,7 +76,7 @@ export function OccurrenceActions({
       {/* Needs attention labels Skip; further ahead it is a quiet icon, so a long
           list is not a column of repeated words. Its name is the same either way. */}
       <Button
-        variant="ghost"
+        variant="quiet"
         size={emphasized ? "sm" : "icon"}
         className={emphasized ? ROW_ACTION : "max-md:size-10"}
         icon={<SkipForward className="size-4" />}

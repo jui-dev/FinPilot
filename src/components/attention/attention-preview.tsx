@@ -62,7 +62,7 @@ function SignalCard({ row }: { readonly row: AttentionRow }) {
   return (
     <li
       className={cn(
-        "group relative flex min-w-0 flex-col gap-3 rounded-panel border border-line bg-surface-subtle p-4 transition-colors",
+        "group relative flex min-w-0 flex-col gap-3 rounded-panel border border-line-soft bg-surface-subtle p-4 transition-colors",
         "hover:bg-surface-hover has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-ocean has-[a:focus-visible]:outline-solid",
       )}
     >

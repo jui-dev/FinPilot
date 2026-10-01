@@ -23,14 +23,16 @@ export default async function AvailablePage() {
 
   return (
     <div className="flex flex-col gap-5 md:gap-6">
-      <AreaSwitch area={AVAILABLE_AREA} current="/available" />
-      <header>
-        <h1 className="text-title font-bold text-navy">Available</h1>
-        <p className="mt-1 text-body text-ink-2">What you can use now, before new income.</p>
-      </header>
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+        <header>
+          <h1 className="text-title font-bold text-navy">Available</h1>
+          <p className="mt-1 text-body text-ink-2">What you can use now, before new income.</p>
+        </header>
+        <AreaSwitch area={AVAILABLE_AREA} current="/available" />
+      </div>
       {view.accounts.length === 0 ? (
         <section
-          className="rounded-panel border border-line bg-surface shadow-card"
+          className="rounded-panel border border-line-soft bg-surface shadow-card"
           aria-label="Available"
         >
           <EmptyState

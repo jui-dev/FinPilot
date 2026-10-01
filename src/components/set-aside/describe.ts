@@ -73,3 +73,73 @@ export function summary(covers: readonly ItemCover[]): Backing {
   if (short === 0) return { kind: "covered", setAside };
   return { kind: "short", covered, setAside, short };
 }
+
+/** The page's headline facts across active items: how many, and how targets stand. */
+export function overview(covers: readonly ItemCover[]): {
+  readonly purposes: number;
+  /** Σ targets and Σ still needed, over the items that have a target; null when none does. */
+  readonly targets: { readonly target: Money; readonly stillNeeded: Money } | null;
+} {
+  const targeted = covers.filter((c) => c.target !== null && c.stillNeeded !== null);
+  return {
+    purposes: covers.length,
+    targets:
+      targeted.length === 0
+        ? null
+        : {
+            target: sum(targeted.map((c) => c.target!)),
+            stillNeeded: sum(targeted.map((c) => c.stillNeeded!)),
+          },
+  };
+}
+
+export interface AccountHolding {
+  readonly accountId: string;
+  readonly name: string;
+  /** Σ set aside on this account, across purposes. */
+  readonly setAside: Money;
+  /** Σ of that the balance no longer backs. */
+  readonly short: Money;
+  /** The purposes it holds money for, in page order. */
+  readonly purposes: readonly string[];
+}
+
+/** Where set-aside money sits: one line per account holding any, in order of first appearance. */
+export function holdingsByAccount(
+  items: readonly {
+    readonly name: string;
+    readonly holdings: readonly {
+      readonly accountId: string;
+      readonly accountName: string;
+      readonly setAside: Money;
+      readonly short: Money;
+    }[];
+  }[],
+): AccountHolding[] {
+  const lines = new Map<
+    string,
+    { name: string; setAside: Money[]; short: Money[]; purposes: string[] }
+  >();
+  for (const item of items) {
+    for (const h of item.holdings) {
+      if (h.setAside === 0) continue;
+      const line = lines.get(h.accountId) ?? {
+        name: h.accountName,
+        setAside: [],
+        short: [],
+        purposes: [],
+      };
+      line.setAside.push(h.setAside);
+      line.short.push(h.short);
+      line.purposes.push(item.name);
+      lines.set(h.accountId, line);
+    }
+  }
+  return [...lines].map(([accountId, l]) => ({
+    accountId,
+    name: l.name,
+    setAside: sum(l.setAside),
+    short: sum(l.short),
+    purposes: l.purposes,
+  }));
+}

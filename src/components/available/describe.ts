@@ -100,6 +100,22 @@ export function spokenForBar(view: AvailableView): SpokenForBar | null {
 }
 
 /**
+ * The answer card's three facts. Left free: Available's share of the pool,
+ * none when the pool holds nothing or nothing is free. Spoken for: what the
+ * pool carries besides Available (owed on cards + payments due + set aside).
+ */
+export function heroFacts(view: AvailableView): {
+  readonly leftFree: number | null;
+  readonly spokenFor: Money;
+} {
+  const owed = view.liabilityBalances < 0 ? -view.liabilityBalances : 0;
+  return {
+    leftFree: view.pool > 0 ? Math.max(view.available, 0) / view.pool : null,
+    spokenFor: (owed + view.commitmentsDue + view.coveredEarmarks) as Money,
+  };
+}
+
+/**
  * The accounts behind the balances, as evidence. An archived account with a
  * zero balance adds nothing and is left out; an excluded account appears only
  * when it holds money or money set aside, since that is what it explains.

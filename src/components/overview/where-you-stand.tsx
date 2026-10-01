@@ -30,7 +30,7 @@ export function WhereYouStand({
   return (
     <section
       aria-labelledby="overview-stand"
-      className="rounded-panel border border-line bg-surface p-5 shadow-card md:p-7"
+      className="rounded-panel border border-line-soft bg-surface p-5 shadow-card md:p-7"
     >
       <ZoneHeader
         id="overview-stand"
@@ -39,7 +39,7 @@ export function WhereYouStand({
       />
       <div className="mt-4 grid gap-4 md:mt-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-10">
         {/* The answer. */}
-        <div className="flex flex-col justify-center rounded-2xl bg-[radial-gradient(120%_120%_at_0%_0%,color-mix(in_srgb,var(--color-mist)_55%,transparent)_0%,transparent_60%)] px-5 py-6 shadow-[inset_0_0_0_1px_var(--color-line)] md:px-8 md:py-9">
+        <div className="flex flex-col justify-center rounded-2xl bg-[radial-gradient(120%_120%_at_0%_0%,color-mix(in_srgb,var(--color-mist)_55%,transparent)_0%,transparent_60%)] px-5 py-6 shadow-[inset_0_0_0_1px_var(--color-line-soft)] md:px-8 md:py-9">
           <p className="text-body font-semibold text-navy">Net worth</p>
           <p className="mt-1.5 text-[clamp(2.75rem,5.5vw,4.25rem)] leading-none font-extrabold tracking-[-0.035em] whitespace-nowrap text-navy tabular-nums">
             <Money amount={position.netWorth} />
@@ -74,7 +74,7 @@ export function WhereYouStand({
 
         {/* The statement: You own − You owe = Net worth. */}
         <div className="min-w-0">
-          <div className="rounded-[14px] bg-mist/25 p-3.5 shadow-[inset_0_0_0_1px_rgb(70_103_141/0.14)] md:px-5 md:py-4.5">
+          <div className="rounded-[14px] bg-mist/25 p-3.5 shadow-[inset_0_0_0_1px_rgb(70_103_141/0.08)] md:px-5 md:py-4.5">
             <Total
               term="You own"
               amount={<Money amount={position.assets} />}
@@ -97,8 +97,8 @@ export function WhereYouStand({
             className={cn(
               "rounded-[14px] p-3.5 md:px-5 md:py-4.5",
               berry
-                ? "bg-negative-soft shadow-[inset_0_0_0_1.5px_rgb(163_58_98/0.45)]"
-                : "bg-surface-subtle shadow-[inset_0_0_0_1px_var(--color-line)]",
+                ? "bg-negative-soft/50 shadow-[inset_0_0_0_1px_rgb(163_58_98/0.12)]"
+                : "bg-surface-subtle shadow-[inset_0_0_0_1px_var(--color-line-soft)]",
             )}
           >
             <Total
@@ -172,7 +172,7 @@ const CARD = "flex items-center gap-2.5 rounded-[10px] bg-surface px-3 py-2.5";
 
 function AccountCard({ account }: { readonly account: StandingAccount }) {
   return (
-    <li className={cn(CARD, "shadow-[inset_0_0_0_1px_rgb(70_103_141/0.16)]")}>
+    <li className={cn(CARD, "shadow-[inset_0_0_0_1px_rgb(70_103_141/0.1)]")}>
       <Glyph icon={accountIcon(account.type)} tone="info" />
       <span className="min-w-0 flex-1 truncate text-body font-semibold text-ink">
         {account.name}
@@ -194,7 +194,7 @@ function OweCard({ line }: { readonly line: OweLine }) {
       className={cn(
         CARD,
         owed
-          ? "shadow-[inset_0_0_0_1px_rgb(163_58_98/0.22)]"
+          ? "shadow-[inset_0_0_0_1px_rgb(163_58_98/0.12)]"
           : "shadow-[inset_0_0_0_1px_var(--color-line)]",
       )}
     >

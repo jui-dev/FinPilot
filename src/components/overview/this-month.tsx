@@ -21,7 +21,7 @@ type Journey = Extract<ReturnType<typeof monthJourney>, { kind: "journey" }>;
 /**
  * "Where did money come from, where did it go, and what was left?" — the
  * month so far as a journey: Came in (tide) → Went out → Left over (navy).
- * Where the money went hangs from the way out, one warm column per category,
+ * Where the money went rises to the way, one warm column per category,
  * each as long as its amount on one scale: spending is normal outflow, never
  * a warning. Every figure is Cash flow's and is text; the line and columns are
  * hidden from assistive technology. From 768px the journey runs left to
@@ -32,7 +32,7 @@ export function ThisMonth({ cashFlow }: { readonly cashFlow: CashFlow }) {
   return (
     <section
       aria-labelledby="overview-month"
-      className="rounded-panel border border-line bg-surface p-5 shadow-card md:p-7"
+      className="rounded-panel border border-line-soft bg-surface p-5 shadow-card md:p-7"
     >
       <ZoneHeader
         id="overview-month"
@@ -189,17 +189,21 @@ function RefundNote({ journey }: { readonly journey: Journey }) {
   );
 }
 
-/** How long the longest column hangs, in pixels. */
-const DROP = 112;
+/** How tall the longest column rises, in pixels. */
+const RISE = 112;
 
-/** From 768px: left to right, with the columns hanging from the way out. */
+/** The two-part grid the figures, columns and labels share, so they line up. */
+const GRID =
+  "grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-x-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]";
+
+/** From 768px: left to right, with the columns rising to the way. */
 function Across({ journey, cashFlow }: { readonly journey: Journey; readonly cashFlow: CashFlow }) {
   const { summary, period } = cashFlow;
   const { range } = period;
   const over = summary.leftOver < 0;
   return (
     <div data-testid="month-journey" className="mt-6 max-md:hidden">
-      <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-x-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <div className={GRID}>
         <div>
           <p className="text-meta text-ink-2">Came in</p>
           <Figure
@@ -234,8 +238,24 @@ function Across({ journey, cashFlow }: { readonly journey: Journey; readonly cas
         </div>
       </div>
 
+      {/* Where it went: one row of columns rising to the way between Came in and Went out. */}
+      <div aria-hidden className={cn(GRID, "mt-6")}>
+        <div className="-mb-5 flex items-end gap-1.5 pr-1.5 pl-9" style={{ height: RISE }}>
+          {journey.columns.map((c, i) => (
+            <span
+              key={c.key}
+              className="block min-w-0 flex-1 rounded-t-xl"
+              style={{
+                height: Math.max(c.length * RISE, 8),
+                ...columnStyle(c, i, ranked(journey)),
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
       {/* The way: tide while money comes in and goes out, navy for what is left. */}
-      <div aria-hidden className="relative mt-4 h-9">
+      <div aria-hidden className="relative h-9">
         <span className="absolute top-1/2 right-2/5 left-3 h-1.5 -translate-y-1/2 rounded-full bg-tide lg:right-1/3" />
         <span
           className={cn(
@@ -259,28 +279,17 @@ function Across({ journey, cashFlow }: { readonly journey: Journey; readonly cas
         </span>
       </div>
 
-      <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-x-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        {/* Where it went: one curtain hanging from the way between Came in and Went out. */}
-        <ul className="-mt-3.5 flex gap-1.5 pr-1.5 pl-9">
-          {journey.columns.map((c, i) => (
-            <li key={c.key} className="flex min-w-0 flex-1 flex-col">
-              <span
-                aria-hidden
-                className="block rounded-b-xl"
-                style={{
-                  height: Math.max(c.length * DROP, 8),
-                  ...columnStyle(c, i, ranked(journey)),
-                }}
-              />
-              <span className="mt-2 w-full">
-                <ColumnLabel column={c} range={range} />
-              </span>
+      <div className={GRID}>
+        <ul className="mt-1 flex gap-1.5 pr-1.5 pl-9">
+          {journey.columns.map((c) => (
+            <li key={c.key} className="min-w-0 flex-1">
+              <ColumnLabel column={c} range={range} />
             </li>
           ))}
         </ul>
-        <div className="space-y-1 pt-3">
+        <div className="space-y-1">
           <p className="text-meta text-ink-2">
-            Where it went, each drop as long as its amount — the largest in the warmest tone.
+            Where it went, each column as tall as its amount — the largest in the warmest tone.
           </p>
           <RefundNote journey={journey} />
         </div>

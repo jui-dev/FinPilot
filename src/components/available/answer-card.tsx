@@ -1,4 +1,6 @@
 import { CircleAlert } from "lucide-react";
+import type { CSSProperties, ReactNode } from "react";
+
 import type { Money as MoneyValue } from "@/domain/money";
 import type { AvailableView } from "@/server/services/available-service";
 
@@ -10,266 +12,316 @@ import {
   accountEvidence,
   cardsRow,
   earmarkEvidence,
+  heroFacts,
   listOf,
   outcomeOf,
   SET_ASIDE_LABEL,
-  spokenForBar,
-  type SegmentKind,
 } from "./describe";
 import { AvailableSentence } from "./sentence";
 
-const CARD = "overflow-clip rounded-panel border border-line bg-surface shadow-card";
+const CARD =
+  "relative isolate overflow-clip rounded-panel border border-line-soft bg-surface shadow-card";
 
 /**
- * "How much can I actually use right now, and why?" One card: the answer
- * (Available, the hero), how it is worked out (the bridge, every term from the
- * read model), and how the balances divide into what is spoken for and what is
- * left (the bar, when it can say something true).
+ * "How much can I actually use right now, and why?" Two cards side by side
+ * from 1024px: the answer (Available, the hero, on a mist card), and how it
+ * is worked out (the bridge as a waterfall: each step, what it takes, and
+ * what is left). Every figure is the read model's.
  */
 export function AnswerCard({ view }: { readonly view: AvailableView }) {
   const dueBy = shortDate(view.horizonEnd, view.today);
-  const bar = spokenForBar(view);
   return (
-    <section
-      aria-labelledby="available-now"
-      className={cn(CARD, "grid lg:grid-cols-[minmax(0,39fr)_minmax(0,61fr)]")}
-    >
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-6">
       <Hero view={view} dueBy={dueBy} />
       <Bridge view={view} dueBy={dueBy} />
-      {bar && <Bar bar={bar} dueBy={dueBy} />}
-    </section>
+    </div>
   );
 }
 
 function Hero({ view, dueBy }: { readonly view: AvailableView; readonly dueBy: string }) {
   const outcome = outcomeOf(view.available);
+  const facts = heroFacts(view);
   return (
-    <div className="bg-mist px-5 py-5 md:px-7 md:py-6">
-      <h2 id="available-now" className="text-body font-semibold text-navy">
-        Available now
-      </h2>
+    <section
+      aria-labelledby="available-now"
+      className="flex flex-col overflow-clip rounded-panel border border-line-soft bg-mist/35 p-5 shadow-card md:p-7"
+    >
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <h2 id="available-now" className="text-heading font-bold text-navy">
+          Available now
+        </h2>
+        {/* White on the mist card, so the tag keeps its edge. */}
+        <span className="inline-flex h-5 items-center rounded-full bg-surface px-2 text-micro font-semibold whitespace-nowrap text-ocean">
+          Before new income
+        </span>
+      </div>
       {/* The figure keeps navy and a true minus even when negative; only the gap is berry. */}
-      <p className="mt-1 text-display font-bold text-navy">
+      <p className="mt-3 text-hero font-bold text-navy tabular-nums">
         <Money amount={view.available} />
       </p>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        {outcome === "over" && (
+      {outcome === "over" && (
+        <div className="mt-3">
           <Tag tone="negative" icon={<CircleAlert aria-hidden className="size-3.5" />}>
             Over-committed by <Money amount={-view.available as MoneyValue} sign="none" />
           </Tag>
-        )}
-        <Tag tone="info">Before new income</Tag>
-      </div>
-      <p className="mt-3 max-w-md text-body text-ink-2">
+        </div>
+      )}
+      <p className="mt-4 max-w-md text-body text-ink-2">
         <AvailableSentence view={view} dueBy={dueBy} figureClassName="font-semibold text-ink" />
       </p>
+
+      <dl className="mt-6 grid grid-cols-3 gap-2 lg:mt-auto lg:pt-8">
+        {facts.leftFree !== null && (
+          <Fact term="Left free">{Math.round(facts.leftFree * 100)}%</Fact>
+        )}
+        <Fact term="Spoken for">
+          <Money amount={facts.spokenFor} sign="none" />
+        </Fact>
+        <Fact term="Counted until">{dueBy}</Fact>
+      </dl>
+    </section>
+  );
+}
+
+function Fact({ term, children }: { readonly term: string; readonly children: ReactNode }) {
+  return (
+    <div className="min-w-0 rounded-[10px] bg-surface/85 px-3 py-2.5 shadow-[inset_0_0_0_1px_var(--color-line-soft)]">
+      <dt className="text-micro text-ink-2">{term}</dt>
+      <dd className="mt-0.5 truncate text-body font-bold text-ink tabular-nums">{children}</dd>
     </div>
   );
 }
 
-type BridgeRow =
-  | {
-      readonly kind: "step";
-      readonly label: string;
-      readonly detail?: string;
-      readonly amount: MoneyValue;
-      /** "plain": as is. "signed": + or −. "deduct": subtracted, written with a minus. */
-      readonly show: "plain" | "signed" | "deduct";
-    }
-  | { readonly kind: "subtotal" | "result"; readonly label: string; readonly amount: MoneyValue };
+type Mark = "accounts" | "owed" | "payments" | "setAside" | "result" | "over";
+
+interface Step {
+  readonly op: "" | "−" | "+" | "=";
+  readonly label: string;
+  readonly detail?: string;
+  readonly amount: MoneyValue;
+  /** The running total after this step; none on the result. */
+  readonly left?: MoneyValue;
+  /** Where the step's mark runs, between two running totals. */
+  readonly from: MoneyValue;
+  readonly to: MoneyValue;
+  readonly mark: Mark;
+}
 
 const names = (list: readonly string[], noun: string) =>
   list.length === 0 ? undefined : list.length <= 3 ? listOf(list) : `${list.length} ${noun}`;
 
-function bridgeRows(view: AvailableView, dueBy: string): BridgeRow[] {
+function steps(view: AvailableView, dueBy: string): Step[] {
   const cards = cardsRow(view);
   const payments = view.commitments.length;
   const purposes = [...new Set(earmarkEvidence(view).deducted.map((e) => e.itemName))];
+  const zero = 0 as MoneyValue;
   return [
     {
-      kind: "step",
+      op: "",
       label: "In your accounts",
       detail: names(
         accountEvidence(view).counted.map((a) => a.name),
         "accounts",
       ),
       amount: view.includedAssetBalances,
-      show: "plain",
+      left: view.includedAssetBalances,
+      from: zero,
+      to: view.includedAssetBalances,
+      mark: "accounts",
     },
     ...(cards
-      ? ([
-          { kind: "step", label: cards.label, amount: cards.amount, show: "signed" },
-          { kind: "subtotal", label: "After cards", amount: view.balancesInScope },
-        ] as const)
+      ? [
+          {
+            op: cards.amount > 0 ? ("+" as const) : ("−" as const),
+            label: cards.label,
+            detail: names(
+              accountEvidence(view).cards.map((a) => a.name),
+              "cards",
+            ),
+            amount: cards.amount,
+            left: view.balancesInScope,
+            from: view.includedAssetBalances,
+            to: view.balancesInScope,
+            mark: "owed" as const,
+          },
+        ]
       : []),
     {
-      kind: "step",
+      op: "−",
       label: `Due by ${dueBy}`,
       detail:
         payments === 0 ? "Nothing due" : `${payments} ${payments === 1 ? "payment" : "payments"}`,
-      amount: view.commitmentsDue,
-      show: "deduct",
+      amount: -view.commitmentsDue as MoneyValue,
+      left: view.afterCommitments,
+      from: view.balancesInScope,
+      to: view.afterCommitments,
+      mark: "payments",
     },
-    { kind: "subtotal", label: "After upcoming payments", amount: view.afterCommitments },
     {
-      kind: "step",
+      op: "−",
       label: SET_ASIDE_LABEL,
       detail: names(purposes, "purposes") ?? "Nothing set aside",
-      amount: view.coveredEarmarks,
-      show: "deduct",
+      amount: -view.coveredEarmarks as MoneyValue,
+      left: view.available,
+      from: view.afterCommitments,
+      to: view.available,
+      mark: "setAside",
     },
-    { kind: "result", label: "Available", amount: view.available },
+    {
+      op: "=",
+      label: "Available",
+      amount: view.available,
+      from: zero,
+      to: view.available,
+      mark: view.available < 0 ? "over" : "result",
+    },
   ];
 }
 
-/** The calculation, as a table: each step, each running total, then Available. */
-function Bridge({ view, dueBy }: { readonly view: AvailableView; readonly dueBy: string }) {
-  return (
-    <div className="border-t border-line px-5 py-4 md:px-7 md:py-5 lg:border-t-0 lg:border-l">
-      <table className="w-full border-collapse">
-        <caption className="sr-only">How Available is worked out</caption>
-        <thead className="sr-only">
-          <tr>
-            <th scope="col">Step</th>
-            <th scope="col">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {bridgeRows(view, dueBy).map((row) => (
-            <tr key={row.label} className={cn(row.kind === "result" && "border-t border-line")}>
-              <th
-                scope="row"
-                className={cn(
-                  // The rail joins the steps; a navy node marks each running total.
-                  "relative py-2 pr-4 pl-6 text-left align-top font-normal",
-                  "before:absolute before:top-0 before:bottom-0 before:left-[7px] before:w-px before:bg-line",
-                  row.kind === "result" && "pt-3 before:bottom-1/2",
-                )}
-              >
-                {row.kind !== "step" && (
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "absolute left-[4px] size-[7px] rounded-full bg-navy",
-                      row.kind === "result" ? "top-[1.35rem]" : "top-[0.85rem]",
-                    )}
-                  />
-                )}
-                <span
-                  className={cn(
-                    "block",
-                    row.kind === "step" && "text-body text-ink-2",
-                    row.kind === "subtotal" && "text-body font-semibold text-ink",
-                    row.kind === "result" && "text-heading font-bold text-navy",
-                  )}
-                >
-                  {row.label}
-                </span>
-                {row.kind === "step" && row.detail && (
-                  <span className="block text-meta text-ink-2">{row.detail}</span>
-                )}
-              </th>
-              <td
-                className={cn(
-                  "py-2 text-right align-top whitespace-nowrap tabular-nums",
-                  row.kind === "step" && "text-body text-ink",
-                  row.kind === "subtotal" && "text-body font-semibold text-ink",
-                  row.kind === "result" && "pt-3 text-heading font-bold text-navy",
-                )}
-              >
-                {row.kind === "step" && row.show === "deduct" ? (
-                  <Deduction amount={row.amount} />
-                ) : (
-                  <Money
-                    amount={row.amount}
-                    sign={row.kind === "step" && row.show === "signed" ? "always" : "negative"}
-                  />
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-/** A subtracted amount: a true minus, announced as "minus". */
-function Deduction({ amount }: { readonly amount: MoneyValue }) {
-  if (amount === 0) return <Money amount={amount} />;
-  return (
-    <>
-      <span aria-hidden>−</span>
-      <span className="sr-only">minus </span>
-      <Money amount={amount} sign="none" />
-    </>
-  );
-}
-
-const SEGMENT: Record<SegmentKind, string> = {
+/** Filled = money that exists; tint + outline = expected; berry outline = more spoken for than held. */
+const MARK: Record<Mark, string> = {
+  accounts: "bg-[color-mix(in_srgb,var(--color-tide)_55%,var(--color-surface))]",
   owed: "bg-ink-3",
-  payments: "bg-mist shadow-[inset_0_0_0_1px_var(--color-ocean)]",
+  payments: "bg-mist shadow-[inset_0_0_0_1.5px_var(--color-ocean)]",
   setAside: "bg-tide",
-  available: "bg-navy",
+  result: "bg-navy",
+  over: "bg-negative-soft shadow-[inset_0_0_0_1.5px_var(--color-negative)]",
 };
 
 /**
- * How the balances divide up: owed, payments due and set aside are spoken
- * for, and the rest is Available. Filled = money that exists and is free;
- * tint + outline = expected; an over-commitment is an outlined gap in berry.
- * Hidden from assistive technology: the bridge above carries every figure.
+ * The calculation, as a waterfall table: each step's amount and what is left
+ * after it, with a mark on one shared scale showing the slice it takes. The
+ * marks are hidden from assistive technology; every figure is in the table.
  */
-function Bar({
-  bar,
-  dueBy,
-}: {
-  readonly bar: NonNullable<ReturnType<typeof spokenForBar>>;
-  readonly dueBy: string;
-}) {
-  const label: Record<SegmentKind, string> = {
-    owed: "Owed on cards",
-    payments: `Due by ${dueBy}`,
-    setAside: SET_ASIDE_LABEL,
-    available: "Available",
-  };
+function Bridge({ view, dueBy }: { readonly view: AvailableView; readonly dueBy: string }) {
+  const rows = steps(view, dueBy);
+  const ends = rows.flatMap((r) => [r.from, r.to]);
+  const lo = Math.min(0, ...ends);
+  const span = Math.max(...ends) - lo;
+  const at = (v: number) => (span > 0 ? ((v - lo) / span) * 100 : 0);
   return (
-    <div aria-hidden className="border-t border-line px-5 py-5 md:px-7 md:py-6 lg:col-span-2">
-      <p className="text-body font-semibold text-ink">
-        {bar.over ? "More is spoken for than your " : "How your "}
-        <Money amount={bar.pool} sign="none" />
-        {bar.over ? " holds" : " is spoken for"}
+    <section aria-labelledby="available-worked-out" className={cn(CARD, "p-5 md:p-7")}>
+      {/* The same light as the answer, falling from the top left. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(90%_75%_at_0%_0%,var(--color-mist)_0%,transparent_60%)] opacity-60"
+      />
+      <h2 id="available-worked-out" className="text-heading font-bold text-navy">
+        How it&apos;s worked out
+      </h2>
+      <p className="mt-1 text-meta text-ink-2">
+        Each step takes its share of{" "}
+        <Money amount={view.includedAssetBalances} sign="none" className="font-semibold text-ink" />
+        ; what&apos;s left carries down.
       </p>
-      <div className="relative mt-4 flex h-6 gap-0.5 overflow-hidden rounded-full bg-surface-subtle">
-        {bar.segments.map((s) => (
-          <span
-            key={s.kind}
-            className={cn("h-full min-w-1", SEGMENT[s.kind])}
-            style={{ width: `${s.share * 100}%` }}
-          />
-        ))}
-        {bar.over && (
-          <span
-            className="absolute inset-y-0 right-0 rounded-r-full border-[1.5px] border-negative bg-negative-soft"
-            style={{ left: `${bar.over.from * 100}%` }}
-          />
-        )}
-      </div>
-      <ul className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-meta text-ink-2">
-        {bar.segments.map((s) => (
-          <li key={s.kind} className="flex items-center gap-1.5">
-            <span className={cn("size-3 rounded-sm", SEGMENT[s.kind])} />
-            {label[s.kind]}
-            <Money amount={s.amount} sign="none" className="font-semibold text-ink" />
-          </li>
-        ))}
-        {bar.over && (
-          <li className="flex items-center gap-1.5 text-negative">
-            <span className="size-3 rounded-sm border-[1.5px] border-negative bg-negative-soft" />
-            Over-committed
-            <Money amount={bar.over.amount} sign="none" className="font-semibold" />
-          </li>
-        )}
-      </ul>
-    </div>
+
+      <table className="mt-5 w-full border-collapse">
+        <caption className="sr-only">How Available is worked out</caption>
+        <thead>
+          <tr className="border-b border-line text-micro font-semibold tracking-[0.08em] text-ink-2 uppercase">
+            <td aria-hidden className="w-7" />
+            <th scope="col" className="pb-2 text-left font-semibold">
+              Step
+            </th>
+            <td aria-hidden className="max-sm:hidden" />
+            <th scope="col" className="pb-2 pl-3 text-right font-semibold">
+              Amount
+            </th>
+            <th scope="col" className="pb-2 pl-3 text-right font-semibold">
+              Left
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => {
+            const result = row.op === "=";
+            const start = at(Math.min(row.from, row.to));
+            const width = Math.abs(at(row.to) - at(row.from));
+            const mark: CSSProperties = { left: `${start}%`, width: `${width}%` };
+            return (
+              <tr
+                key={row.label}
+                className={cn(result ? "border-t-2 border-navy" : "border-b border-line-soft")}
+              >
+                <td aria-hidden className={cn("align-top", result ? "pt-4" : "py-3")}>
+                  {row.op && (
+                    <span
+                      className={cn(
+                        "grid size-5 place-items-center rounded-full text-meta leading-none font-bold",
+                        result ? "bg-navy text-white" : "bg-surface-hover text-ink-2",
+                      )}
+                    >
+                      {row.op}
+                    </span>
+                  )}
+                </td>
+                <th
+                  scope="row"
+                  className={cn("pr-3 text-left align-top font-normal", result ? "pt-4" : "py-3")}
+                >
+                  <span
+                    className={cn(
+                      "block",
+                      result
+                        ? "text-heading font-bold text-navy"
+                        : "text-body font-semibold text-ink",
+                    )}
+                  >
+                    {row.label}
+                  </span>
+                  {row.detail && <span className="block text-meta text-ink-2">{row.detail}</span>}
+                </th>
+                <td
+                  aria-hidden
+                  className={cn("w-[34%] align-top max-sm:hidden", result ? "pt-5" : "pt-4.5")}
+                >
+                  <span className="relative block h-2.5 rounded-full bg-surface-hover/70">
+                    {width > 0 && (
+                      <span
+                        className={cn("absolute inset-y-0 min-w-1 rounded-full", MARK[row.mark])}
+                        style={mark}
+                      />
+                    )}
+                  </span>
+                </td>
+                <td
+                  data-cell="amount"
+                  className={cn(
+                    "pl-3 text-right align-top whitespace-nowrap tabular-nums",
+                    result
+                      ? "pt-4 text-heading font-bold text-navy"
+                      : "py-3 text-body font-bold text-ink",
+                  )}
+                >
+                  {row.op === "" || result ? (
+                    <Money amount={row.amount} />
+                  ) : (
+                    <Signed amount={row.amount} />
+                  )}
+                </td>
+                <td
+                  className={cn(
+                    "pl-3 text-right align-top whitespace-nowrap text-body text-ink-2 tabular-nums",
+                    result ? "pt-4" : "py-3",
+                  )}
+                >
+                  {row.left !== undefined && <Money amount={row.left} />}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+/** A step's amount as a magnitude: the operator column shows its direction, announced as "minus" or "plus". */
+function Signed({ amount }: { readonly amount: MoneyValue }) {
+  return (
+    <>
+      {amount !== 0 && <span className="sr-only">{amount < 0 ? "minus " : "plus "}</span>}
+      <Money amount={amount} sign="none" />
+    </>
   );
 }

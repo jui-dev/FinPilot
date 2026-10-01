@@ -37,7 +37,7 @@ export function AvailableCard({
     <section
       aria-labelledby="overview-available"
       className={cn(
-        "relative isolate flex flex-col overflow-clip rounded-panel border border-line bg-surface p-5 shadow-card",
+        "relative isolate flex flex-col overflow-clip rounded-panel border border-line-soft bg-surface p-5 shadow-card",
         "md:grid md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-x-10 md:p-7",
         "lg:flex lg:items-stretch",
         className,
