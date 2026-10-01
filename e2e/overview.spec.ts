@@ -257,7 +257,7 @@ test("This month and Where you stand lead to the rows and pages behind them", as
   await expect(month).toContainText("so far");
   await expect(month).toContainText("Left over");
   await expect(month).not.toContainText("Savings rate");
-  // The journey: where it came from and where it went, each leading to its rows.
+  // Left over, and where it went: each figure leading to its rows.
   await expect(month.getByTestId("month-journey")).toBeVisible();
   await expect(
     month.getByRole("link", { name: /more categories: ৳|^[^,]+: ৳/ }).first(),
@@ -503,7 +503,7 @@ for (const width of [390, 768, 820, 1024, 1280, 1920]) {
       }
     }
 
-    // Net worth and the month's journey stay inside their cards.
+    // Net worth and the month stay inside their cards.
     const stand = page.getByRole("region", { name: "Where you stand" });
     const standBox = (await stand.boundingBox())!;
     const worth = (await stand
@@ -513,9 +513,7 @@ for (const width of [390, 768, 820, 1024, 1280, 1920]) {
     expect(worth.x + worth.width).toBeLessThanOrEqual(standBox.x + standBox.width);
     const story = page.getByRole("region", { name: "This month" });
     const storyBox = (await story.boundingBox())!;
-    const journey = (await story
-      .getByTestId(width >= 768 ? "month-journey" : "month-journey-down")
-      .boundingBox())!;
+    const journey = (await story.getByTestId("month-journey").boundingBox())!;
     expect(journey.x + journey.width).toBeLessThanOrEqual(storyBox.x + storyBox.width);
 
     // Five destinations on desktop, four phone tabs around the +; Overview is current.

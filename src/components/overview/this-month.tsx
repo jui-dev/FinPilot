@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties } from "react";
 
 import type { DateRange } from "@/domain/calendar-date";
 import { formatMoney, type Money as MoneyValue } from "@/domain/money";
@@ -19,13 +19,13 @@ type CashFlow = Pick<MonthlyCashFlow, "summary" | "period" | "sources" | "compos
 type Journey = Extract<ReturnType<typeof monthJourney>, { kind: "journey" }>;
 
 /**
- * "Where did money come from, where did it go, and what was left?" — the
- * month so far as a journey: Came in (tide) → Went out → Left over (navy).
- * Where the money went rises to the way, one warm column per category,
- * each as long as its amount on one scale: spending is normal outflow, never
- * a warning. Every figure is Cash flow's and is text; the line and columns are
- * hidden from assistive technology. From 768px the journey runs left to
- * right; on phones it runs down the page.
+ * "How much of what came in is left, and where did the rest go?" — built like
+ * Where you stand: Left over leads on a mist panel, with what came in and went
+ * out in words and one to-scale bar of the two; beside it, where it went, each
+ * category's line measured against what came in, so a category reads as the
+ * share of the month it took. Spending is normal outflow, never a warning.
+ * Every figure is Cash flow's and is text; the bars are hidden from assistive
+ * technology. From 1024px the two sit side by side; below, they stack.
  */
 export function ThisMonth({ cashFlow }: { readonly cashFlow: CashFlow }) {
   const journey = monthJourney(cashFlow);
@@ -43,38 +43,32 @@ export function ThisMonth({ cashFlow }: { readonly cashFlow: CashFlow }) {
       {journey.kind === "empty" ? (
         <p className="mt-4 text-meta text-ink-2">Nothing has come in or gone out yet this month.</p>
       ) : (
-        <>
-          <Across journey={journey} cashFlow={cashFlow} />
-          <Down journey={journey} cashFlow={cashFlow} />
-        </>
+        <div
+          data-testid="month-journey"
+          className="mt-4 grid gap-5 md:mt-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-10"
+        >
+          <Kept journey={journey} cashFlow={cashFlow} />
+          <WhereItWent journey={journey} cashFlow={cashFlow} />
+        </div>
       )}
     </section>
   );
 }
 
-/** Came in and Went out open their Activity rows; each figure names its period for a screen reader. */
-function Figure({
+/** Came in and Went out open their Activity rows; each names its period for a screen reader. */
+function FigureLink({
   term,
   amount,
   href,
   range,
-  size = "large",
+  className,
 }: {
   readonly term: string;
   readonly amount: MoneyValue;
   readonly href: string | null;
   readonly range: DateRange;
-  /** "adaptive": a step smaller until 1024px, where the journey has less room. */
-  readonly size?: "large" | "medium" | "adaptive";
+  readonly className: string;
 }) {
-  const className = cn(
-    "font-bold whitespace-nowrap text-ink tabular-nums",
-    size === "large"
-      ? "text-display"
-      : size === "medium"
-        ? "text-figure"
-        : "text-figure lg:text-display",
-  );
   return href ? (
     <Link
       href={href}
@@ -88,11 +82,77 @@ function Figure({
   );
 }
 
-/** "Salary ৳1,05,000 · Other Income ৳2,500", each opening its income rows. */
+const cameInHref = (c: CashFlow) =>
+  c.summary.income !== 0 ? activityHref({ type: "income", range: c.period.range }) : null;
+// No type filter: Activity's Spent total is expenses net of refunds, exactly this figure.
+const wentOutHref = (c: CashFlow) =>
+  c.summary.spending !== 0 ? activityHref({ range: c.period.range }) : null;
+
+/** Left over on its mist panel, the month in words, and the bar of the two. */
+function Kept({ journey, cashFlow }: { readonly journey: Journey; readonly cashFlow: CashFlow }) {
+  const { summary, period } = cashFlow;
+  const { range } = period;
+  const over = summary.leftOver < 0;
+  const figure = "font-semibold whitespace-nowrap text-ink tabular-nums";
+  const cameIn = (
+    <FigureLink
+      term="Came in"
+      amount={summary.income}
+      href={cameInHref(cashFlow)}
+      range={range}
+      className={figure}
+    />
+  );
+  const wentOut = (
+    <FigureLink
+      term="Went out"
+      amount={summary.spending}
+      href={wentOutHref(cashFlow)}
+      range={range}
+      className={figure}
+    />
+  );
+  return (
+    <div
+      className={cn(
+        "flex flex-col justify-between gap-6 rounded-2xl px-5 py-6 md:px-7 md:py-7",
+        // More went out: outlined, never berry — it is direction, not an error.
+        over
+          ? "border-[1.5px] border-dashed border-ocean bg-surface"
+          : "bg-[linear-gradient(150deg,var(--color-mist)_0%,color-mix(in_srgb,var(--color-mist)_35%,var(--color-surface))_55%,var(--color-surface)_100%)] shadow-[inset_0_0_0_1px_var(--color-line-soft)]",
+      )}
+    >
+      <div>
+        <p className="text-body font-semibold text-navy">
+          {over ? "Went out more than came in" : "Left over"}
+        </p>
+        {/* A true minus when more went out. */}
+        <Money
+          amount={summary.leftOver}
+          className="mt-1.5 block text-[clamp(2.5rem,4.5vw,3.5rem)] leading-none font-extrabold tracking-[-0.03em] whitespace-nowrap text-navy tabular-nums"
+        />
+        <p className="mt-4 text-body text-ink-2">
+          {summary.income !== 0 ? (
+            <>
+              Of {cameIn} that came in, {wentOut} went out, net of refunds.
+            </>
+          ) : (
+            <>Nothing has come in yet; {wentOut} went out, net of refunds.</>
+          )}
+        </p>
+        <Sources journey={journey} range={range} />
+      </div>
+      <Meter journey={journey} cashFlow={cashFlow} />
+    </div>
+  );
+}
+
+/** "From Salary ৳1,05,000 · Other Income ৳2,500", each opening its income rows. */
 function Sources({ journey, range }: { readonly journey: Journey; readonly range: DateRange }) {
   if (journey.sources.length === 0) return null;
   return (
-    <p className="mt-1 text-meta text-ink-2">
+    <p className="mt-1.5 text-meta text-ink-2">
+      From{" "}
       {journey.sources.map((s, i) => (
         <span key={s.key}>
           {i > 0 && " · "}
@@ -110,288 +170,149 @@ function Sources({ journey, range }: { readonly journey: Journey; readonly range
   );
 }
 
-/** A column's evidence: its Activity rows, or Cash flow for a group. */
-function columnHref(c: JourneyPart, range: DateRange): string {
-  return c.categoryId ? activityHref({ categoryId: c.categoryId, range }) : "/cash-flow";
-}
-
-function ColumnLabel({
-  column,
-  range,
-  align = "center",
-}: {
-  readonly column: JourneyColumn;
-  readonly range: DateRange;
-  /** "row": name and amount on one line, for a phone's rows. */
-  readonly align?: "center" | "row";
-}) {
+/**
+ * The month as one bar: where it went, in the categories' tones, then what is
+ * left in navy. The categories share Went out exactly (refunds can make their
+ * lines add up to more), so the bar's split is the figures' split.
+ */
+function Meter({ journey, cashFlow }: { readonly journey: Journey; readonly cashFlow: CashFlow }) {
+  const { spending, leftOver } = cashFlow.summary;
+  const lines = journey.columns.reduce((n, c) => n + c.amount, 0);
+  const share = lines > 0 ? Math.max(spending, 0) / lines : 0;
+  const n = ranked(journey);
   return (
-    <span
-      className={cn(
-        "leading-tight",
-        align === "center"
-          ? "block text-center"
-          : "flex min-w-0 flex-1 items-baseline justify-between gap-2",
-      )}
-    >
-      <span
-        className={cn("text-meta text-ink-2", align === "center" ? "block" : "min-w-0 truncate")}
-      >
-        {column.name}
-      </span>
-      <Link
-        href={columnHref(column, range)}
-        aria-label={
-          column.categoryId
-            ? `${column.name}: ${formatMoney(column.amount)}`
-            : `${column.count} more categories: ${formatMoney(column.amount)}`
-        }
-        className={cn("text-body font-bold whitespace-nowrap text-ink", linkClass)}
-      >
-        <Money amount={column.amount} />
-      </Link>
-    </span>
+    <div aria-hidden>
+      <div className="flex h-3 gap-0.75">
+        {journey.columns.map((c, i) => (
+          <span
+            key={c.key}
+            className="min-w-0.75 rounded-[3px] first:rounded-l-full last:rounded-r-full"
+            style={{ flex: `${c.amount * share} 0 0`, ...lineStyle(c, i, n) }}
+          />
+        ))}
+        {leftOver > 0 && (
+          <span
+            className="min-w-0.75 rounded-[3px] bg-navy first:rounded-l-full last:rounded-r-full"
+            style={{ flex: `${leftOver} 0 0` }}
+          />
+        )}
+      </div>
+      <div className="mt-2 flex justify-between gap-4 text-micro text-ink-2">
+        <span>Went out</span>
+        {leftOver > 0 && <span>Left over</span>}
+      </div>
+    </div>
   );
 }
 
+/** A line's evidence: its Activity rows, or Cash flow for a group. */
+function lineHref(c: JourneyPart, range: DateRange): string {
+  return c.categoryId ? activityHref({ categoryId: c.categoryId, range }) : "/cash-flow";
+}
+
 /**
- * One warm ramp by size, never a colour per category: the largest column the
+ * One warm ramp by size, never a colour per category: the largest line the
  * warmest (a pale coral tint), stepping down to sand for the smallest. It only
  * repeats the order the lengths already show; a group of small categories is
  * neutral and hatched. Spending is normal outflow, so nothing here is berry.
  */
-function columnStyle(c: JourneyColumn, rank: number, of: number): CSSProperties {
+function lineStyle(c: JourneyColumn, rank: number, of: number): CSSProperties {
   if (!c.categoryId) {
     return {
-      backgroundColor: "var(--color-surface-subtle)",
+      backgroundColor: "var(--color-surface-hover)",
       backgroundImage:
-        "repeating-linear-gradient(135deg, transparent 0 5px, rgb(156 148 133 / 0.2) 5px 6px)",
-      boxShadow: "inset 0 0 0 1px var(--color-line)",
+        "repeating-linear-gradient(135deg, transparent 0 3px, rgb(156 148 133 / 0.35) 3px 4px)",
     };
   }
-  const warmth = of > 1 ? 24 * (1 - rank / (of - 1)) : 24;
+  const warmth = (of > 1 ? 26 * (1 - rank / (of - 1)) : 26) + 6;
   return {
     backgroundColor: `color-mix(in srgb, var(--color-coral) ${warmth}%, var(--color-surface-hover))`,
-    boxShadow: `inset 0 0 0 1px color-mix(in srgb, color-mix(in srgb, var(--color-coral) ${warmth * 1.6}%, var(--color-line-strong)) 45%, transparent)`,
   };
 }
 
-/** How many columns take part in the ramp (a group does not). */
+/** How many lines take part in the ramp (a group does not). */
 const ranked = (journey: Journey) => journey.columns.filter((c) => c.categoryId).length;
+
+/** Where it went, a statement: each category, its line against what came in, and Went out. */
+function WhereItWent({
+  journey,
+  cashFlow,
+}: {
+  readonly journey: Journey;
+  readonly cashFlow: CashFlow;
+}) {
+  const { summary, period } = cashFlow;
+  const { range } = period;
+  const n = ranked(journey);
+  const against = summary.spending > summary.income ? "what went out" : "what came in";
+  return (
+    <div className="min-w-0">
+      <div className="flex items-baseline justify-between gap-4 border-b border-line-soft pb-2.5">
+        <h3 className="text-meta font-semibold text-ink-2">Where it went</h3>
+        {journey.columns.length > 0 && (
+          <p className="text-micro text-ink-3">Each line against {against}</p>
+        )}
+      </div>
+      {journey.columns.length > 0 ? (
+        <ul>
+          {journey.columns.map((c, i) => (
+            <li
+              key={c.key}
+              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 border-b border-line-soft py-2.5 md:grid-cols-[minmax(0,9rem)_minmax(0,1fr)_6.5rem]"
+            >
+              <span className="truncate text-body text-ink">{c.name}</span>
+              <span
+                aria-hidden
+                className="relative col-span-full row-start-2 h-1.5 overflow-hidden rounded-full bg-surface-subtle md:col-span-1 md:row-start-auto md:h-2.5"
+              >
+                <span
+                  className="absolute inset-y-0 left-0 rounded-full"
+                  style={{ width: `${Math.max(c.length * 100, 1)}%`, ...lineStyle(c, i, n) }}
+                />
+              </span>
+              <Link
+                href={lineHref(c, range)}
+                aria-label={
+                  c.categoryId
+                    ? `${c.name}: ${formatMoney(c.amount)}`
+                    : `${c.count} more categories: ${formatMoney(c.amount)}`
+                }
+                className={cn(
+                  "justify-self-end text-body font-bold whitespace-nowrap text-ink tabular-nums",
+                  linkClass,
+                )}
+              >
+                <Money amount={c.amount} />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="py-2.5 text-meta text-ink-2">Nothing has gone out yet this month.</p>
+      )}
+      <div className="-mt-px flex items-baseline justify-between gap-4 border-t-2 border-navy pt-3">
+        <p className="text-body font-bold text-ink">
+          Went out <span className="font-normal text-ink-2">· net of refunds</span>
+        </p>
+        <FigureLink
+          term="Went out"
+          amount={summary.spending}
+          href={wentOutHref(cashFlow)}
+          range={range}
+          className="text-body font-bold whitespace-nowrap text-ink tabular-nums"
+        />
+      </div>
+      <RefundNote journey={journey} />
+    </div>
+  );
+}
 
 function RefundNote({ journey }: { readonly journey: Journey }) {
   if (journey.refunded.length === 0) return null;
   return (
-    <p className="text-meta text-ink-2">
+    <p className="mt-2 text-meta text-ink-2">
       Refunds in {listOf(journey.refunded)} were larger than what was spent there, so{" "}
-      {journey.refunded.length === 1 ? "it has" : "they have"} no column.
+      {journey.refunded.length === 1 ? "it isn't" : "they aren't"} listed.
     </p>
-  );
-}
-
-/** How tall the longest column rises, in pixels. */
-const RISE = 112;
-
-/** The two-part grid the figures, columns and labels share, so they line up. */
-const GRID =
-  "grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-x-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]";
-
-/** From 768px: left to right, with the columns rising to the way. */
-function Across({ journey, cashFlow }: { readonly journey: Journey; readonly cashFlow: CashFlow }) {
-  const { summary, period } = cashFlow;
-  const { range } = period;
-  const over = summary.leftOver < 0;
-  return (
-    <div data-testid="month-journey" className="mt-6 max-md:hidden">
-      <div className={GRID}>
-        <div>
-          <p className="text-meta text-ink-2">Came in</p>
-          <Figure
-            term="Came in"
-            amount={summary.income}
-            href={summary.income !== 0 ? activityHref({ type: "income", range }) : null}
-            range={range}
-          />
-          <Sources journey={journey} range={range} />
-        </div>
-        <div className="flex items-start justify-between gap-6">
-          <div className="min-w-0">
-            <p className="text-meta text-ink-2">Went out</p>
-            {/* No type filter: Activity's Spent total is expenses net of refunds, exactly this figure. */}
-            <Figure
-              term="Went out"
-              amount={summary.spending}
-              href={summary.spending !== 0 ? activityHref({ range }) : null}
-              range={range}
-              size="adaptive"
-            />
-            <p className="mt-1 text-meta text-ink-2">Net of refunds</p>
-          </div>
-          <div className="text-right">
-            <p className="text-meta font-semibold text-navy">Left over</p>
-            {/* A true minus when more went out; never berry: it is direction, not an error. */}
-            <Money
-              amount={summary.leftOver}
-              className="text-display font-extrabold whitespace-nowrap text-navy tabular-nums"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Where it went: one row of columns rising to the way between Came in and Went out. */}
-      <div aria-hidden className={cn(GRID, "mt-6")}>
-        <div className="-mb-5 flex items-end gap-1.5 pr-1.5 pl-9" style={{ height: RISE }}>
-          {journey.columns.map((c, i) => (
-            <span
-              key={c.key}
-              className="block min-w-0 flex-1 rounded-t-xl"
-              style={{
-                height: Math.max(c.length * RISE, 8),
-                ...columnStyle(c, i, ranked(journey)),
-              }}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* The way: tide while money comes in and goes out, navy for what is left. */}
-      <div aria-hidden className="relative h-9">
-        <span className="absolute top-1/2 right-2/5 left-3 h-1.5 -translate-y-1/2 rounded-full bg-tide lg:right-1/3" />
-        <span
-          className={cn(
-            "absolute top-1/2 right-4 left-3/5 -translate-y-1/2 rounded-full lg:left-2/3",
-            over ? "h-2 border-[1.5px] border-dashed border-ocean" : "h-1.5 bg-navy",
-          )}
-        />
-        <span className="absolute top-1/2 left-0 size-7 -translate-y-1/2 rounded-full border-[5px] border-tide bg-surface" />
-        <span className="absolute top-1/2 left-3/5 grid size-7 lg:left-2/3 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-[5px] border-line-strong bg-surface text-meta leading-none font-bold text-line-strong">
-          −
-        </span>
-        <span
-          className={cn(
-            "absolute top-1/2 right-0 grid size-9 -translate-y-1/2 place-items-center rounded-full text-body font-bold",
-            over
-              ? "border-[1.5px] border-dashed border-ocean bg-surface text-ocean"
-              : "bg-navy text-white",
-          )}
-        >
-          =
-        </span>
-      </div>
-
-      <div className={GRID}>
-        <ul className="mt-1 flex gap-1.5 pr-1.5 pl-9">
-          {journey.columns.map((c) => (
-            <li key={c.key} className="min-w-0 flex-1">
-              <ColumnLabel column={c} range={range} />
-            </li>
-          ))}
-        </ul>
-        <div className="space-y-1">
-          <p className="text-meta text-ink-2">
-            Where it went, each column as tall as its amount — the largest in the warmest tone.
-          </p>
-          <RefundNote journey={journey} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** How far the longest column reaches on a phone, as a share of the row. */
-const REACH = 0.58;
-
-/** On phones: the same journey down the page, the columns hanging sideways from the way. */
-function Down({ journey, cashFlow }: { readonly journey: Journey; readonly cashFlow: CashFlow }) {
-  const { summary, period } = cashFlow;
-  const { range } = period;
-  const over = summary.leftOver < 0;
-  const stop = (children: ReactNode, className: string) => (
-    <span
-      aria-hidden
-      className={cn(
-        "relative z-10 grid size-6 shrink-0 place-items-center rounded-full text-micro font-bold",
-        className,
-      )}
-    >
-      {children}
-    </span>
-  );
-  return (
-    <div data-testid="month-journey-down" className="relative mt-5 md:hidden">
-      {/* The way, down the left edge. */}
-      <span aria-hidden className="absolute top-3 bottom-24 left-2.25 w-1.5 rounded-full bg-tide" />
-      <span
-        aria-hidden
-        className={cn(
-          "absolute bottom-3 left-2.25 h-24 w-1.5 rounded-full",
-          over ? "border-[1.5px] border-dashed border-ocean" : "bg-navy",
-        )}
-      />
-
-      <div className="flex gap-4">
-        {stop(null, "border-[4px] border-tide bg-surface")}
-        <div className="min-w-0">
-          <p className="text-meta text-ink-2">Came in</p>
-          <Figure
-            term="Came in"
-            amount={summary.income}
-            href={summary.income !== 0 ? activityHref({ type: "income", range }) : null}
-            range={range}
-            size="medium"
-          />
-          <Sources journey={journey} range={range} />
-        </div>
-      </div>
-
-      <ul className="mt-2.5 pl-3.5">
-        {journey.columns.map((c, i) => (
-          <li key={c.key} className="flex h-8 items-center gap-2.5">
-            <span
-              aria-hidden
-              className="h-5.5 shrink-0 rounded-r-[9px]"
-              style={{
-                width: `${Math.max(c.length * REACH * 100, 3)}%`,
-                ...columnStyle(c, i, ranked(journey)),
-              }}
-            />
-            <ColumnLabel column={c} range={range} align="row" />
-          </li>
-        ))}
-      </ul>
-      <div className="mt-2 pl-10">
-        <RefundNote journey={journey} />
-      </div>
-
-      <div className="mt-4 flex gap-4">
-        {stop("−", "border-[4px] border-line-strong bg-surface text-line-strong")}
-        <div>
-          <p className="text-meta text-ink-2">Went out · net of refunds</p>
-          <Figure
-            term="Went out"
-            amount={summary.spending}
-            href={summary.spending !== 0 ? activityHref({ range }) : null}
-            range={range}
-            size="medium"
-          />
-        </div>
-      </div>
-
-      <div className="mt-12 flex items-center gap-4">
-        {stop(
-          "=",
-          over
-            ? "border-[1.5px] border-dashed border-ocean bg-surface text-ocean"
-            : "bg-navy text-white",
-        )}
-        <div>
-          <p className="text-meta font-semibold text-navy">Left over</p>
-          <Money
-            amount={summary.leftOver}
-            className="text-display font-extrabold whitespace-nowrap text-navy tabular-nums"
-          />
-        </div>
-      </div>
-    </div>
   );
 }

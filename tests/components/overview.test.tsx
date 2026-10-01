@@ -201,7 +201,7 @@ describe("AvailableCard", () => {
 });
 
 // ---------------------------------------------------------------------------
-// This month: the journey
+// This month: what is left, and where it went
 // ---------------------------------------------------------------------------
 
 const cat = (name: string, amount: number) => ({
@@ -235,7 +235,7 @@ const SPENT: [string, number][] = [
 ];
 
 describe("monthJourney", () => {
-  it("hangs the six largest categories, the rest as N more, each on one scale", () => {
+  it("lists the five largest categories, the rest as N more, each against what came in", () => {
     const journey = monthJourney(
       month(
         [
@@ -252,19 +252,21 @@ describe("monthJourney", () => {
       ["Transport", t(9_800)],
       ["Health", t(6_000)],
       ["Utilities", t(5_270)],
-      ["Internet", t(3_090)],
-      ["3 more", t(3_000 + 850 + 400)],
+      ["4 more", t(3_090 + 3_000 + 850 + 400)],
     ]);
-    expect(journey.columns.at(-1)).toMatchObject({ categoryId: null, count: 3 });
-    expect(journey.columns[0]!.length).toBe(1);
-    expect(journey.columns[1]!.length).toBeCloseTo(14_200 / 30_000);
+    expect(journey.columns.at(-1)).toMatchObject({ categoryId: null, count: 4 });
+    expect(journey.columns[0]!.length).toBeCloseTo(30_000 / 1_07_500);
+    expect(journey.columns[1]!.length).toBeCloseTo(14_200 / 1_07_500);
     expect(journey.sources.map((s) => s.name)).toEqual(["Salary", "Other Income"]);
   });
 
-  it("never groups a single category, and never gives a refunded category a column", () => {
-    const seven = monthJourney(month([["Salary", 1_00_000]], [...SPENT, ["Utilities", 5_270]]));
-    if (seven.kind !== "journey") throw new Error(seven.kind);
-    expect(seven.columns.some((c) => c.categoryId === null)).toBe(false);
+  it("never groups a single category, measures against what went out when more did, and never lists a refunded category", () => {
+    const six = monthJourney(month([["Salary", 1_00_000]], SPENT));
+    if (six.kind !== "journey") throw new Error(six.kind);
+    expect(six.columns.some((c) => c.categoryId === null)).toBe(false);
+    const over = monthJourney(month([["Salary", 50_000]], [["Housing", 80_000]]));
+    if (over.kind !== "journey") throw new Error(over.kind);
+    expect(over.columns[0]!.length).toBe(1);
     const refunded = monthJourney(
       month(
         [["Salary", 10_000]],
@@ -285,7 +287,7 @@ describe("monthJourney", () => {
 });
 
 describe("ThisMonth", () => {
-  it("tells the journey with exact figures, each part leading to its rows, and no rate", () => {
+  it("leads with Left over, then where it went, in exact figures leading to their rows, and no rate", () => {
     const html = renderToStaticMarkup(
       <ThisMonth
         cashFlow={month(
@@ -298,22 +300,25 @@ describe("ThisMonth", () => {
       />,
     );
     const words = text(html);
-    expect(words).toMatch(/Came in ৳ 1,07,500 Salary ৳ 1,00,000 · Other Income ৳ 7,500/);
-    expect(words).toMatch(/Went out ৳ 63,400 Net of refunds Left over ৳ 44,100/);
+    expect(words).toMatch(
+      /Left over ৳ 44,100 Of ৳ 1,07,500 that came in, ৳ 63,400 went out, net of refunds\. From Salary ৳ 1,00,000 · Other Income ৳ 7,500/,
+    );
+    expect(words).toMatch(/Where it went .*Housing ৳ 30,000 .*Went out · net of refunds ৳ 63,400/);
     expect(html).toContain('aria-label="Came in, 1–22 Sep 2026: ৳1,07,500"');
+    expect(html).toContain('aria-label="Went out, 1–22 Sep 2026: ৳63,400"');
     expect(html).toContain('data-testid="month-journey"');
-    expect(html).toContain('data-testid="month-journey-down"');
     expect(html).toContain('aria-label="Housing: ৳30,000"');
     expect(html).toContain("category=c-Housing");
     expect(html).toContain("category=c-Salary&amp;type=income");
     expect(words).not.toMatch(/%|rate/i);
   });
 
-  it("when more went out: a true minus on Left over and an outlined way, never berry", () => {
+  it("when more went out: a true minus, an outlined panel and lines against what went out, never berry", () => {
     const html = renderToStaticMarkup(
       <ThisMonth cashFlow={month([["Salary", 50_000]], [["Housing", 80_000]])} />,
     );
-    expect(text(html)).toContain("Left over − ৳ 30,000");
+    expect(text(html)).toContain("Went out more than came in − ৳ 30,000");
+    expect(text(html)).toContain("Each line against what went out");
     expect(html).toContain("border-dashed border-ocean");
     expect(html).not.toContain("negative");
   });
@@ -333,7 +338,7 @@ describe("ThisMonth", () => {
       ),
     );
     expect(refunds).toContain(
-      "Refunds in Shopping were larger than what was spent there, so it has no column.",
+      "Refunds in Shopping were larger than what was spent there, so it isn't listed.",
     );
     const empty = renderToStaticMarkup(<ThisMonth cashFlow={month([], [])} />);
     expect(text(empty)).toContain("Nothing has come in or gone out yet this month.");

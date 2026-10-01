@@ -144,7 +144,7 @@ export function monthGlance(
 }
 
 // ---------------------------------------------------------------------------
-// This month: the journey
+// This month: what is left, and where it went
 // ---------------------------------------------------------------------------
 
 /** A place money came from or went to, or several grouped as "N more". */
@@ -159,16 +159,17 @@ export interface JourneyPart {
 }
 
 export interface JourneyColumn extends JourneyPart {
-  /** Its length against the longest column, 0–1: every column on one scale. */
+  /** Its length against what came in (or went out, when more did), 0–1. */
   readonly length: number;
 }
 
 /**
- * This month as a journey: Came in → Went out → Left over, with where the
- * money went hanging from the way out, each column as long as its amount.
- * The three figures are Cash flow's; the columns are its category lines above
- * zero, the smallest grouped. A category whose refunds exceeded its spending
- * has no length to draw, so it is named instead, never drawn.
+ * This month: what is left of what came in, and where the rest went, one
+ * line per category on one scale — what came in, or what went out when more
+ * did — so a category reads as the share of the month it took. The figures
+ * are Cash flow's; the lines are its category lines above zero, the smallest
+ * grouped. A category whose refunds exceeded its spending has no length to
+ * draw, so it is named instead, never drawn.
  */
 export type MonthJourney =
   | { readonly kind: "empty" }
@@ -180,8 +181,8 @@ export type MonthJourney =
       readonly refunded: readonly string[];
     };
 
-/** Columns drawn on their own before the rest are grouped. */
-export const JOURNEY_COLUMNS = 6;
+/** Categories listed on their own before the rest are grouped. */
+export const JOURNEY_COLUMNS = 5;
 /** Sources named on their own under Came in. */
 export const JOURNEY_SOURCES = 2;
 
@@ -224,11 +225,11 @@ export function monthJourney(cashFlow: {
     spent.filter((l) => l.amount > 0),
     JOURNEY_COLUMNS,
   );
-  const longest = Math.max(...parts.map((p) => p.amount), 0);
+  const scale = Math.max(income, spending, ...parts.map((p) => p.amount), 0);
   return {
     kind: "journey",
     sources: grouped(cashFlow.sources, JOURNEY_SOURCES),
-    columns: parts.map((p) => ({ ...p, length: longest > 0 ? p.amount / longest : 0 })),
+    columns: parts.map((p) => ({ ...p, length: scale > 0 ? p.amount / scale : 0 })),
     refunded: refundedMoreThanSpent.map((l) => l.name),
   };
 }
