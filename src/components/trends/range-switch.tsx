@@ -11,7 +11,7 @@ import { cn } from "../ui/cn";
 export function RangeSwitch({ current }: { readonly current: TrendLength }) {
   return (
     <nav aria-label="Months covered">
-      <ul className="inline-flex rounded-control border border-line bg-surface p-0.5">
+      <ul className="inline-flex rounded-control border border-line bg-surface-subtle p-0.5">
         {TREND_LENGTHS.map((length) => {
           const selected = length === current;
           return (

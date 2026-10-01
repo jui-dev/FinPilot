@@ -18,3 +18,11 @@ export function monthSpan(months: readonly (YearMonth | string)[]): string {
 
 /** "3 months", "1 month". */
 export const monthsCount = (n: number): string => (n === 1 ? "1 month" : `${n} months`);
+
+/** The window's name: "Six months", "Twelve months", or "4 months" while fewer are complete. */
+export const periodName = (n: number): string =>
+  n === 6
+    ? "Six months"
+    : n === 12
+      ? "Twelve months"
+      : monthsCount(n).replace(/^\w/, (c) => c.toUpperCase());

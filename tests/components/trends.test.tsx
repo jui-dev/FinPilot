@@ -1,16 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { monthSpan } from "@/components/trends/describe";
-import { Journey } from "@/components/trends/journey";
-import {
-  axisAmount,
-  COMPACT_BELOW,
-  journeyGeometry,
-  niceDomain,
-  type JourneyMonth,
-} from "@/components/trends/journey-geometry";
+import { periodName } from "@/components/trends/describe";
+import { monthLabel } from "@/components/format";
 import { MonthByMonth } from "@/components/trends/month-by-month";
+import { axisAmount, niceDomain } from "@/components/trends/scale";
+import { TrendTotals } from "@/components/trends/totals";
 import { TrendWhatChanged } from "@/components/trends/what-changed";
 import { monthRange, type YearMonth } from "@/domain/calendar-date";
 import type { CategorySpending } from "@/domain/ledger/cash-flow";
@@ -20,9 +15,9 @@ import { fromMajor, subtract } from "@/domain/money";
 import type { TrendChange, TrendMonth } from "@/server/services/analysis-service";
 
 /**
- * How Trends is drawn and read (Stage 12): the journey's geometry, including
- * the zero, negative and extreme cases the demo never shows, and what each
- * section says. Figures come from the real domain functions, as the service
+ * How Trends is drawn and read (Stage 12): the chart's scale, including the
+ * negative and extreme cases the demo never shows, and what each section says,
+ * each figure once. Figures come from the real domain functions, as the service
  * would build them; the components only lay them out.
  */
 const t = fromMajor;
@@ -53,10 +48,8 @@ const SIX = [
   month("2026-07", 1_05_000, 69_297),
   month("2026-08", 1_05_000, 68_557),
 ];
-const flow = (ms: readonly TrendMonth[]): readonly JourneyMonth[] => ms;
-const finite = (n: number) => Number.isFinite(n);
 
-describe("journey geometry", () => {
+describe("the chart's scale", () => {
   it("scales from zero to a whole ৳50,000 step above the largest amount", () => {
     expect(niceDomain([t(1_20_657), t(95_000)])).toEqual({
       lo: 0,
@@ -85,152 +78,26 @@ describe("journey geometry", () => {
       "−৳50k",
     ]);
   });
-
-  it("draws one flat step per month for each line, across the plot", () => {
-    const g = journeyGeometry(flow(SIX), 1000);
-    expect(g.slots).toHaveLength(6);
-    expect(g.slots[0]!.x).toBe(g.plot.left);
-    expect(g.slots[5]!.x + g.slots[5]!.width).toBeCloseTo(g.plot.right);
-    // M, then an H per month and a V between months.
-    expect(g.incomePath.match(/H/g)).toHaveLength(6);
-    expect(g.incomePath.match(/V/g)).toHaveLength(5);
-    expect(g.incomePath.startsWith(`M${g.plot.left} `)).toBe(true);
-  });
-
-  it("fills the gap as left over, or as more going out, and nothing when they are equal", () => {
-    const g = journeyGeometry(flow([...SIX.slice(0, 2), month("2026-05", 70_000, 70_000)]), 1000);
-    expect(g.gaps.map((r) => r?.kind ?? null)).toEqual(["left", "over", null]);
-    // Left over sits between the steps: from Came in down to Went out.
-    const [first] = g.gaps;
-    expect(first!.y + first!.height).toBeCloseTo(g.wentOut[0]!.y);
-    // Went out reaches down to zero.
-    expect(g.wentOut[0]!.y + g.wentOut[0]!.height).toBeCloseTo(g.baseline);
-  });
-
-  it("sets every month's Left over on one zero line, a month in the minus below it", () => {
-    const g = journeyGeometry(flow(SIX), 1000);
-    const { zero, bars } = g.lane;
-    expect(bars.map((b) => b?.kind)).toEqual(["left", "over", "left", "left", "left", "left"]);
-    for (const b of bars) {
-      if (b!.kind === "left") expect(b!.y + b!.height).toBeCloseTo(zero);
-      else expect(b!.y).toBe(zero);
-    }
-    // Proportional: the ৳25,657 bar against the ৳36,763 one.
-    expect(bars[1]!.height / bars[3]!.height).toBeCloseTo(25_657 / 36_763, 5);
-  });
-
-  it("draws nothing broken when every month is zero", () => {
-    const g = journeyGeometry(flow([month("2026-06", 0, 0), month("2026-07", 0, 0)]), 400);
-    expect(g.gaps).toEqual([null, null]);
-    expect(g.lane.bars).toEqual([null, null]);
-    expect([g.baseline, g.lane.zero, g.height].every(finite)).toBe(true);
-    expect(g.peaks).toEqual({ income: null, spending: null });
-  });
-
-  it("keeps every coordinate finite for negative spending and every month in the minus", () => {
-    const g = journeyGeometry(
-      flow([
-        month("2026-06", 0, -1_200),
-        month("2026-07", 10_000, 90_000),
-        month("2026-08", 0, 5_000),
-      ]),
-      COMPACT_BELOW - 1,
-    );
-    const rects = [...g.wentOut, ...g.gaps, ...g.lane.bars].filter((r) => r !== null);
-    expect(rects.every((r) => [r.x, r.y, r.width, r.height].every(finite) && r.height >= 0)).toBe(
-      true,
-    );
-    expect(g.ticks[0]!.value).toBeLessThan(0);
-    expect(g.lane.bars.map((b) => b?.kind)).toEqual(["left", "over", "over"]);
-  });
-
-  it("handles crore-sized amounts without losing the scale", () => {
-    const g = journeyGeometry(
-      flow([month("2026-07", 2_00_00_000, 50_00_000), month("2026-08", 10_000, 0)]),
-      1000,
-    );
-    expect(g.ticks.at(-1)!.value).toBe(t(2_00_00_000));
-    expect(g.ticks.length).toBeLessThanOrEqual(6);
-    expect(g.incomePath).not.toContain("NaN");
-  });
-
-  it("labels a peak only when it rises above the latest month, never over another label", () => {
-    const g = journeyGeometry(flow(SIX), 1000);
-    // Came in peaks at ৳1,05,000 — the latest month's own figure, already shown.
-    expect(g.peaks.income).toBeNull();
-    expect(g.peaks.spending?.month).toBe(1);
-    // Neighbouring peaks at almost the same height, in narrow slots: their labels
-    // would collide, so only the Came in one is kept.
-    const year = Array.from({ length: 12 }, (_, i) => {
-      const ym = `2025-${String(i + 1).padStart(2, "0")}`;
-      return i === 4
-        ? month(ym, 1_42_500, 60_000)
-        : i === 5
-          ? month(ym, 95_000, 1_40_000)
-          : month(ym, 95_000, 60_000);
-    });
-    const spike = journeyGeometry(flow(year), 400);
-    expect(spike.peaks.income?.month).toBe(4);
-    expect(spike.peaks.spending).toBeNull();
-    // With room between them, both are named.
-    expect(journeyGeometry(flow(year), 1400).peaks.spending?.month).toBe(5);
-  });
-
-  it("names the lines beside the last month only on wide drawings, apart from each other", () => {
-    const wide = journeyGeometry(
-      flow([month("2026-07", 95_000, 94_000), month("2026-08", 95_000, 94_500)]),
-      1000,
-    );
-    expect(wide.compact).toBe(false);
-    expect(Math.abs(wide.endLabels!.spendingY - wide.endLabels!.incomeY)).toBeGreaterThanOrEqual(
-      34,
-    );
-    const narrow = journeyGeometry(flow(SIX), 358);
-    expect(narrow.compact).toBe(true);
-    expect(narrow.endLabels).toBeNull();
-  });
-
-  it("writes every Left over when there is room, and only the ones that matter when there isn't", () => {
-    expect(journeyGeometry(flow(SIX), 1000).lane.labelled.every(Boolean)).toBe(true);
-    const twelve = [
-      ...SIX.map((m) => ({ ...m, month: `2025-${m.month.slice(5)}` as YearMonth })),
-      ...SIX,
-    ];
-    const g = journeyGeometry(flow(twelve), 358);
-    expect(g.initials).toBe(true);
-    // The latest, the largest and each month in the minus.
-    expect(g.lane.labelled.map((l, i) => (l ? i : -1)).filter((i) => i >= 0)).toEqual([
-      1, 3, 7, 11,
-    ]);
-  });
 });
 
-describe("the journey's statement", () => {
-  const halves = {
-    earlier: SIX.slice(0, 3).map((m) => m.month),
-    recent: SIX.slice(3).map((m) => m.month),
-  };
+describe("the months added up", () => {
+  const words = text(renderToStaticMarkup(<TrendTotals months={SIX} />));
 
-  it("shows the latest complete month until another is chosen, with a way to its Cash flow page", () => {
-    const html = renderToStaticMarkup(
-      <Journey months={SIX} halves={halves} currentMonth={"2026-09" as YearMonth} />,
-    );
-    const words = text(html);
-    expect(words).toContain("Left over · August 2026 ৳ 36,443");
-    expect(words).toContain("Of ৳ 1,05,000 that came in");
-    expect(words).toContain("Came in ৳ 1,05,000");
-    expect(words).toContain("Went out ৳ 68,557");
-    expect(words).toContain("Mar–Aug 2026 · 6 months");
-    expect(html).toContain('href="/cash-flow?month=2026-08"');
-    // The drawing and its month choices wait for the measured width; the figures never do.
-    expect(html).not.toContain('role="radiogroup"');
+  it("names the window and states it as one equation, with each side's monthly average", () => {
+    expect(words).toContain("Six months Mar–Aug 2026, added up.");
+    expect(words).toContain("Came in ৳ 6,10,000 ৳ 1,01,667 a month on average");
+    expect(words).toContain("Went out ৳ 4,63,302 ৳ 77,217 a month on average");
+    expect(words).toContain("Left over ৳ 1,46,698 Of what came in 24.0%");
   });
 
-  it("says so in words when more went out than came in", () => {
-    const html = renderToStaticMarkup(
-      <Journey months={SIX.slice(0, 2)} halves={null} currentMonth={"2026-09" as YearMonth} />,
-    );
-    expect(text(html)).toContain("Left over · April 2026 − ৳ 25,657 More went out than came in");
+  it("names a shorter or longer window by its length", () => {
+    expect(periodName(12)).toBe("Twelve months");
+    expect(periodName(4)).toBe("4 months");
+  });
+
+  it("keeps a true minus when more went out than came in over the window", () => {
+    const over = text(renderToStaticMarkup(<TrendTotals months={SIX.slice(1, 2)} />));
+    expect(over).toContain("Left over − ৳ 25,657");
   });
 });
 
@@ -238,24 +105,42 @@ describe("month by month", () => {
   const html = renderToStaticMarkup(
     <MonthByMonth months={SIX} currentMonth={"2026-09" as YearMonth} />,
   );
+  const words = text(html);
 
-  it("lists every month newest first, each opening its Cash flow page", () => {
-    const rows = [...html.matchAll(/href="\/cash-flow\?month=(\d{4}-\d{2})"/g)].map((m) => m[1]);
-    // Once in the table (md up) and once in the phone rows.
-    expect(rows).toEqual([
-      ...SIX.map((m) => m.month).reverse(),
-      ...SIX.map((m) => m.month).reverse(),
-    ]);
+  it("gives the table the months oldest first and the phone rows newest first, each opening Cash flow", () => {
+    const heads = [...html.matchAll(/aria-label="(\w+ 2026)"/g)].map((m) => m[1]);
+    expect(heads).toEqual(SIX.map((m) => monthLabel(m.month)));
+    const phone = html.slice(html.indexOf('aria-label="Months"'));
+    const rows = [...phone.matchAll(/href="\/cash-flow\?month=(\d{4}-\d{2})"/g)].map((m) => m[1]);
+    expect(rows).toEqual(SIX.map((m) => m.month).reverse());
   });
 
-  it("gives phones the month, its Left over, then in and out", () => {
-    expect(text(html)).toContain(
-      "April 2026 Left over − ৳ 25,657 More went out In ৳ 95,000 · Out ৳ 1,20,657",
+  it("puts each figure under its own month, in three rows", () => {
+    expect(words).toContain(
+      "Came in ৳ 95,000 ৳ 95,000 ৳ 1,05,000 ৳ 1,05,000 ৳ 1,05,000 ৳ 1,05,000",
     );
+    expect(words).toContain("Went out ৳ 68,297 ৳ 1,20,657 ৳ 68,257 ৳ 68,237 ৳ 69,297 ৳ 68,557");
+    expect(words).toContain("Left over ৳ 26,703 − ৳ 25,657 ৳ 36,743 ৳ 36,763 ৳ 35,703 ৳ 36,443");
   });
 
-  it("carries no percentages", () => {
-    expect(text(html)).not.toContain("%");
+  it("draws both bars on one scale, hatching only what went out beyond what came in", () => {
+    // ৳1,20,657 is the largest amount: the grid tops out at ৳1.5L.
+    expect(html).toContain("height:80.438");
+    expect(words).toContain("Went out more than came in");
+    // Only April went over: one hatched part, and its navy share is ৳95,000 of ৳1,20,657.
+    expect(html.match(/data-part="over"/g)).toHaveLength(1);
+    expect(html).toContain("height:78.73");
+    // A month in the minus is a direction, not an error: no berry anywhere.
+    expect(html).not.toMatch(/bg-negative|text-negative/);
+  });
+
+  it("leaves the key out when no month went over", () => {
+    const calm = text(
+      renderToStaticMarkup(
+        <MonthByMonth months={SIX.slice(2)} currentMonth={"2026-09" as YearMonth} />,
+      ),
+    );
+    expect(calm).not.toContain("Went out more than came in");
   });
 });
 
@@ -288,27 +173,25 @@ describe("what changed across the halves", () => {
   const html = renderToStaticMarkup(<TrendWhatChanged change={demo} />);
   const words = text(html);
 
-  it("leads with the exact difference between the halves and both totals", () => {
-    expect(words).toContain("The recent 3 months against the earlier 3 months");
-    expect(words).toContain("৳ 52,300 less went out");
-    expect(words).toContain(
-      `Earlier 3 months ${monthSpan(demo.earlier.months)} Spending, 1 Mar – 31 May 2026: ৳ 2,22,280`,
-    );
-    expect(words).toContain(
-      `Recent 3 months ${monthSpan(demo.recent.months)} Spending, 1 Jun – 31 Aug 2026: ৳ 1,69,980`,
-    );
+  it("leads with the exact difference between the halves, then both totals", () => {
+    expect(words).toContain("The recent 3 months against the earlier 3 months.");
+    expect(words).toContain("Spending ৳ 52,300 lower");
+    expect(words).toContain("Mar–May Jun–Aug Change");
+    expect(words).toContain("All spending ৳ 2,22,280 ৳ 1,69,980 − ৳ 52,300");
   });
 
-  it("groups the material changes as higher and lower, and keeps smaller ones together", () => {
+  it("lists the material changes, higher then lower, and keeps smaller ones together", () => {
+    expect(html).toContain('aria-label="Categories that were higher"');
+    expect(html).toContain('aria-label="Categories that were lower"');
     expect(words).toMatch(
-      /Higher Food & Dining \+ ৳ 5,560 .*Lower Shopping − ৳ 53,100 .*Transport − ৳ 1,400/,
+      /Food & Dining .*৳ 18,710 .*৳ 24,270 \+ ৳ 5,560 .*Shopping .*৳ 66,250 .*৳ 13,150 − ৳ 53,100 .*Transport .*− ৳ 1,400/,
     );
     // Groceries −3,360 is under 10% of 36,950: a smaller change.
     expect(words).toContain("1 smaller change − ৳ 3,360");
     expect(words).toContain("No change: Housing.");
   });
 
-  it("opens each half's rows in Activity, for the category and for the whole half", () => {
+  it("opens each half's rows in Activity, for each category", () => {
     const shopping = demo.explanation.offsets.find((l) => l.name === "Shopping")!;
     expect(html).toContain(
       `/activity?category=${shopping.categoryId}&amp;from=2026-03-01&amp;to=2026-05-31`,
@@ -316,7 +199,6 @@ describe("what changed across the halves", () => {
     expect(html).toContain(
       `/activity?category=${shopping.categoryId}&amp;from=2026-06-01&amp;to=2026-08-31`,
     );
-    expect(html).toContain(`/activity?from=2026-06-01&amp;to=2026-08-31`);
   });
 
   it("carries no percentages, shares or judgement", () => {
@@ -329,16 +211,16 @@ describe("what changed across the halves", () => {
         <TrendWhatChanged change={change([line("Housing", 100)], [line("Housing", 100)])} />,
       ),
     );
-    expect(same).toContain("The same went out");
+    expect(same).toContain("Spending unchanged");
     const none = text(renderToStaticMarkup(<TrendWhatChanged change={change([], [])} />));
     expect(none).toContain("Nothing went out in either half");
   });
 
-  it("draws a track from a refund-heavy (negative) half without breaking the scale", () => {
+  it("shows a refund-heavy (negative) half without breaking the bars", () => {
     const refunds = renderToStaticMarkup(
       <TrendWhatChanged change={change([line("Health", 2_500)], [line("Health", -2_500)])} />,
     );
-    expect(text(refunds)).toContain("Health − ৳ 5,000");
+    expect(text(refunds)).toContain("Health, 1 Jun – 31 Aug 2026: − ৳ 2,500 − ৳ 5,000");
     expect(refunds).not.toContain("NaN");
   });
 });

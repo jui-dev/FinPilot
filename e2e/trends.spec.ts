@@ -7,8 +7,8 @@ import { systemClock } from "@/server/clock";
 
 /**
  * Trends (Stage 12): reached from Cash flow's local switch, complete months
- * only, the latest selected until another month is chosen, the exact record
- * behind the journey, and the rows behind What changed. Built on the plain
+ * only, the months added up once, each month's chart and exact figures in one
+ * table, and the rows behind What changed. Built on the plain
  * demo ledger (a year of history); assertions compare the page with itself
  * rather than with fixed demo numbers.
  */
@@ -24,30 +24,28 @@ function amountIn(text: string): number {
   return match[1] ? -value : value;
 }
 
-const journey = (page: Page) => page.getByRole("region", { name: "Came in and went out" });
-const months = (page: Page) => journey(page).getByRole("radio");
+const record = (page: Page) => page.getByRole("region", { name: "Month by month" });
+/** The months in the table, oldest first: each column heading is its month's link. */
+const months = (page: Page) => record(page).getByRole("columnheader");
 
-/** Opens Trends and waits for the journey's months, which appear once the chart is measured. */
-async function openTrends(page: Page, path = "/trends") {
-  await page.goto(path);
-  await expect(journey(page).getByRole("radiogroup")).toBeVisible();
-}
-
-/** The statement's Left over for the month it names. */
-async function statement(page: Page): Promise<{ month: string; leftOver: number }> {
-  const text = await journey(page).locator("[aria-live]").innerText();
-  const match = /Left over · (\w+ \d{4})/.exec(text);
-  if (!match) throw new Error(`No month in the statement: ${text}`);
-  return { month: match[1]!, leftOver: amountIn(text.slice(match.index + match[0].length)) };
-}
-
-/** A month's Left over in the Month by month table. */
-async function recordedLeftOver(page: Page, month: string): Promise<number> {
-  const row = page
-    .getByRole("region", { name: "Month by month" })
+/** A figure row of the table ("Came in", "Went out", "Left over"), one amount per month. */
+async function figures(page: Page, term: string): Promise<number[]> {
+  const row = record(page)
     .getByRole("row")
-    .filter({ has: page.getByRole("rowheader", { name: month }) });
-  return amountIn(await row.getByRole("cell").nth(2).innerText());
+    .filter({ has: page.getByRole("rowheader", { name: term, exact: true }) });
+  return (await row.getByRole("cell").allInnerTexts()).map(amountIn);
+}
+
+/** A figure in the totals card ("Came in", "Went out", "Left over"). */
+async function total(page: Page, term: string): Promise<number> {
+  const text = await page
+    .getByRole("region", { name: /months$/ })
+    .locator("dl > div")
+    .filter({ has: page.getByRole("term").filter({ hasText: new RegExp(`^${term}$`) }) })
+    .getByRole("definition")
+    .first()
+    .innerText();
+  return amountIn(text);
 }
 
 test("Trends sits behind Cash flow's local switch, and Cash flow stays current", async ({
@@ -72,59 +70,46 @@ test("Trends sits behind Cash flow's local switch, and Cash flow stays current",
   await expect(page).toHaveURL(/\/cash-flow$/);
 });
 
-test("shows six complete months by default, the latest selected, never the current month", async ({
+test("shows six complete months by default, oldest first, never the current month", async ({
   page,
 }) => {
-  await openTrends(page);
+  await page.goto("/trends");
   await expect(months(page)).toHaveCount(6);
-  const latest = monthLabel(lastComplete());
-  await expect(months(page).last()).toHaveAccessibleName(latest);
-  await expect(months(page).last()).toHaveAttribute("aria-checked", "true");
+  await expect(months(page).last().getByRole("link")).toHaveAccessibleName(
+    monthLabel(lastComplete()),
+  );
+  await expect(months(page).first().getByRole("link")).toHaveAccessibleName(
+    monthLabel(addMonths(lastComplete(), -5)),
+  );
   await expect(
-    journey(page).getByRole("radio", { name: monthLabel(yearMonthOf(today())) }),
+    record(page).getByRole("link", { name: monthLabel(yearMonthOf(today())) }),
   ).toHaveCount(0);
-  expect((await statement(page)).month).toBe(latest);
   await expect(page.getByRole("link", { name: "6 months" })).toHaveAttribute(
     "aria-current",
     "true",
   );
 });
 
-test("choosing a month by keyboard, click or pointer shows its exact figures", async ({ page }) => {
-  await openTrends(page);
-  const latest = monthLabel(lastComplete());
-  const previous = monthLabel(addMonths(lastComplete(), -1));
-  const first = monthLabel(addMonths(lastComplete(), -5));
+test("every month and the whole window add up: came in − went out = left over", async ({
+  page,
+}) => {
+  await page.goto("/trends");
+  const [income, spending, leftOver] = await Promise.all([
+    figures(page, "Came in"),
+    figures(page, "Went out"),
+    figures(page, "Left over"),
+  ]);
+  expect(income).toHaveLength(6);
+  income.forEach((inc, i) => expect(leftOver[i]).toBe(inc - spending[i]!));
 
-  // Keyboard: the months are one radio group.
-  await months(page).last().focus();
-  await page.keyboard.press("ArrowLeft");
-  await expect(journey(page).getByRole("radio", { name: previous })).toHaveAttribute(
-    "aria-checked",
-    "true",
-  );
-  await expect(journey(page).getByRole("radio", { name: previous })).toBeFocused();
-  let shown = await statement(page);
-  expect(shown.month).toBe(previous);
-  expect(shown.leftOver).toBe(await recordedLeftOver(page, previous));
-  await page.keyboard.press("Home");
-  expect((await statement(page)).month).toBe(first);
-  await page.keyboard.press("End");
-  expect((await statement(page)).month).toBe(latest);
-
-  // Click (a tap on a phone).
-  await journey(page).getByRole("radio", { name: first }).click();
-  shown = await statement(page);
-  expect(shown.month).toBe(first);
-  expect(shown.leftOver).toBe(await recordedLeftOver(page, first));
-
-  // Pointer: hovering a month shows it too.
-  await journey(page).getByRole("radio", { name: previous }).hover();
-  expect((await statement(page)).month).toBe(previous);
+  const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+  expect(await total(page, "Came in")).toBe(sum(income));
+  expect(await total(page, "Went out")).toBe(sum(spending));
+  expect(await total(page, "Left over")).toBe(sum(leftOver));
 });
 
 test("switches to twelve months and back, each with its own URL", async ({ page }) => {
-  await openTrends(page);
+  await page.goto("/trends");
   await page.getByRole("link", { name: "12 months" }).click();
   await expect(page).toHaveURL(/\/trends\?range=12$/);
   await expect(months(page)).toHaveCount(12);
@@ -132,7 +117,7 @@ test("switches to twelve months and back, each with its own URL", async ({ page 
     "aria-current",
     "true",
   );
-  expect((await statement(page)).month).toBe(monthLabel(lastComplete()));
+  await expect(page.getByRole("heading", { name: "Twelve months" })).toBeVisible();
 
   await page.getByRole("link", { name: "6 months" }).click();
   await expect(page).toHaveURL(/\/trends$/);
@@ -140,23 +125,17 @@ test("switches to twelve months and back, each with its own URL", async ({ page 
 });
 
 test("each month opens its own Cash flow page", async ({ page }) => {
-  await openTrends(page);
+  await page.goto("/trends");
   const month = addMonths(lastComplete(), -2);
-  await page
-    .getByRole("region", { name: "Month by month" })
+  await record(page)
     .getByRole("link", { name: monthLabel(month) })
     .click();
   await expect(page).toHaveURL(new RegExp(`/cash-flow\\?month=${month}$`));
   await expect(page.getByText("Full month")).toBeVisible();
-
-  // The statement leads to the selected month's page as well.
-  await openTrends(page);
-  await journey(page).getByRole("link", { name: "Open on Cash flow" }).click();
-  await expect(page).toHaveURL(new RegExp(`/cash-flow\\?month=${lastComplete()}$`));
 });
 
 test("What changed opens the rows behind each half's figure", async ({ page }) => {
-  await openTrends(page);
+  await page.goto("/trends");
   const panel = page.getByRole("region", { name: "What changed" });
   const drivers = panel.getByRole("list", { name: /Categories that were (higher|lower)/ }).first();
   const recent = drivers.getByRole("listitem").first().getByRole("link").nth(1);
@@ -170,25 +149,23 @@ test("What changed opens the rows behind each half's figure", async ({ page }) =
 });
 
 for (const width of [390, 820, 1280]) {
-  test(`fits ${width}px: the journey, then the exact record ${width < 768 ? "as rows" : "as a table"}`, async ({
+  test(`fits ${width}px: the months ${width < 768 ? "as rows" : "as the chart and its table"}`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 844 });
-    await openTrends(page);
+    await page.goto("/trends");
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
     expect(overflow, `horizontal overflow at ${width}px`).toBe(0);
-    await expect(journey(page).locator("svg[aria-hidden]").last()).toBeVisible();
-    const record = page.getByRole("region", { name: "Month by month" });
     if (width < 768) {
-      await expect(record.getByRole("table")).toBeHidden();
-      await expect(record.getByRole("list", { name: "Months" }).getByRole("listitem")).toHaveCount(
-        6,
-      );
+      await expect(record(page).getByRole("table")).toBeHidden();
+      await expect(
+        record(page).getByRole("list", { name: "Months" }).getByRole("listitem"),
+      ).toHaveCount(6);
     } else {
-      await expect(record.getByRole("table")).toBeVisible();
-      await expect(record.getByRole("list", { name: "Months" })).toBeHidden();
+      await expect(record(page).getByRole("table")).toBeVisible();
+      await expect(record(page).getByRole("list", { name: "Months" })).toBeHidden();
     }
   });
 }
