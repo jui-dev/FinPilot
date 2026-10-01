@@ -48,15 +48,15 @@ export default async function AccountsPage() {
   return (
     <div className="flex flex-col gap-5 md:gap-6">
       {/* Phones too: New account stays on the title's line, so net worth comes up sooner. */}
-      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1">
-        <h1 className="text-title font-bold text-navy">Accounts</h1>
-        <div className="md:row-span-2">
-          <NewAccountButton today={today} />
-        </div>
-        <p className="col-span-2 text-body text-ink-2 md:col-span-1">
-          Your balances, and whether each still matches what you verified.
-        </p>
-      </header>
+      <div className="flex items-start justify-between gap-x-6 gap-y-3">
+        <header className="min-w-0">
+          <h1 className="text-title font-bold text-navy">Accounts</h1>
+          <p className="mt-1 text-body text-ink-2">
+            Your balances, and whether each still matches what you verified.
+          </p>
+        </header>
+        <NewAccountButton today={today} />
+      </div>
 
       <PositionSummary position={position} />
 

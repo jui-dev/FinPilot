@@ -46,34 +46,34 @@ describe("balanceReading", () => {
 });
 
 describe("PositionSummary", () => {
-  it("reads money owed on cards as Owe", () => {
+  it("reads money owed on cards as You owe", () => {
     const html = summary([
       { accountId: "bank", type: "bank", balance: taka(133_000) },
       { accountId: "visa", type: "credit_card", balance: taka(-6_000) },
     ]);
-    expect(html).toContain("Own ৳ 1,33,000");
-    expect(html).toContain("Owe ৳ 6,000");
+    expect(html).toContain("You own ৳ 1,33,000");
+    expect(html).toContain("You owe ৳ 6,000");
     expect(html).not.toContain("Credit on cards");
   });
 
-  it("reads a card's credit balance as Credit on cards, never Owe", () => {
+  it("reads a card's credit balance as Credit on cards, never You owe", () => {
     const html = summary([
       { accountId: "bank", type: "bank", balance: taka(10_000) },
       { accountId: "visa", type: "credit_card", balance: taka(500) },
     ]);
     expect(html).toContain("Credit on cards ৳ 500");
-    expect(html).not.toContain("Owe");
+    expect(html).not.toContain("You owe");
     expect(html).toContain("Net worth ৳ 10,500");
   });
 
-  it("reads Owe ৳0 when nothing is owed and no credit is held", () => {
+  it("reads You owe ৳0 when nothing is owed and no credit is held", () => {
     expect(summary([{ accountId: "bank", type: "bank", balance: taka(1_000) }])).toContain(
-      "Owe ৳ 0",
+      "You owe ৳ 0",
     );
   });
 
-  it("keeps the minus on a negative Own", () => {
+  it("keeps the minus on a negative You own", () => {
     const html = summary([{ accountId: "cash", type: "cash", balance: taka(-300) }]);
-    expect(html).toContain("Own − ৳ 300");
+    expect(html).toContain("You own − ৳ 300");
   });
 });

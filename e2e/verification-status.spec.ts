@@ -90,15 +90,19 @@ test("an account reads as verified, then as changed once earlier history moves",
   await backdatedExpense(page, name, "250", daysAgo(1));
 
   const after = await metaOf(page, name);
-  expect(after).toContain("Changed since");
+  expect(after).toMatch(/Changed · ৳\s*250 off/);
   expect(after).not.toMatch(/Verified \d/);
-  // How far off, and the two amounts compared: never which entry caused it.
-  expect(after).toMatch(/৳\s*250 off/);
-  expect(after).toMatch(/Recorded ৳\s*4,750 for that day · verified ৳\s*5,000/);
+
+  // The tag opens what changed: the two amounts compared, never which entry caused it.
+  const row = page.getByRole("listitem").filter({ hasText: name }).first();
+  await openPanel(page, () => row.getByRole("button", { name: /^Changed/ }).click());
+  const details = page.getByRole("dialog");
+  await expect(details).toContainText("has changed since");
+  await expect(details).toContainText(/Recorded for .*৳\s*4,750/);
+  await expect(details).toContainText(/You verified\s*৳\s*5,000/);
 
   // The evidence: the account's entries through the checkpoint date, as they stand now.
-  const row = page.getByRole("listitem").filter({ hasText: name }).first();
-  await row.getByRole("link", { name: /^Review entries through / }).click();
+  await details.getByRole("link", { name: /^Review entries through / }).click();
   await expect(page).toHaveURL(
     /\/activity\?account=[^&]+&from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}$/,
   );

@@ -1,10 +1,10 @@
-import { CheckCircle2, CircleAlert, CircleDashed } from "lucide-react";
+import { CheckCircle2, CircleDashed } from "lucide-react";
 import Link from "next/link";
 
 import { addDays, type CalendarDate } from "@/domain/calendar-date";
 import type { AccountType } from "@/domain/ledger/accounts";
 import type { Verification } from "@/domain/ledger/verification";
-import type { Money as MoneyValue } from "@/domain/money";
+import { sum, type Money as MoneyValue } from "@/domain/money";
 
 import { activityHref } from "../activity/links";
 import { shortDate } from "../format";
@@ -16,6 +16,7 @@ import { EmptyState, Tag } from "../ui/panel";
 import { AccountActions } from "./account-actions";
 import { balanceReading } from "./balance-reading";
 import { verificationView } from "./verification-view";
+import { ChangedDetails } from "./changed-details";
 import { VerifyBalanceButton } from "./verify-balance-panel";
 
 export interface AccountView {
@@ -37,18 +38,17 @@ const GROUPS: ReadonlyArray<{ title: string; types: readonly AccountType[] }> = 
 
 /**
  * Desktop: one grid for the column names and every row, shared through
- * subgrid, so balances, verifications and their Verify buttons line up down
- * the page whatever each row holds. The account column is capped, so a balance
- * stays close to its name; the verification is capped at about one line of a
- * changed checkpoint's evidence, and Verify closes it on the right. The rest
- * goes to the management actions, which sit at the row's far end. The
- * zero-width first and last tracks are the side padding (the column gap on
- * either side of them), which keeps row borders full-bleed; the gap is 16px
- * until xl, so 1024px fits every column.
- * Tracks: pad · glyph · account · balance · verification · Verify · manage · pad.
+ * subgrid, so balances, verifications and their actions line up down the
+ * page whatever each row holds. Four columns — the account (its icon inside),
+ * Balance (a fixed-width pill), Verification and Action — each as wide as its content, with the
+ * spare width shared out evenly between them (justify-between), so the gaps
+ * are equal and nothing is left empty at the row's end. Rows, the head and the
+ * group bands pad themselves, which keeps row borders full-bleed.
  */
 const DESKTOP_GRID =
-  "lg:grid lg:grid-cols-[0_2.25rem_minmax(11rem,20rem)_auto_minmax(max-content,34rem)_auto_minmax(max-content,1fr)_0] lg:gap-x-4 xl:gap-x-5";
+  "lg:grid lg:grid-cols-[minmax(14rem,max-content)_max-content_max-content_max-content] lg:justify-between lg:gap-x-8 xl:gap-x-10";
+/** Each level's side padding on desktop: the table's edge, inside the full-bleed rows. */
+const EDGE = "lg:px-6 xl:px-7";
 /** A level between the grid and a row: it passes the columns through. */
 const SUBGRID = "lg:col-span-full lg:grid lg:grid-cols-subgrid";
 
@@ -75,7 +75,7 @@ export function AccountList({
     <section
       aria-labelledby="accounts-balances"
       className={cn(
-        "overflow-clip rounded-panel border border-line bg-surface shadow-card",
+        "overflow-clip rounded-panel border border-line-soft bg-surface shadow-card",
         DESKTOP_GRID,
       )}
     >
@@ -87,12 +87,19 @@ export function AccountList({
         aria-hidden
         className={cn(
           SUBGRID,
-          "hidden border-b border-line py-2.5 text-micro font-semibold tracking-wider text-navy uppercase",
+          // A light-blue gradient with blue labels: the table's head, apart from the warm group rows.
+          EDGE,
+          // A subgrid keeps its own gap unless told otherwise: the rows', exactly.
+          "lg:gap-x-8 xl:gap-x-10",
+          "hidden border-b border-line-soft bg-[linear-gradient(90deg,color-mix(in_srgb,var(--color-mist)_80%,transparent)_0%,color-mix(in_srgb,var(--color-mist)_15%,transparent)_100%)] py-3.5 text-micro font-bold tracking-[0.08em] text-ocean uppercase",
         )}
       >
-        <span className="col-start-3">Account</span>
-        <span className="text-right">Balance</span>
-        <span className="col-span-2">Verification</span>
+        {/* Over the account's name, past its icon. */}
+        <span className="pl-12">Account</span>
+        <span className="w-44 text-center">Balance</span>
+        <span>Verification</span>
+        {/* Indented as far as the Verify button's own padding, so the word sits over its icon. */}
+        <span className="pl-3">Action</span>
       </div>
 
       {groups.map((group, index) => (
@@ -139,15 +146,29 @@ function Group({
 }) {
   return (
     <section className={SUBGRID}>
-      {/* A warm band between hairlines: the ledger's sections, inside one card. */}
+      {/* A warm band between hairlines: the ledger's sections, inside one card, each with its count and total. */}
       <h3
         className={cn(
-          "border-b border-line bg-surface-subtle px-4 py-2 text-meta font-semibold md:px-5 lg:col-span-full lg:px-4 xl:px-5",
-          muted ? "text-ink-2" : "text-navy",
+          // A warm gradient: each group's band, fading toward the row's end.
+          "flex items-baseline justify-between gap-3 border-b border-line-soft bg-[linear-gradient(90deg,var(--color-surface-hover)_0%,var(--color-surface-subtle)_45%,var(--color-surface)_100%)] px-4 py-2.5 md:px-5",
+          // Desktop: the group's total sits in the Balance column, over its accounts' balances.
+          "lg:col-span-full lg:grid lg:grid-cols-subgrid lg:gap-x-8 xl:gap-x-10",
+          EDGE,
           !first && "border-t",
         )}
       >
-        {title}
+        <span
+          className={cn(
+            "text-micro font-semibold tracking-[0.08em] uppercase lg:col-start-1",
+            muted ? "text-ink-2" : "text-navy",
+          )}
+        >
+          {title}
+          <span className="ml-2 font-medium tracking-normal text-ink-2 normal-case">
+            {accounts.length === 1 ? "1 account" : `${accounts.length} accounts`}
+          </span>
+        </span>
+        {!muted && <GroupTotal accounts={accounts} />}
       </h3>
       <ul className={SUBGRID}>
         {accounts.map((account) => (
@@ -193,35 +214,39 @@ function AccountRow({
     <li
       className={cn(
         SUBGRID,
-        "grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b border-line px-4 py-3 last:border-b-0",
-        "md:grid-cols-[2.25rem_minmax(0,1fr)_auto_auto_auto] md:px-5",
+        "grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b border-line-soft px-4 py-3 transition-colors last:border-b-0 hover:bg-canvas",
+        "md:grid-cols-[2.25rem_minmax(0,1fr)_auto_auto] md:px-5",
         // A subgrid keeps its own gap unless told otherwise: the parent's, exactly.
-        "lg:gap-x-4 lg:px-0 xl:gap-x-5 lg:py-3.5",
+        "lg:gap-x-8 xl:gap-x-10 lg:py-3.5",
+        EDGE,
       )}
     >
       <Glyph
         icon={accountIcon(account.type)}
         tone={account.archived ? "neutral" : "info"}
-        className="col-start-1 row-[1/3] lg:col-start-2"
+        className="col-start-1 row-[1/3] lg:col-start-1 lg:justify-self-start"
       />
 
       <Link
         href={`/activity?account=${account.id}`}
         className={cn(
-          "col-start-2 row-start-1 min-w-0 self-end truncate font-semibold hover:underline hover:underline-offset-4 lg:col-start-3",
+          "col-start-2 row-start-1 min-w-0 self-end truncate font-semibold hover:underline hover:underline-offset-4 lg:col-start-1 lg:pl-12",
           account.archived ? "text-ink-2" : "text-ink",
         )}
       >
         {account.name}
       </Link>
 
-      <p className="col-[2/-1] row-start-2 min-w-0 self-start truncate text-meta text-ink-2 md:col-end-3 md:self-center lg:col-start-3 lg:self-start lg:col-end-4">
+      <p className="col-[2/-1] row-start-2 min-w-0 self-start truncate text-meta text-ink-2 md:col-end-3 md:self-center lg:col-start-1 lg:col-end-2 lg:self-start lg:pl-12">
         {showType ? `${ACCOUNT_TYPE_LABEL[account.type]} · since ${opened}` : `Since ${opened}`}
       </p>
 
       <p
         className={cn(
-          "col-[3/-1] row-start-1 self-end text-right whitespace-nowrap lg:col-start-4 lg:col-end-5 lg:row-[1/3] lg:self-center",
+          "col-[3/-1] row-start-1 self-end text-right whitespace-nowrap lg:col-start-2 lg:col-end-3 lg:row-[1/3] lg:self-center",
+          // Desktop: a fixed-width pill, the amount centred in it, so the column keeps one
+          // width and straight edges whatever the amount's length.
+          "lg:w-44 lg:rounded-full lg:bg-surface-subtle lg:py-1.5 lg:text-center lg:shadow-[inset_0_0_0_1px_var(--color-line-soft)]",
           account.archived ? "text-ink-2" : "text-navy",
         )}
       >
@@ -234,62 +259,36 @@ function AccountRow({
       {marked && (
         <div
           className={cn(
-            "row-start-3 md:col-start-3 md:col-end-4 md:row-start-2 md:justify-self-end lg:col-start-5 lg:col-end-6 lg:justify-self-start",
-            changed ? "col-[2/-1] lg:row-start-1 lg:self-end" : "col-start-2 lg:row-[1/3]",
+            "col-start-2 row-start-3 md:col-start-3 md:col-end-4 md:row-start-2 md:justify-self-end lg:col-start-3 lg:col-end-4 lg:row-[1/3] lg:justify-self-start",
           )}
         >
-          <VerificationMarker view={view} today={today} />
+          <VerificationMarker account={account} view={view} today={today} />
         </div>
       )}
 
-      {!account.archived && (
-        <div
-          className={cn(
-            "col-start-3 justify-self-end md:col-start-4 md:row-start-2 lg:col-start-6",
-            changed ? "row-start-5 lg:row-start-1 lg:self-end" : "row-start-3 lg:row-[1/3]",
+      {/* The Action cell: Verify, then whatever managing the ledger allows. */}
+      {(!account.archived || managed) && (
+        <div className="col-start-3 row-start-3 flex items-center justify-end gap-1 justify-self-end md:col-[4/-1] md:row-start-2 lg:col-start-4 lg:col-end-5 lg:row-[1/3] lg:justify-self-start">
+          {!account.archived && (
+            <VerifyBalanceButton
+              id={account.id}
+              name={account.name}
+              type={account.type}
+              balance={account.balance}
+              today={today}
+              emphasized={changed}
+            />
           )}
-        >
-          <VerifyBalanceButton
-            id={account.id}
-            name={account.name}
-            type={account.type}
-            balance={account.balance}
-            today={today}
-            emphasized={changed}
-          />
-        </div>
-      )}
-
-      {managed && (
-        <div
-          className={cn(
-            "justify-self-end md:col-start-5 md:row-start-2 lg:col-start-7",
-            // Phones: beside a changed row's Verify; otherwise the first free line.
-            changed
-              ? "col-start-2 row-start-5 lg:row-start-1 lg:self-end"
-              : cn("col-[2/-1] lg:row-[1/3]", marked ? "row-start-4" : "row-start-3"),
+          {managed && (
+            <AccountActions
+              id={account.id}
+              name={account.name}
+              archived={account.archived}
+              canArchive={canArchive}
+              canDelete={canDelete}
+            />
           )}
-        >
-          <AccountActions
-            id={account.id}
-            name={account.name}
-            archived={account.archived}
-            canArchive={canArchive}
-            canDelete={canDelete}
-          />
         </div>
-      )}
-
-      {/* Desktop: the evidence fills the verification and Verify columns but never
-          sizes them (w-0, then min-w-full), so a long sentence wraps instead of
-          pushing the management actions out of the row. */}
-      {changed && (
-        <ChangedEvidence
-          account={account}
-          view={view}
-          today={today}
-          className="col-[2/-1] row-start-4 md:row-start-3 lg:col-start-5 lg:col-end-7 lg:row-start-2 lg:w-0 lg:min-w-full"
-        />
       )}
     </li>
   );
@@ -298,14 +297,32 @@ function AccountRow({
 type View = ReturnType<typeof verificationView>;
 
 /**
+ * A group's total, read as its accounts are: a card group's is owed (or held
+ * as credit). Every balance is the ledger's; this only adds the group's rows.
+ */
+function GroupTotal({ accounts }: { readonly accounts: readonly AccountView[] }) {
+  const total = sum(accounts.map((a) => a.balance));
+  const reading = balanceReading(accounts[0]!.type, total);
+  return (
+    // A sky-blue pill, the balances' width: the group's total, apart from its accounts'.
+    <span className="rounded-full bg-mist/45 px-3 py-0.5 text-right text-body font-bold whitespace-nowrap text-ocean tabular-nums shadow-[inset_0_0_0_1px_rgb(70_103_141/0.1)] lg:col-start-2 lg:w-44 lg:text-center">
+      <Money amount={reading.amount} sign={reading.sign} />
+      {reading.note && <span className="ml-1 text-meta font-medium">{reading.note}</span>}
+    </span>
+  );
+}
+
+/**
  * The balance's verification, always stated: never verified is a quiet,
  * neutral marker (an invitation, not a warning); verified is calm; changed is
  * the only warning.
  */
 function VerificationMarker({
+  account,
   view,
   today,
 }: {
+  readonly account: AccountView;
   readonly view: View;
   readonly today: CalendarDate;
 }) {
@@ -326,9 +343,18 @@ function VerificationMarker({
     );
   }
   return (
-    <Tag tone="warning" icon={<CircleAlert aria-hidden className="size-3.5" />}>
-      Changed since {day} · <Money amount={view.off} sign="none" /> off
-    </Tag>
+    // The only warning: the warning ink on white, never a yellow fill.
+    // Short, so the column stays narrow: what changed opens in a dialog.
+    <ChangedDetails
+      label={
+        <>
+          Changed · <Money amount={view.off} sign="none" /> off
+        </>
+      }
+      title={`${account.name} has changed since ${day}`}
+    >
+      <ChangedEvidence account={account} view={view} today={today} />
+    </ChangedDetails>
   );
 }
 
@@ -343,20 +369,20 @@ function ChangedEvidence({
   account,
   view,
   today,
-  className,
 }: {
   readonly account: AccountView;
   readonly view: Extract<View, { status: "changed" }>;
   readonly today: CalendarDate;
-  readonly className?: string;
 }) {
   const day = shortDate(view.asOf, today);
   const amount = (value: MoneyValue) => {
     const reading = balanceReading(account.type, value);
     return (
       <>
-        <Money amount={reading.amount} sign={reading.sign} className="text-ink" />
-        {reading.note && ` ${reading.note}`}
+        <Money amount={reading.amount} sign={reading.sign} />
+        {reading.note && (
+          <span className="ml-1 text-meta font-medium text-ink-2">{reading.note}</span>
+        )}
       </>
     );
   };
@@ -369,22 +395,37 @@ function ChangedEvidence({
           range: { start: account.openedOn, end: addDays(view.asOf, 1) },
         })
       : null;
+  const figure = "mt-1 text-figure font-bold whitespace-nowrap text-navy tabular-nums";
   return (
-    <p
-      className={cn(
-        "rounded-r-control border-l-2 border-warning bg-surface-subtle px-3 py-2 text-meta text-ink-2",
-        className,
-      )}
-    >
-      Recorded {amount(view.recorded)} for that day · verified {amount(view.verified)}
+    <div className="flex flex-col gap-4">
+      <dl className="grid grid-cols-2 gap-3">
+        <div className="rounded-[12px] bg-surface-subtle px-4 py-3 shadow-[inset_0_0_0_1px_var(--color-line-soft)]">
+          <dt className="text-micro font-semibold tracking-[0.08em] text-ink-2 uppercase">
+            Recorded for {day}
+          </dt>
+          <dd className={figure}>{amount(view.recorded)}</dd>
+        </div>
+        <div className="rounded-[12px] bg-mist/35 px-4 py-3 shadow-[inset_0_0_0_1px_rgb(70_103_141/0.14)]">
+          <dt className="text-micro font-semibold tracking-[0.08em] text-ocean uppercase">
+            You verified
+          </dt>
+          <dd className={figure}>{amount(view.verified)}</dd>
+        </div>
+      </dl>
+      <p className="text-body text-ink-2">
+        Entries dated on or before {day} have changed since you verified, so what&apos;s recorded
+        for that day is now{" "}
+        <Money amount={view.off} sign="none" className="font-semibold text-warning" /> off what you
+        counted. Review them, then verify again to settle it.
+      </p>
       {evidence && (
-        <>
-          {" · "}
-          <Link href={evidence} className={cn("font-medium whitespace-nowrap text-ink", linkClass)}>
-            Review entries through {day}
-          </Link>
-        </>
+        <Link
+          href={evidence}
+          className={cn("self-start text-body font-medium text-ocean", linkClass)}
+        >
+          Review entries through {day}
+        </Link>
       )}
-    </p>
+    </div>
   );
 }

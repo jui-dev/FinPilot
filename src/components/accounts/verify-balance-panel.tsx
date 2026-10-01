@@ -89,7 +89,7 @@ export function VerifyBalanceButton({
   return (
     <>
       <Button
-        variant={emphasized ? "secondary" : "ghost"}
+        variant={emphasized ? "soft" : "ghost"}
         size="sm"
         className={ROW_ACTION}
         icon={<CheckCircle2 className="size-4" />}

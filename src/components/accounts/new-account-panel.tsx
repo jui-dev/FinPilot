@@ -58,7 +58,7 @@ export function NewAccountButton({ today }: { readonly today: CalendarDate }) {
   return (
     <>
       <Button
-        variant="secondary"
+        variant="primary"
         icon={<Plus className="size-4" strokeWidth={2.25} />}
         onClick={() => {
           reset();
