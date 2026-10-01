@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { choose, describeEntry } from "./quick-add-steps";
 
 /**
  * Activity as a workspace: filters that live in the URL, the scope and totals
@@ -18,9 +19,9 @@ async function addExpense(page: Page, amount: string, description: string) {
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Amount in taka").fill(amount);
   await dialog.getByRole("radio", { name: "Expense" }).click();
-  await dialog.getByRole("button", { name: "Food & Dining" }).click();
-  await dialog.getByRole("button", { name: "Cash", exact: true }).click();
-  await dialog.getByLabel("Description").fill(description);
+  await choose(dialog, "Category", "Food & Dining");
+  await choose(dialog, "Paid from", "Cash");
+  await describeEntry(dialog, description);
   await dialog.getByRole("button", { name: /Save expense/ }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
 }

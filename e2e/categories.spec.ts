@@ -122,10 +122,9 @@ test("an archived category leaves Quick Add, keeps its records, and comes back",
   await expect(action(page, "Restore", "Entertainment")).toBeVisible();
 
   const quickAdd = await openQuickAdd(page);
-  const more = quickAdd.getByRole("button", { name: /more$/ });
-  if (await more.isVisible()) await more.click();
-  await expect(quickAdd.getByRole("button", { name: "Groceries", exact: true })).toBeVisible();
-  await expect(quickAdd.getByRole("button", { name: "Entertainment", exact: true })).toHaveCount(0);
+  await quickAdd.getByRole("button", { name: /^Category/ }).click();
+  await expect(quickAdd.getByRole("option", { name: "Groceries", exact: true })).toBeVisible();
+  await expect(quickAdd.getByRole("option", { name: "Entertainment", exact: true })).toHaveCount(0);
   // Quick Add selects; it never manages.
   await expect(quickAdd.getByRole("link", { name: /categor/i })).toHaveCount(0);
   await quickAdd.getByRole("button", { name: "Close" }).click();
@@ -169,10 +168,9 @@ test("a transfer fee chooses its category, whatever Fees & Charges is called", a
   await openCategories(page);
   const quickAdd = await openQuickAdd(page);
   await quickAdd.getByRole("radio", { name: "Transfer" }).click();
-  await quickAdd.getByRole("button", { name: "+ Add a fee" }).click();
-  await expect(quickAdd.getByLabel("Fee category")).toHaveValue(/.+/);
-  await expect(quickAdd.getByLabel("Fee category").locator("option:checked")).toHaveText(
-    "Fees & Charges",
+  await quickAdd.getByRole("button", { name: "Add a fee" }).click();
+  await expect(quickAdd.getByRole("button", { name: /^Fee category/ })).toHaveAccessibleName(
+    "Fee category Fees & Charges",
   );
 });
 

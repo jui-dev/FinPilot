@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { formatMoney, money } from "@/domain/money";
 
 import { resetDemoInPlace } from "./demo-ledger";
+import { choose } from "./quick-add-steps";
 
 /**
  * Roadmap flow 4: Quick Add → the Overview updates (Available, signals).
@@ -91,10 +92,10 @@ test("Quick Add on the Overview: Available drops by the expense and Attention fl
   const quickAdd = page.getByRole("dialog");
   await quickAdd.getByLabel("Amount in taka").fill(String(EXPENSE));
   await quickAdd.getByRole("radio", { name: "Expense" }).click();
-  await quickAdd.getByRole("button", { name: "Food & Dining" }).click();
-  await quickAdd.getByRole("button", { name, exact: true }).click();
-  await expect(quickAdd.getByRole("button", { name: "Today", exact: true })).toHaveAttribute(
-    "aria-pressed",
+  await choose(quickAdd, "Category", "Food & Dining");
+  await choose(quickAdd, "Paid from", name);
+  await expect(quickAdd.getByRole("radio", { name: "Today", exact: true })).toHaveAttribute(
+    "aria-checked",
     "true",
   );
   await quickAdd.getByRole("button", { name: /Save expense/ }).click();

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { choose, describeEntry } from "./quick-add-steps";
 
 /**
  * Cash flow (Stages 5a–5c): the current month to date and complete past
@@ -45,13 +46,9 @@ async function addExpense(
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Amount in taka").fill(amount);
   await dialog.getByRole("radio", { name: "Expense" }).click();
-  const categoryButton = dialog.getByRole("button", { name: category, exact: true });
-  if (!(await categoryButton.isVisible())) {
-    await dialog.getByRole("button", { name: /^\+\d+ more$/ }).click();
-  }
-  await categoryButton.click();
-  await dialog.getByRole("button", { name: account, exact: true }).click();
-  await dialog.getByLabel("Description").fill(description);
+  await choose(dialog, "Category", category);
+  await choose(dialog, "Paid from", account);
+  await describeEntry(dialog, description);
   await dialog.getByRole("button", { name: /Save expense/ }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
 }

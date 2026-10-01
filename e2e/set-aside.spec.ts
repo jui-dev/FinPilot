@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { choose } from "./quick-add-steps";
 
 /**
  * Stage 7: Set aside, end to end on the real ledger. Each test makes its own
@@ -116,8 +117,8 @@ test("a purpose from creation to archive, with a real shortfall in between", asy
   const quickAdd = page.getByRole("dialog");
   await quickAdd.getByLabel("Amount in taka").fill("500");
   await quickAdd.getByRole("radio", { name: "Expense" }).click();
-  await quickAdd.getByRole("button", { name: "Food & Dining" }).click();
-  await quickAdd.getByRole("button", { name: account, exact: true }).click();
+  await choose(quickAdd, "Category", "Food & Dining");
+  await choose(quickAdd, "Paid from", account);
   await quickAdd.getByRole("button", { name: /Save expense/ }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
 
@@ -232,8 +233,8 @@ test("Set aside fits every width with representative data and no horizontal scro
   const quickAdd = page.getByRole("dialog");
   await quickAdd.getByLabel("Amount in taka").fill("700");
   await quickAdd.getByRole("radio", { name: "Expense" }).click();
-  await quickAdd.getByRole("button", { name: "Food & Dining" }).click();
-  await quickAdd.getByRole("button", { name: account, exact: true }).click();
+  await choose(quickAdd, "Category", "Food & Dining");
+  await choose(quickAdd, "Paid from", account);
   await quickAdd.getByRole("button", { name: /Save expense/ }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
 

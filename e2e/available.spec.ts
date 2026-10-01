@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { choose } from "./quick-add-steps";
 
 /**
  * Stage 8: the Available area. Available is the global destination; its area
@@ -71,8 +72,8 @@ async function spend(page: Page, account: string, amount: string) {
   const quickAdd = page.getByRole("dialog");
   await quickAdd.getByLabel("Amount in taka").fill(amount);
   await quickAdd.getByRole("radio", { name: "Expense" }).click();
-  await quickAdd.getByRole("button", { name: "Food & Dining" }).click();
-  await quickAdd.getByRole("button", { name: account, exact: true }).click();
+  await choose(quickAdd, "Category", "Food & Dining");
+  await choose(quickAdd, "Paid from", account);
   await quickAdd.getByRole("button", { name: /Save expense/ }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
 }

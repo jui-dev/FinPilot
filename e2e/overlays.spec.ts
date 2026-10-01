@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { choose, describeEntry } from "./quick-add-steps";
 
 /**
  * The shared overlays (Modal, SidePanel, and both as phone sheets): closing one
@@ -40,7 +41,7 @@ const box = async (locator: Locator) => {
 async function fillEntry(page: Page, amount = "1") {
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Amount in taka").fill(amount);
-  await dialog.getByRole("button", { name: account, exact: true }).click();
+  await choose(dialog, "Paid from", account);
 }
 
 test("a side panel returns focus to its opener, after Escape and after saving", async ({
@@ -100,7 +101,7 @@ test("Undo on the toast keeps Quick Add open with the next entry intact", async 
 
   // The next entry, half typed.
   await dialog.getByLabel("Amount in taka").fill("22");
-  await dialog.getByLabel("Description").fill("The next one");
+  await describeEntry(dialog, "The next one");
 
   await page.getByRole("status").getByRole("button", { name: "Undo" }).click();
   await expect(page.getByRole("status")).toContainText("Entry removed.");

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { choose, dateEntry } from "./quick-add-steps";
 
 /**
  * Verification status on Accounts: an account reads as verified until something
@@ -65,9 +66,9 @@ async function backdatedExpense(page: Page, account: string, amount: string, iso
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Amount in taka").fill(amount);
   await dialog.getByRole("radio", { name: "Expense" }).click();
-  await dialog.getByRole("button", { name: "Food & Dining" }).click();
-  await dialog.getByRole("button", { name: account, exact: true }).click();
-  await dialog.getByLabel("Date").fill(isoDate);
+  await choose(dialog, "Category", "Food & Dining");
+  await choose(dialog, "Paid from", account);
+  await dateEntry(dialog, isoDate);
   await dialog.getByRole("button", { name: /Save expense/ }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
 }
