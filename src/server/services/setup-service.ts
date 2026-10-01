@@ -124,3 +124,8 @@ export async function deleteCategory(
 export async function getCategoryReferenceCounts(ctx: ServiceContext) {
   return setup.categoryReferenceCounts(ctx.db, ctx.ownerId);
 }
+
+/** What each category is used by, as a person sees it (recorded transactions, commitments). */
+export async function getCategoryUsage(ctx: ServiceContext) {
+  return setup.categoryUsage(ctx.db, ctx.ownerId);
+}

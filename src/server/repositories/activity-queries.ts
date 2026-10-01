@@ -145,6 +145,28 @@ export function lastRecorded(db: AppDatabase, ownerId: string, type: Transaction
     .get();
 }
 
+/**
+ * The category of the most recent transfer fee: an expense recorded in one
+ * group with a transfer (recordTransferWithFee). Quick Add starts the next fee there.
+ */
+export function lastFeeCategory(db: AppDatabase, ownerId: string): string | null {
+  const row = db
+    .select({ categoryId: t.categoryId })
+    .from(t)
+    .where(
+      and(
+        eq(t.ownerId, ownerId),
+        eq(t.type, "expense"),
+        sql`${t.groupId} IS NOT NULL`,
+        sql`EXISTS (SELECT 1 FROM active_transactions g WHERE g.group_id = ${t.groupId} AND g.type = 'transfer')`,
+      ),
+    )
+    .orderBy(desc(t.sequence))
+    .limit(1)
+    .get();
+  return row?.categoryId ?? null;
+}
+
 /** How often each category was used by a type since a date, most used first. */
 export function categoryUsage(
   db: AppDatabase,

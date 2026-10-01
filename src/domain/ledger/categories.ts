@@ -15,3 +15,15 @@ export const DEFAULT_CATEGORIES: ReadonlyArray<{ name: string; kind: CategoryKin
   { name: "Fees & Charges", kind: "expense" },
   { name: "Other", kind: "expense" },
 ];
+
+/** What the product calls each kind: "Expense Category", "Income Category". */
+export const CATEGORY_KIND_LABEL: Readonly<Record<CategoryKind, string>> = {
+  expense: "Expense Category",
+  income: "Income Category",
+};
+
+/** Why the last active category of a kind cannot be archived or deleted. */
+export const LAST_ACTIVE_CATEGORY_MESSAGE: Readonly<Record<CategoryKind, string>> = {
+  expense: "Keep at least one Expense Category active so new expenses can be recorded.",
+  income: "Keep at least one Income Category active so new income can be recorded.",
+};

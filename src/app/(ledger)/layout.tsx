@@ -41,9 +41,6 @@ export default async function LedgerLayout({ children }: { readonly children: Re
         categories: activeCategories.map((c) => ({ id: c.id, name: c.name, kind: c.kind })),
         defaults,
         today,
-        feeCategoryId:
-          activeCategories.find((c) => c.kind === "expense" && c.name === "Fees & Charges")?.id ??
-          null,
       }}
     >
       {children}

@@ -38,8 +38,6 @@ export interface QuickAddData {
   readonly categories: readonly QuickAddCategory[];
   readonly defaults: EntryDefaults;
   readonly today: CalendarDate;
-  /** Where a transfer fee is recorded (the "Fees & Charges" category, if it exists). */
-  readonly feeCategoryId: string | null;
 }
 
 type EntryType = "expense" | "income" | "transfer";
@@ -64,6 +62,7 @@ export function QuickAdd({
   const [occurredOn, setOccurredOn] = useState<string>(data.today);
   const [description, setDescription] = useState("");
   const [fee, setFee] = useState("");
+  const [feeCategoryId, setFeeCategoryId] = useState(() => defaultFeeCategory(data));
   const [showFee, setShowFee] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -77,6 +76,16 @@ export function QuickAdd({
     [data.categories, data.defaults, kind],
   );
   const accounts = data.accounts;
+  /** Where a transfer fee can go: any active expense category, chosen explicitly. */
+  const feeCategories = useMemo(
+    () =>
+      data.categories
+        .filter((c) => c.kind === "expense")
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [data.categories],
+  );
+  // Archived categories never reach Quick Add (the layout passes active ones only).
+  const noCategory = type !== "transfer" && categories.length === 0;
   const yesterday = addDays(data.today, -1);
 
   /** Applies the remembered defaults for a type (on a type change, or after saving). */
@@ -92,6 +101,7 @@ export function QuickAdd({
     setCounterAccountId(next.counterAccountId);
     setCategoryId(next.categoryId);
     setFee("");
+    setFeeCategoryId(defaultFeeCategory(data));
     setShowFee(false);
   };
 
@@ -112,9 +122,7 @@ export function QuickAdd({
             counterAccountId,
             occurredOn,
             description,
-            ...(showFee && fee.trim() !== ""
-              ? { fee, feeCategoryId: data.feeCategoryId ?? "" }
-              : {}),
+            ...(showFee && fee.trim() !== "" ? { fee, feeCategoryId } : {}),
           }
         : { type, amount, accountId, categoryId, occurredOn, description };
     const result = await recordEntryAction(input);
@@ -176,7 +184,12 @@ export function QuickAdd({
             <kbd className="font-medium">Ctrl</kbd>+<kbd className="font-medium">Enter</kbd> to save
             &amp; add another
           </p>
-          <Button variant="primary" pending={pending} onClick={() => void submit(false)}>
+          <Button
+            variant="primary"
+            pending={pending}
+            disabled={noCategory}
+            onClick={() => void submit(false)}
+          >
             {type === "transfer"
               ? cardPayment
                 ? "Save card payment"
@@ -263,22 +276,43 @@ export function QuickAdd({
               </Field>
             </div>
             {showFee ? (
-              <Field
-                label="Fee"
-                htmlFor="quick-fee"
-                error={errors.fee ?? errors.feeCategoryId}
-                hint="Recorded as its own expense, linked to this transfer."
-              >
-                <MoneyInput
-                  id="quick-fee"
-                  value={fee}
-                  onValueChange={setFee}
-                  placeholder="0"
-                  {...errorProps("quick-fee", errors.fee)}
-                />
-              </Field>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field
+                  label="Fee"
+                  htmlFor="quick-fee"
+                  error={errors.fee}
+                  hint="Recorded as its own expense, linked to this transfer."
+                >
+                  <MoneyInput
+                    id="quick-fee"
+                    value={fee}
+                    onValueChange={setFee}
+                    placeholder="0"
+                    {...errorProps("quick-fee", errors.fee)}
+                  />
+                </Field>
+                <Field
+                  label="Fee category"
+                  htmlFor="quick-fee-category"
+                  error={errors.feeCategoryId}
+                >
+                  <Select
+                    id="quick-fee-category"
+                    value={feeCategoryId}
+                    onChange={(e) => setFeeCategoryId(e.target.value)}
+                    {...errorProps("quick-fee-category", errors.feeCategoryId)}
+                  >
+                    {feeCategoryId === "" && <option value="">Choose a category</option>}
+                    {feeCategories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
             ) : (
-              data.feeCategoryId && (
+              feeCategories.length > 0 && (
                 <div>
                   <Button variant="ghost" size="sm" onClick={() => setShowFee(true)}>
                     + Add a fee
@@ -291,6 +325,12 @@ export function QuickAdd({
           <>
             <div>
               <p className="mb-2 text-meta font-medium text-ink-2">Category</p>
+              {noCategory && (
+                // Categories are managed on their own page only; Quick Add just says why it cannot record.
+                <p className="rounded-control bg-surface-subtle px-3 py-2 text-meta text-ink-2">
+                  No active {type === "income" ? "Income" : "Expense"} Categories are available.
+                </p>
+              )}
               <div className="flex flex-wrap gap-2">
                 {visible.map((category) => (
                   <Chip
@@ -447,6 +487,18 @@ function orderCategories(data: QuickAddData, kind: CategoryKind): readonly Quick
     return index === -1 ? frequent.length : index;
   };
   return [...inKind].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+}
+
+/**
+ * The category a transfer fee starts in: the last fee's, while still active,
+ * else an active "Fees & Charges". The name only suggests a starting choice —
+ * any active expense category can take the fee, so renaming it changes nothing.
+ */
+export function defaultFeeCategory(data: QuickAddData): string {
+  const expense = data.categories.filter((c) => c.kind === "expense");
+  const last = data.defaults.feeCategoryId;
+  if (last && expense.some((c) => c.id === last)) return last;
+  return expense.find((c) => c.name.toLowerCase() === "fees & charges")?.id ?? "";
 }
 
 /** The account, counter account and category a new entry of this type starts with. */

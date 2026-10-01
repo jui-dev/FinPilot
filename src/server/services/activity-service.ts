@@ -199,6 +199,8 @@ export interface EntryDefaults {
   } | null;
   /** Most used categories over the last 90 days, most used first. */
   readonly frequentCategoryIds: { readonly expense: string[]; readonly income: string[] };
+  /** The category the last transfer fee was recorded in, if any. */
+  readonly feeCategoryId: string | null;
 }
 
 export const FREQUENT_CATEGORY_WINDOW_DAYS = 90;
@@ -221,5 +223,6 @@ export async function getEntryDefaults(ctx: ServiceContext): Promise<EntryDefaul
       ? { accountId: transfer.accountId, counterAccountId: transfer.counterAccountId }
       : null,
     frequentCategoryIds: { expense: usage("expense"), income: usage("income") },
+    feeCategoryId: q.lastFeeCategory(ctx.db, ctx.ownerId),
   };
 }

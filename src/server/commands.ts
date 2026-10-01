@@ -126,7 +126,8 @@ export async function recordEntry(
       occurredOn: draft.occurredOn,
       description: draft.description,
     });
-    if (!result.ok) return rejected(result.error);
+    // The transfer has no category: a category rejection is the fee's.
+    if (!result.ok) return rejected(result.error, { categoryId: "feeCategoryId" });
     ids = [result.value.transferId, result.value.feeId];
   } else {
     const result = await ledger.recordTransaction(ctx, draft);
