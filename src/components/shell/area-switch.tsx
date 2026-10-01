@@ -12,6 +12,15 @@ export interface Area {
   readonly pages: readonly { readonly href: string; readonly label: string }[];
 }
 
+/** The ledger's rows, and the categories that classify them. */
+export const ACTIVITY_AREA: Area = {
+  label: "Activity",
+  pages: [
+    { href: "/activity", label: "Activity" },
+    { href: "/categories", label: "Categories" },
+  ],
+};
+
 /** The forward-looking area (roadmap §8.3, P-2): Available leads, Commitments and Set aside are its inputs. */
 export const AVAILABLE_AREA: Area = {
   label: "Available",

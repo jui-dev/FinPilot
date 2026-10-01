@@ -22,7 +22,8 @@ export interface NavItem {
 
 export const PRIMARY_NAV: readonly NavItem[] = [
   { href: HOME_PATH, label: "Overview" },
-  { href: "/activity", label: "Activity" },
+  // Categories classify Activity: the other page of its area, behind a local switch.
+  { href: "/activity", label: "Activity", area: ["/categories"] },
   { href: "/accounts", label: "Accounts" },
   // No phone tab (P-3): on phones Cash flow is reached from the Overview's This
   // month, Attention and Activity, and stays its own page with no tab current.

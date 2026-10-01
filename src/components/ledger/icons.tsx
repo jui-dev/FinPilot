@@ -61,12 +61,14 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   "Fees & Charges": Receipt,
 };
 
-export type GlyphTone = "neutral" | "positive" | "info";
+export type GlyphTone = "neutral" | "positive" | "info" | "warm";
 
 const tones: Record<GlyphTone, string> = {
   neutral: "bg-surface-hover text-ink-2",
   positive: "bg-positive-soft text-positive",
   info: "bg-mist text-ocean",
+  /** The warm spending family (a soft coral tint): Expense Categories. */
+  warm: "bg-[color-mix(in_srgb,var(--color-coral)_16%,var(--color-surface-hover))] text-ink-2",
 };
 
 /** A small round icon badge in front of a row. */

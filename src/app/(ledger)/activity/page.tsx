@@ -9,6 +9,7 @@ import { cashFlowHref, cashFlowMonthOf } from "@/components/activity/links";
 import { TransactionPanel } from "@/components/activity/transaction-panel";
 import { monthLabel, rangeLabel } from "@/components/format";
 import { EmptyState } from "@/components/ui/panel";
+import { ACTIVITY_AREA, AreaSwitch } from "@/components/shell/area-switch";
 import { inclusiveRange, yearMonthOf, type YearMonth } from "@/domain/calendar-date";
 import {
   ACTIVITY_TYPE_FILTERS,
@@ -109,10 +110,13 @@ export default async function ActivityPage({
 
   return (
     <div className="flex flex-col gap-5 md:gap-6">
-      <header className="min-w-0">
-        <h1 className="text-title font-bold text-navy">Activity</h1>
-        <p className="mt-1 text-body text-ink-2">Every transaction, newest first.</p>
-      </header>
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+        <header className="min-w-0">
+          <h1 className="text-title font-bold text-navy">Activity</h1>
+          <p className="mt-1 text-body text-ink-2">Every transaction, newest first.</p>
+        </header>
+        <AreaSwitch area={ACTIVITY_AREA} current="/activity" />
+      </div>
 
       {/* One workspace in three cards, apart: the filters, what they select, then the rows. */}
       <section aria-labelledby="activity-scope" className="flex flex-col gap-4">
@@ -124,7 +128,12 @@ export default async function ActivityPage({
                 .map((a) => ({ id: a.id, name: a.name })),
               categories: categories
                 .filter((c) => c.archivedAt === null || c.id === category)
-                .map((c) => ({ id: c.id, name: c.name, kind: c.kind })),
+                .map((c) => ({
+                  id: c.id,
+                  name: c.name,
+                  kind: c.kind,
+                  archived: c.archivedAt !== null,
+                })),
               months,
             }}
             values={{ q, account, category, type, month, from, to }}
@@ -192,7 +201,7 @@ export default async function ActivityPage({
           .map((a) => ({ id: a.id, name: a.name, type: a.type }))}
         categories={categories
           .filter((c) => c.archivedAt === null || c.id === selected?.primary.category?.id)
-          .map((c) => ({ id: c.id, name: c.name, kind: c.kind }))}
+          .map((c) => ({ id: c.id, name: c.name, kind: c.kind, archived: c.archivedAt !== null }))}
       />
     </div>
   );

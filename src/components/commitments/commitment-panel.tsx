@@ -38,7 +38,7 @@ export interface EditableCommitment {
 }
 
 interface FormChoices {
-  /** Spending categories a commitment may use. */
+  /** Expense categories a commitment may use. */
   readonly categories: readonly Choice[];
   /** Accounts that may be named as the usual one. */
   readonly accounts: readonly Choice[];

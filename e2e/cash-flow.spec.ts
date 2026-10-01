@@ -309,12 +309,15 @@ test("a complete month's Spending leads back to that month", async ({ page }) =>
 test("smaller changes open, and each one leads to its transactions", async ({ page }) => {
   // A category nobody has used: ৳10 in it is a change, but never a material one.
   const name = `Small ${Date.now().toString(36)}`;
-  await page.goto("/settings");
-  const input = page.getByLabel("New expense category");
+  await page.goto("/categories");
   await expect(async () => {
-    await input.fill(name);
-    await input.press("Enter");
-    await expect(page.getByText(name, { exact: true })).toBeVisible({ timeout: 1_000 });
+    await page.getByRole("button", { name: "Add category" }).click();
+    const dialog = page.getByRole("dialog", { name: "New Expense Category" });
+    await dialog.getByLabel("Name").fill(name);
+    await dialog.getByLabel("Name").press("Enter");
+    await expect(page.getByRole("button", { name: `Rename ${name}`, exact: true })).toBeVisible({
+      timeout: 1_000,
+    });
   }).toPass({ timeout: 20_000 });
   await addExpense(page, "10", "Evidence of a smaller change", name, "Cash");
 

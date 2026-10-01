@@ -14,7 +14,13 @@ import { controlClass, Select } from "../ui/field";
 
 export interface FilterOptions {
   readonly accounts: ReadonlyArray<{ id: string; name: string }>;
-  readonly categories: ReadonlyArray<{ id: string; name: string; kind: CategoryKind }>;
+  readonly categories: ReadonlyArray<{
+    id: string;
+    name: string;
+    kind: CategoryKind;
+    /** Listed only while it is the chosen filter (e.g. a link from Cash flow). */
+    archived?: boolean;
+  }>;
   readonly months: readonly string[];
 }
 
@@ -30,11 +36,16 @@ export interface FilterValues {
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  expense: "Spending",
+  expense: "Expenses",
   income: "Income",
   transfer: "Transfers",
   refund: "Refunds",
 };
+
+const CATEGORY_GROUPS: ReadonlyArray<{ kind: CategoryKind; label: string }> = [
+  { kind: "expense", label: "Expense Categories" },
+  { kind: "income", label: "Income Categories" },
+];
 
 /** The Period select's value while a date range is active. */
 const RANGE = "range";
@@ -200,11 +211,20 @@ export function ActivityFilters({
           values.category,
           <>
             <option value="">All categories</option>
-            {options.categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
+            {CATEGORY_GROUPS.map(({ kind, label }) => {
+              const inKind = options.categories.filter((c) => c.kind === kind);
+              return (
+                inKind.length > 0 && (
+                  <optgroup key={kind} label={label}>
+                    {inKind.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.archived ? `${category.name} (archived)` : category.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )
+              );
+            })}
           </>,
         )}
         {select(

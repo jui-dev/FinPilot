@@ -85,6 +85,14 @@ describe("navigation", () => {
     expect(current("/trends", PHONE_TABS)).toEqual([]);
   });
 
+  it("keeps Activity current on Categories, the other page of its area, phone tab included", () => {
+    const activity = PRIMARY_NAV.find((i) => i.href === "/activity")!;
+    expect(navState("/activity", activity)).toBe("page");
+    expect(navState("/categories", activity)).toBe("area");
+    expect(current("/categories", PRIMARY_NAV)).toEqual(["Activity"]);
+    expect(current("/categories", PHONE_TABS)).toEqual(["Activity"]);
+  });
+
   it("keeps Cash flow current on Calendar too, with no phone tab", () => {
     expect(current("/calendar", PRIMARY_NAV)).toEqual(["Cash flow"]);
     expect(current("/calendar", PHONE_TABS)).toEqual([]);

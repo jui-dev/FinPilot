@@ -59,8 +59,12 @@ test("clearing leaves a fresh start on every screen", async ({ page }) => {
   await expect(page.getByText("All data cleared.")).toBeVisible();
   await expect(dialog).toBeHidden();
 
-  // Settings re-reads itself: the twelve default categories, none in use.
-  await expect(page.getByText("Not used yet")).toHaveCount(12);
+  // The fresh-start categories: the twelve defaults, active and unused, so each can be deleted.
+  await page.goto("/categories");
+  await expect(page.getByRole("button", { name: /^Delete / })).toHaveCount(10);
+  await expect(page.getByText("No archived Expense Categories.")).toBeVisible();
+  await page.goto("/categories?kind=income");
+  await expect(page.getByRole("button", { name: /^Delete / })).toHaveCount(2);
 
   // Quick Add (loaded by the layout) no longer offers the old accounts.
   await page.getByRole("button", { name: /^Add/ }).first().click();

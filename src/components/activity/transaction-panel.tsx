@@ -39,6 +39,8 @@ export interface PanelCategory {
   readonly id: string;
   readonly name: string;
   readonly kind: CategoryKind;
+  /** Offered only because this transaction already uses it: kept, never newly chosen. */
+  readonly archived?: boolean;
 }
 
 const takaText = (amount: Money): string => {
@@ -360,7 +362,7 @@ function EditForm({
             >
               {inKind.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {c.archived ? `${c.name} (archived)` : c.name}
                 </option>
               ))}
             </Select>
