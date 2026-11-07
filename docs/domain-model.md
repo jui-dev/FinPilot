@@ -156,6 +156,13 @@ Every Model S invariant is a **single-row `CHECK`**, which works the same way in
   - There is deliberately **no "Subscriptions" category**: it's a way of paying, not a purpose. Subscriptions are derived from commitments.
 - The **type ↔ category-kind rule** (income → income-kind; expense and refund → expense-kind) is enforced in the domain layer and covered by tests.
 - Categories in use are **archived, not deleted**. Merging and a parent/child hierarchy are V1.1+ (a nullable `parent_id`, with analytics rolling up).
+- **Lifecycle (built 2026-10-01, the Categories page):**
+  - **Rename** is always allowed. Records reference a category by id, so a rename changes how every existing record reads, never what it is.
+  - **Archive** means "not offered for new activity". A record that already carries the category keeps it: editing that record with the same category, a linked refund (which must share its expense's category), and paying a commitment that pays into it all stay valid (`keptCategoryId` in the ledger rules).
+  - **Delete** only when nothing has ever referenced it, counting soft-deleted transactions and commitments, so restoring a deleted record can never meet a missing category.
+  - **Each kind keeps at least one active category**, so income and expenses can always be recorded. It is checked inside the write transaction.
+  - Names are unique per kind, case-insensitively, archived ones included (an archived duplicate is restored instead).
+  - The transfer fee's category is chosen explicitly (defaulting to the last fee's), never looked up by name.
 - A category is **required** on income, expense and refund. Quick Add pre-selects the last category used, so this costs no speed. Without it, analytics would silently degrade.
 - **Fixed vs variable spending is not a category property.** It comes from whether a transaction is matched to a commitment occurrence (§8). Rent is fixed because it's a commitment, not because "Housing" is.
 
@@ -400,7 +407,8 @@ Available = Σ balance(asset accounts with included_in_available)
 | Occurrence | When the linked transaction is deleted, it returns to pending. | The expectation reappears. |
 | Monthly Plan intentions (Stage 13; formerly BudgetLimit) | Past months are read-only. | Plans are history. |
 | EarmarkEntry | Append-only; corrections, releases and moves are new entries. | Gives protected-money trajectories for free. |
-| Category / Account | Archived when in use; deleted only when unused. | No orphaned history. |
+| Category / Account | Archived when in use; deleted only when unused (for a category, counting soft-deleted references). A kind's last active category can't be archived or deleted (§6). | No orphaned history. |
+| Owner data (Settings' Data & demo) | **Reset to demo data** replaces every owner-scoped row with the demo in one transaction; **Clear all data** removes them and restores the default categories. The owner's id and settings are kept. Both exist only when `FINPILOT_DATA_CONTROLS=enabled`. | Starting again must never leave a half-replaced ledger. |
 
 - **Out of V1:** a transaction revision log (V1.1: store the previous row on each update) and hard purge.
 - **Tenancy:**
@@ -503,4 +511,5 @@ Headline results on 2026-09-22:
 | 2026-09-28 | **Stage 10 Slice 2 (Accounts sign fix).** §5: liability standing (owed, credit, clear) is defined and classified by the domain. No semantics and no acceptance value changed. | Accounts wrote every liability as a magnitude followed by "owed", so a card holding credit read as owed. |
 | 2026-09-28 | **Stage 10 Slice 2 (read model).** §10: excluded asset balances are built as `excludedAssetBalances`, and the bridge gains `pool` = included asset balances + max(liability balances, 0), with the invariants included + excluded = assets and owed + due + set aside + Available = pool. Available's formula is unchanged, and **no acceptance value changed**. | The Overview needs both; the pool rule lived in the spoken-for bar's presentation and moves into the bridge, so it has one owner. |
 | 2026-09-29 | **Stage 12 (Trends).** §11: signal family 3 is no longer tied to Stage 12, and the context's "typical" amount stays open (O-5); Trends compares exact half totals and defines no typical. No semantics and no acceptance value changed. | Trends shipped without a baseline of its own, so family 3 had nothing to wait for there. |
+| 2026-10-01 | **Categories and data controls** (`5043429`, `cbd49dc`, `62cf9e5`, `d0e82c0`, `2c06e33`). §6: the category lifecycle (rename, archive keeps existing records valid, delete only when never referenced, one active category per kind, explicit fee category). §12: the last-active rule and owner-data reset and clear. No acceptance value changed. | Categories became a page of their own, and archiving one used by existing records had made those records fail validation on edit. |
 | 2026-10-01 | **UI refinement.** §10: the bridge's running totals are shown beside each step (*Left*) rather than as rows of their own, and its marks replace the spoken-for bar. Presentation only: no semantics and no acceptance value changed. | The page was recomposed ([design-direction.md §6](design-direction.md)). |
