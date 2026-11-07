@@ -27,7 +27,14 @@ import {
 } from "@/server/services/protected-money-service";
 import { archiveAccount, createAccount, createOwner } from "@/server/services/setup-service";
 
-import { d, errorCode, ok, setupLedger, taka } from "../support/ledger";
+import {
+  asBeforeArchivedEntriesFroze,
+  d,
+  errorCode,
+  ok,
+  setupLedger,
+  taka,
+} from "../support/ledger";
 
 /**
  * Protected money ("Set aside") through the real services on a real database:
@@ -394,7 +401,7 @@ describe("backing follows the ledger without rewriting earmarks", () => {
 // ---------------------------------------------------------------------------
 
 describe("archived accounts", () => {
-  /** An account archived at zero, which then regains 1,000 when its transfer out is deleted. */
+  /** An account archived at zero, which then regains 1,000 when its transfer out is deleted (as allowed before 2026-11-07). */
   async function archivedWithBalance(s: Ledger) {
     const spare = await s.account("Spare", "cash", "2026-08-01", 1_000);
     const transferId = ok(
@@ -407,7 +414,9 @@ describe("archived accounts", () => {
       }),
     );
     ok(await archiveAccount(s.ctx, spare));
-    ok(await deleteTransaction(s.ctx, transferId));
+    ok(
+      await asBeforeArchivedEntriesFroze(s.ctx, spare, () => deleteTransaction(s.ctx, transferId)),
+    );
     return spare;
   }
 
@@ -566,7 +575,9 @@ describe("getReserveSources", () => {
       }),
     );
     ok(await archiveAccount(s.ctx, spare));
-    ok(await deleteTransaction(s.ctx, transferId)); // Spare: archived, and ৳1,000 again
+    ok(
+      await asBeforeArchivedEntriesFroze(s.ctx, spare, () => deleteTransaction(s.ctx, transferId)),
+    ); // Spare: archived, and ৳1,000 again
 
     expect((await getReserveSources(s.ctx)).map((x) => x.accountId)).not.toContain(spare);
   });

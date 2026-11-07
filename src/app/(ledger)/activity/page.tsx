@@ -6,6 +6,7 @@ import { ActivityList } from "@/components/activity/activity-list";
 import { ActivityScope } from "@/components/activity/activity-scope";
 import { PAGE_SIZE, Pagination } from "@/components/activity/pagination";
 import { cashFlowHref, cashFlowMonthOf } from "@/components/activity/links";
+import { archivedAccountOf } from "@/components/activity/describe";
 import { TransactionPanel } from "@/components/activity/transaction-panel";
 import { monthLabel, rangeLabel } from "@/components/format";
 import { EmptyState } from "@/components/ui/panel";
@@ -194,6 +195,7 @@ export default async function ActivityPage({
       <TransactionPanel
         item={selected}
         today={today}
+        archivedAccount={archivedAccountOf(selected, accounts)}
         accounts={accounts
           .filter((a) => a.archivedAt === null || a.id === selected?.primary.account.id)
           .map((a) => ({ id: a.id, name: a.name, type: a.type }))}

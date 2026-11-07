@@ -267,3 +267,61 @@ test("the list pages through its view; a row opens over its page, and a filter s
   await expect(page).toHaveURL(/\/activity\?type=expense$/);
   await expect(pages).toContainText(/^1–/);
 });
+
+test("an archived account's entries open read-only, with the way back", async ({ page }) => {
+  const tag = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+  const account = `Old wallet ${tag}`;
+
+  // A fresh account that receives 500 and spends it, so it can be archived at zero.
+  await page.goto("/accounts");
+  await expect(async () => {
+    await page
+      .getByRole("button", { name: /^New account/ })
+      .first()
+      .click();
+    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 20_000 });
+  const setup = page.getByRole("dialog");
+  await setup.getByLabel("Name").fill(account);
+  await setup.getByRole("radio", { name: "Cash" }).click();
+  await setup.getByLabel("Balance on that date").fill("");
+  await setup.getByRole("button", { name: "Add account" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+
+  for (const [type, row, category, description] of [
+    ["Income", "Received in", "Salary", `Wallet in ${tag}`],
+    ["Expense", "Paid from", "Food & Dining", `Wallet out ${tag}`],
+  ] as const) {
+    await page.goto("/activity");
+    await expect(async () => {
+      await page.getByRole("button", { name: /^Add/ }).first().click();
+      await expect(page.getByRole("dialog")).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 20_000 });
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Amount in taka").fill("500");
+    await dialog.getByRole("radio", { name: type }).click();
+    await choose(dialog, "Category", category);
+    await choose(dialog, row, account);
+    await describeEntry(dialog, description);
+    await dialog.getByRole("button", { name: new RegExp(`Save ${type.toLowerCase()}`) }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+  }
+
+  await page.goto("/accounts");
+  const accountRow = page.getByRole("listitem").filter({ hasText: account }).first();
+  await expect(async () => {
+    await accountRow.getByRole("button", { name: /^Archive/ }).click();
+    await expect(page.getByRole("status")).toContainText("archived", { timeout: 1_000 });
+  }).toPass({ timeout: 20_000 });
+
+  // Opening the spend shows why it can't change, and offers no edit or delete.
+  await page.goto(`/activity?q=${encodeURIComponent(`Wallet out ${tag}`)}`);
+  await page.getByRole("link", { name: new RegExp(`Wallet out ${tag}`) }).click();
+  const panel = page.getByRole("dialog");
+  await expect(panel).toContainText(
+    `${account} is archived, so this entry can’t be edited or deleted.`,
+  );
+  await expect(panel.getByRole("button", { name: /Delete/ })).toHaveCount(0);
+  await expect(panel.getByRole("button", { name: "Save changes" })).toHaveCount(0);
+  await expect(panel.getByRole("link", { name: "Accounts" })).toHaveAttribute("href", "/accounts");
+});

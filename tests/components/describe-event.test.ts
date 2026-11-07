@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { describeEvent } from "@/components/activity/describe";
+import { archivedAccountOf, describeEvent } from "@/components/activity/describe";
 import { accountIcon, TransferIcon } from "@/components/ledger/icons";
 import type { CalendarDate } from "@/domain/calendar-date";
 import type { TransactionType } from "@/domain/ledger/transactions";
@@ -166,5 +166,33 @@ describe("how an Activity row reads in columns", () => {
       amount: taka(-350),
       sign: "always",
     });
+  });
+});
+
+describe("which archived account freezes an Activity event", () => {
+  const accounts = (...archived: string[]) =>
+    [cash, bank, bkash, visa].map((a) => ({
+      id: a.id,
+      name: a.name,
+      archivedAt: archived.includes(a.id) ? "2026-09-21T00:00:00.000Z" : null,
+    }));
+
+  it("is none when nothing the event touches is archived", () => {
+    expect(archivedAccountOf(item(row("expense", -450)), accounts("bank"))).toBeNull();
+    expect(archivedAccountOf(null, accounts("cash"))).toBeNull();
+  });
+
+  it("names the event's own account when it is archived", () => {
+    expect(archivedAccountOf(item(row("expense", -450)), accounts("cash"))).toBe("Cash");
+  });
+
+  it("looks at both sides of a transfer and at its fee", () => {
+    const transfer = row("transfer", -2_000, { account: bkash, counterAccount: bank });
+    expect(archivedAccountOf(item(transfer), accounts("bank"))).toBe("City Bank");
+    const withFee = item(row("transfer", -2_000, { account: bank, counterAccount: cash }), {
+      fee: row("expense", -37, { account: visa }),
+    });
+    expect(archivedAccountOf(withFee, accounts("visa"))).toBe("Visa card");
+    expect(archivedAccountOf(withFee, accounts("visa", "bank"))).toBe("City Bank");
   });
 });

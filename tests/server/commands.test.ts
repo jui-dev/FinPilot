@@ -248,6 +248,59 @@ describe("accounts", () => {
 
     expect(await deleteAccount(ctx, cash)).toMatchObject({ ok: false });
   });
+
+  it("keeps an archived account at zero: its entries can't be deleted or edited away", async () => {
+    const { ctx, cash, category } = await ledger();
+    const spare = ok(
+      await openAccount(ctx, {
+        name: "Spare",
+        type: "cash",
+        openedOn: "2026-09-01",
+        startingAmount: "",
+      }),
+    );
+    const [moveIn] = ok(
+      await recordEntry(ctx, {
+        type: "transfer",
+        amount: "1000",
+        accountId: cash,
+        counterAccountId: spare,
+        occurredOn: "2026-09-05",
+      }),
+    ).ids;
+    const [spent] = ok(
+      await recordEntry(ctx, {
+        type: "expense",
+        amount: "1000",
+        accountId: spare,
+        categoryId: category("Food & Dining"),
+        occurredOn: "2026-09-06",
+      }),
+    ).ids;
+    ok(await archiveAccount(ctx, spare));
+
+    const refused = {
+      ok: false,
+      message: "Spare is archived. Restore the account to change its entries.",
+    };
+    expect(await removeEntry(ctx, spent!)).toMatchObject(refused);
+    expect(await removeEntry(ctx, moveIn!)).toMatchObject(refused);
+    expect(
+      await editEntry(ctx, spent!, {
+        type: "expense",
+        amount: "1000",
+        accountId: cash,
+        categoryId: category("Food & Dining"),
+        occurredOn: "2026-09-06",
+      }),
+    ).toMatchObject(refused);
+    expect(await balance(ctx, spare)).toBe(taka(0));
+
+    // Restoring the account is the way back in.
+    ok(await restoreAccount(ctx, spare));
+    ok(await removeEntry(ctx, spent!));
+    expect(await balance(ctx, spare)).toBe(taka(1_000));
+  });
 });
 
 describe("verifyBalance", () => {

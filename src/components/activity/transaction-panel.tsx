@@ -1,6 +1,7 @@
 "use client";
 
 import { Trash2, Undo2 } from "lucide-react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -19,7 +20,8 @@ import type { FieldErrors } from "@/server/commands";
 import type { ActivityItem, ActivityRow } from "@/server/services/activity-service";
 
 import { longDate, shortDate } from "../format";
-import { Button } from "../ui/button";
+import { Button, linkClass } from "../ui/button";
+import { cn } from "../ui/cn";
 import { Segmented } from "../ui/choice";
 import { errorProps, Field, FormMessage, Input, Select } from "../ui/field";
 import { MoneyInput } from "../ui/money-input";
@@ -59,11 +61,17 @@ export function TransactionPanel({
   accounts,
   categories,
   today,
+  archivedAccount = null,
 }: {
   readonly item: ActivityItem | null;
   readonly accounts: readonly PanelAccount[];
   readonly categories: readonly PanelCategory[];
   readonly today: CalendarDate;
+  /**
+   * The name of an archived account this event touches, if any. Its entries
+   * are frozen in the ledger, so the panel offers no edit, refund or delete.
+   */
+  readonly archivedAccount?: string | null;
 }) {
   // Keyed by the event, so opening another transaction starts from its own values.
   if (!item) return null;
@@ -74,6 +82,7 @@ export function TransactionPanel({
       accounts={accounts}
       categories={categories}
       today={today}
+      archivedAccount={archivedAccount}
     />
   );
 }
@@ -83,11 +92,13 @@ function EventPanel({
   accounts,
   categories,
   today,
+  archivedAccount,
 }: {
   readonly item: ActivityItem;
   readonly accounts: readonly PanelAccount[];
   readonly categories: readonly PanelCategory[];
   readonly today: CalendarDate;
+  readonly archivedAccount: string | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -133,6 +144,15 @@ function EventPanel({
       {row.type === "adjustment" ? (
         <p className="py-6 text-body text-ink-2">
           Balance adjustments come from reconciling an account and cannot be edited.
+        </p>
+      ) : archivedAccount ? (
+        <p className="py-6 text-body text-ink-2">
+          {archivedAccount} is archived, so this entry can&rsquo;t be edited or deleted. To change
+          it, restore the account in{" "}
+          <Link href="/accounts" className={cn("font-medium text-ocean", linkClass)}>
+            Accounts
+          </Link>
+          .
         </p>
       ) : row.type === "opening_balance" ? (
         <OpeningBalanceForm key={row.id} row={row} onDone={close} />

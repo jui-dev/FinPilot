@@ -166,3 +166,25 @@ export function describeEvent(item: ActivityItem, perspectiveAccountId?: string)
       };
   }
 }
+
+/**
+ * The first archived account (by name) any row of the event touches, or null.
+ * The ledger freezes such an event: it can't be edited or deleted until the
+ * account is restored, so the transaction panel offers neither.
+ */
+export function archivedAccountOf(
+  item: ActivityItem | null,
+  accounts: ReadonlyArray<{ id: string; name: string; archivedAt: string | null }>,
+): string | null {
+  if (!item) return null;
+  const touched = new Set(
+    [item.primary, ...(item.fee ? [item.fee] : [])].flatMap((r) =>
+      r.counterAccount ? [r.account.id, r.counterAccount.id] : [r.account.id],
+    ),
+  );
+  const archived = accounts
+    .filter((a) => a.archivedAt !== null && touched.has(a.id))
+    .map((a) => a.name)
+    .sort((a, b) => a.localeCompare(b));
+  return archived[0] ?? null;
+}

@@ -283,6 +283,7 @@ export function updateTransaction(
         "Re-reconcile instead of editing an adjustment.",
       );
     }
+    assertNoArchivedAccount(tx, ctx.ownerId, [existing]);
     if ((existing.type === "opening_balance") !== (draft.type === "opening_balance")) {
       throw new LedgerRuleError("type_change_not_allowed", "Opening balances cannot change type.");
     }
@@ -325,6 +326,38 @@ export function updateTransaction(
   }, IMMEDIATE);
 }
 
+/**
+ * An archived account's entries are frozen: an account is archived only at a
+ * zero balance, so deleting one of its entries, or editing one away from it,
+ * would give it a balance again. Restoring the account is the way back in.
+ * (Edits that keep the account are already refused by the ledger rules.)
+ */
+function assertNoArchivedAccount(
+  tx: SyncDb,
+  ownerId: string,
+  rows: ReadonlyArray<{ accountId: string; counterAccountId: string | null }>,
+): void {
+  const ids = [
+    ...new Set(
+      rows.flatMap((r) => (r.counterAccountId ? [r.accountId, r.counterAccountId] : [r.accountId])),
+    ),
+  ];
+  const archived = tx
+    .select({ name: accounts.name })
+    .from(accounts)
+    .where(
+      and(eq(accounts.ownerId, ownerId), inArray(accounts.id, ids), isNotNull(accounts.archivedAt)),
+    )
+    .orderBy(accounts.name)
+    .get();
+  if (archived) {
+    throw new LedgerRuleError(
+      "entry_on_archived_account",
+      `${archived.name} is archived. Restore the account to change its entries.`,
+    );
+  }
+}
+
 /** The rows a delete/restore acts on: the whole group, or the single row. */
 function eventRows(tx: SyncDb, ownerId: string, row: typeof transactions.$inferSelect) {
   if (!row.groupId) return [row];
@@ -344,6 +377,7 @@ export function deleteTransaction(db: AppDatabase, ctx: WriteContext, id: string
     }
     const rows = eventRows(tx, ctx.ownerId, existing).filter((r) => r.deletedAt === null);
     const ids = rows.map((r) => r.id);
+    assertNoArchivedAccount(tx, ctx.ownerId, rows);
 
     const adjustmentIds = rows.filter((r) => r.type === "adjustment").map((r) => r.id);
     if (checkpointOwnedAdjustments(tx, ctx.ownerId, adjustmentIds).length > 0) {

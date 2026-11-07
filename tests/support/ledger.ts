@@ -1,3 +1,6 @@
+import { and, eq } from "drizzle-orm";
+
+import { accounts } from "@/db/schema";
 import { calendarDateFromIso, type CalendarDate } from "@/domain/calendar-date";
 import { fixedClock } from "@/domain/clock";
 import type { AccountType } from "@/domain/ledger/accounts";
@@ -66,4 +69,26 @@ export async function setupLedger(today = "2026-09-22") {
       }),
     );
   return { handle, ctx, category, account };
+}
+
+/**
+ * Runs `change` on an archived account's entries as the ledger allowed before
+ * 2026-11-07, when deleting or editing an entry away could give an archived
+ * account a balance again. Databases from then may still hold such accounts,
+ * so the readers are tested against them; the write path now refuses it.
+ */
+export async function asBeforeArchivedEntriesFroze<T>(
+  ctx: ServiceContext,
+  accountId: string,
+  change: () => Promise<T>,
+): Promise<T> {
+  const where = and(eq(accounts.ownerId, ctx.ownerId), eq(accounts.id, accountId));
+  const row = ctx.db.select({ archivedAt: accounts.archivedAt }).from(accounts).where(where).get();
+  if (!row?.archivedAt) throw new Error("The account is not archived.");
+  ctx.db.update(accounts).set({ archivedAt: null }).where(where).run();
+  try {
+    return await change();
+  } finally {
+    ctx.db.update(accounts).set({ archivedAt: row.archivedAt }).where(where).run();
+  }
 }

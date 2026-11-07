@@ -167,7 +167,7 @@ Payment states keep Commitments' treatment: overdue is a warning, due today info
 The evidence workspace, not a dashboard. Three cards, apart:
 1. **Filters:** search, Period, Account, Category, Type, Clear. They live in the URL, so any view can be linked to and reloaded.
 2. **Scope:** what the filters select, the number of entries, Spent and Income for the whole view, and a link to Cash flow when the view has a month's shape.
-3. **Rows,** grouped by day under sticky day bands with each day's count: **Description · Category · Account · Amount** on desktop. A row opens its transaction in a side panel, marked as current while open. **Pages of 25**, the page in the URL (`?page=`): the count and the totals always cover the whole view, a filter starts again at the first page, and an open transaction keeps its page.
+3. **Rows,** grouped by day under sticky day bands with each day's count: **Description · Category · Account · Amount** on desktop. A row opens its transaction in a side panel, marked as current while open. An entry that touches an archived account opens read-only: one sentence says which account is archived and that restoring it in Accounts (a link) is the way to change the entry, with no form, Refund or Delete, as for a balance adjustment. **Pages of 25**, the page in the URL (`?page=`): the count and the totals always cover the whole view, a filter starts again at the first page, and an open transaction keeps its page.
 
 It has no metric cards.
 

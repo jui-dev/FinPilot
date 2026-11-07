@@ -18,7 +18,7 @@ import {
 import { createItem, editItem, getItems, reserve } from "@/server/services/protected-money-service";
 import { archiveAccount, createAccount, createOwner } from "@/server/services/setup-service";
 
-import { d, ok, setupLedger, taka } from "../support/ledger";
+import { asBeforeArchivedEntriesFroze, d, ok, setupLedger, taka } from "../support/ledger";
 
 /**
  * Available through the real services on a real database. The read model only
@@ -258,8 +258,8 @@ describe("getAvailable", () => {
     ok(await archiveAccount(s.ctx, spare));
     expect(await available(s.ctx)).toBe(taka(104_000));
 
-    // The known Accounts gap: deleting the expense gives the archived account its 1,000 back.
-    ok(await deleteTransaction(s.ctx, spent));
+    // As the ledger allowed before 2026-11-07, deleting the expense gives the archived account its 1,000 back.
+    ok(await asBeforeArchivedEntriesFroze(s.ctx, spare, () => deleteTransaction(s.ctx, spent)));
     const view = await getAvailable(s.ctx);
     expect(view.accounts.find((a) => a.accountId === spare)).toMatchObject({
       archived: true,
@@ -280,9 +280,9 @@ describe("getAvailable", () => {
     ok(await archiveAccount(s.ctx, spare));
     expect(await available(s.ctx)).toBe(taka(109_000));
 
-    // Deleting the transfer (the known Accounts gap) gives Spare its 5,000 back:
+    // Deleting the transfer (as allowed before 2026-11-07) gives Spare its 5,000 back:
     // it covers the 3,000 again, and that covered money is deducted.
-    ok(await deleteTransaction(s.ctx, moved));
+    ok(await asBeforeArchivedEntriesFroze(s.ctx, spare, () => deleteTransaction(s.ctx, moved)));
     const view = await getAvailable(s.ctx);
     expect(view.accounts.find((a) => a.accountId === spare)).toMatchObject({
       archived: true,
@@ -308,12 +308,12 @@ describe("getAvailable", () => {
       (await getPosition(s.ctx)).assets,
     );
 
-    // An excluded account that regains a balance after archiving (the known
-    // Accounts gap): no archive filter, so it moves only the excluded total.
+    // An excluded account that regains a balance after archiving (as allowed
+    // before 2026-11-07): no archive filter, so it moves only the excluded total.
     const locker = await s.account("Locker", "savings", "2026-08-01", 3_000);
     const spent = await s.expense(locker, 3_000);
     ok(await archiveAccount(s.ctx, locker));
-    ok(await deleteTransaction(s.ctx, spent));
+    ok(await asBeforeArchivedEntriesFroze(s.ctx, locker, () => deleteTransaction(s.ctx, spent)));
     const after = await getAvailable(s.ctx);
     expect(after.accounts.find((a) => a.accountId === locker)).toMatchObject({
       archived: true,
