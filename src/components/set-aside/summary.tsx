@@ -119,8 +119,7 @@ export function SetAsideSummary({
           </li>
           {accounts.some((a) => a.short > 0) && (
             <li className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-sm bg-negative/45" />{" "}
-              Short
+              <span className="size-2.5 rounded-sm bg-negative/45" /> Short
             </li>
           )}
         </ul>
