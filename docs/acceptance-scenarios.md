@@ -201,7 +201,7 @@ Kept deliberately, with every value unchanged: this is the commitment-aware proj
 | 10 — Overview + V1 readiness | none new. **V1 exit criterion:** every assertion is green except A-40 and M1-4, which are deliberately deferred with Monthly Plan. |
 | 11 — Extended demo history | none |
 | 12 — Trends | none |
-| 13 — Monthly Plan | A-40, M1-4 → **full suite green** (no `todo` remaining) |
+| 13 — Monthly Plan | A-40, M1-4 → **full suite green** (no `todo` remaining). *Cut from V1 on 2026-11-08: A-40 and M1-4 stay deferred, as the V1 exit criterion already allows.* |
 
 Stage numbers changed on 2026-09-27 ([roadmap.md §8](roadmap.md) maps old → new). The change-log entries below keep the numbers they were written with.
 

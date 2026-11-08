@@ -55,7 +55,7 @@
 | 10 | Overview + V1 readiness | product surface; readiness | the **V1.0 candidate** (the V1 feature set); no tag — **done** |
 | 11 | Extended demo history | data/history foundation | after the V1 candidate — product depth |
 | 12 | Trends | product capability | after the V1 candidate — product depth |
-| 13 | Monthly Plan (optional; replaces Budgets) | product capability | after the V1 candidate — product depth |
+| 13 | Monthly Plan (optional; replaces Budgets) | product capability | **not in V1** — cut 2026-11-08; after `v1.0` only if reopened |
 | R | Final V1 readiness gate | readiness | E — `v1.0` |
 
 Stage numbers 7–12 meant different stages before 2026-09-27. §8.4 maps old to new; entries written before then keep their original numbers.
@@ -469,6 +469,7 @@ The two inputs to Available: money already obligated and money deliberately set 
 - **Not built:** a first-run checklist on the Overview (decided 2026-11-07).
 
 #### 13 — Monthly Plan
+- **Cut from V1 (2026-11-08, owner's decision).** It answers a question FinPilot's core does not need (it never feeds Available), and V1 is closed without it: A-40 and M1-4 stay deferred, as the V1 exit criterion already allows. What follows is kept as the design if it is ever reopened.
 - **Question:** *What do I intend to spend or set aside this month, and how did that go?* It is optional, it never feeds Available, and it never rewrites the ledger ([domain-model.md §7](domain-model.md)).
 - **Resolve first:** effective-dated or month-specific intentions (§8.5).
 - **Builds:**
@@ -490,7 +491,7 @@ The two inputs to Available: money already obligated and money deliberately set 
 
 #### R — Final V1 readiness gate
 - **Decided 2026-09-29, at Stage 10 closure.** Portfolio presentation and the final review describe the finished product, so they wait for the features still to be built. They don't keep the stage that built the Overview open.
-- **When:** once the portfolio features planned before it are built: Stages 11–13, and any portfolio differentiator whose own discussion places it before the gate.
+- **When:** once the portfolio features planned before it are built: Stages 11 and 12 (Stage 13, Monthly Plan, was cut from V1 on 2026-11-08), and any portfolio differentiator whose own discussion places it before the gate.
 - **Builds:**
   - **README:** status, architecture, decisions, how to run, and **portfolio screenshots** (required). The README is not rewritten before this gate.
   - A whole-product responsive review (390 / 820 / 1280) and accessibility review.
@@ -625,7 +626,7 @@ Every item here is **deliberately open, not forgotten**. A stage's plan resolves
 | ~~O-3~~ | ~~Protected money: the container's code name, and the representation of operation kinds.~~ **Resolved 2026-09-28 (Stage 7):** `protected_money_items`; append-only signed earmark entries, positive = Reserve, negative = Release, no operation-kind field. | [domain-model.md §9.1](domain-model.md) | closed |
 | O-4 | **Use:** how much is released when the expense differs from the reservation, and what happens to the release when the Use transaction is edited or deleted. | [domain-model.md §9.1](domain-model.md) | implementing **Use** (not required in the minimum Stage 7 slice) |
 | O-5 | "Typical" for signal family 3: the window, and mean or median. *Trends (built 2026-09-29) compares exact half totals and needs none.* | this file | signal family 3, when scheduled |
-| O-6 | Monthly Plan intentions: effective-dated or month-specific. Either reproduces A-40 and M1-4. | [domain-model.md §7](domain-model.md) | **Stage 13** |
+| O-6 | Monthly Plan intentions: effective-dated or month-specific. Either reproduces A-40 and M1-4. | [domain-model.md §7](domain-model.md) | Monthly Plan, if it is ever reopened (cut from V1 2026-11-08) |
 
 **B. Later product questions**
 
