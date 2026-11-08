@@ -37,3 +37,6 @@ npm-debug.log*
 /playwright-report/
 /blob-report/
 /.playwright/
+
+# local notes for AI assistants
+CLAUDE.local.md
