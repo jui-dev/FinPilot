@@ -539,6 +539,8 @@ describe("MonthAtAGlance", () => {
     expect(words).toContain("Month at a glance September 2026");
     expect(html).toContain('href="/calendar?month=2026-09"');
     expect(words).toMatch(/Still due this month ৳ 26,500 · 2 payments/);
+    // Money already owed is named before the next payment.
+    expect(words).toMatch(/Overdue: Internet\s?, 15 Sep/);
     expect(words).toMatch(/Next: Rent\s?, 28 Sep/);
     // One coral day, today; no amount inside the grid.
     const grid = /data-testid="month-glance".*?<p class="sr-only"/s.exec(html)![0];
@@ -559,6 +561,7 @@ describe("MonthAtAGlance", () => {
     expect(words).toContain("Nothing still due this month");
     expect(words).toContain("No payment is still due this month.");
     expect(words).not.toContain("Next:");
+    expect(words).not.toContain("Overdue:");
   });
 });
 

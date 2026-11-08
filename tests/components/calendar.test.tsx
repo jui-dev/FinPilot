@@ -234,7 +234,7 @@ describe("the month line and a future month", () => {
     );
     expect(words).toContain("September so far What was recorded, and what is still to pay.");
     expect(words).toContain(
-      "Came in + ৳ 60,000 Went out ৳ 21,073 Still due this month ৳ 3,500 3 payments",
+      "Came in ৳ 60,000 Went out ৳ 21,073 Still due this month ৳ 3,500 3 payments",
     );
     expect(words).not.toContain("%");
   });

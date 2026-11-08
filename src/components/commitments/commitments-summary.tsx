@@ -56,7 +56,7 @@ export function CommitmentsSummary({
   const dueToday = attention.count - attention.overdue;
   const largest = Math.max(0, ...months.map((m) => m.total));
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-6">
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-6">
       <section
         aria-labelledby="commitments-due-now"
         className="flex flex-col overflow-clip rounded-panel border border-line-soft bg-mist/35 p-5 shadow-card md:p-7"
@@ -153,7 +153,7 @@ export function CommitmentsSummary({
         {months.length > 0 && (
           <div className="mt-5">
             <h3 className="text-micro font-semibold tracking-[0.08em] text-ink-2 uppercase">
-              By month
+              Coming up, by month
             </h3>
             <ul className="mt-2 divide-y divide-line-soft">
               {months.map((m) => (

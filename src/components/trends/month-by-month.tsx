@@ -102,7 +102,9 @@ export function MonthByMonth({
                   ))}
                   <Link
                     href={cashFlowHref(m.month, currentMonth)}
+                    // A larger target for the pointer only: the month's name below is the named link.
                     tabIndex={-1}
+                    aria-hidden
                     className="absolute inset-x-1 top-0 flex items-end justify-center gap-1.5 rounded-t-[10px] transition-colors hover:bg-mist/40"
                     style={{ bottom: `${at(0)}%` }}
                   >

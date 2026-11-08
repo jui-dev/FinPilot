@@ -40,6 +40,8 @@ export function MonthAtAGlance({
 }) {
   const glance = monthGlance(calendar, selected);
   const { month, today, due } = calendar;
+  // Money already owed comes first: a payment past its date is named before the next one.
+  const overdue = glance.pending.filter((d) => d.dueOn < today);
   const next = glance.pending.find((d) => d.dueOn >= today);
   // The key names only the marks the month shows.
   const shown = (due: "attention" | "expected") =>
@@ -141,6 +143,14 @@ export function MonthAtAGlance({
                 />
                 <span className="text-meta text-ink-2">· {payments(due.pendingCount)}</span>
               </p>
+              {overdue[0] && (
+                <p className="mt-1 text-meta text-ink-2">
+                  <span className="font-semibold text-warning">Overdue:</span>{" "}
+                  <span className="font-semibold text-ink">{overdue[0].name}</span>,{" "}
+                  {dayMonth(overdue[0].dueOn)}
+                  {overdue.length > 1 && ` and ${overdue.length - 1} more`}
+                </p>
+              )}
               {next && (
                 <p className="mt-1 text-meta text-ink-2">
                   Next: <span className="font-semibold text-ink">{next.name}</span>,{" "}

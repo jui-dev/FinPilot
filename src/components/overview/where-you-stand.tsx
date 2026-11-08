@@ -37,7 +37,7 @@ export function WhereYouStand({
         title="Where you stand"
         action={<ZoneLink href="/accounts">Your accounts</ZoneLink>}
       />
-      <div className="mt-4 grid gap-4 md:mt-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-10">
+      <div className="mt-4 grid gap-4 md:mt-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-10">
         {/* The answer. */}
         <div className="flex flex-col justify-center rounded-2xl bg-[radial-gradient(120%_120%_at_0%_0%,color-mix(in_srgb,var(--color-mist)_55%,transparent)_0%,transparent_60%)] px-5 py-6 shadow-[inset_0_0_0_1px_var(--color-line-soft)] md:px-8 md:py-9">
           <p className="text-body font-semibold text-navy">Net worth</p>

@@ -101,7 +101,8 @@ export function MonthLine({ calendar }: { readonly calendar: MonthCalendar }) {
         {summary ? (
           <>
             <Panel term="Came in">
-              <Money amount={summary.income} sign={summary.income > 0 ? "always" : "negative"} />
+              {/* As Cash flow writes Came in: a plain amount, its heading says the direction. */}
+              <Money amount={summary.income} sign="negative" />
             </Panel>
             <Panel term="Went out">
               <Money amount={summary.spending} />
