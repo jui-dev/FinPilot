@@ -31,7 +31,7 @@ const CARD =
 export function AnswerCard({ view }: { readonly view: AvailableView }) {
   const dueBy = shortDate(view.horizonEnd, view.today);
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-6">
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-6">
       <Hero view={view} dueBy={dueBy} />
       <Bridge view={view} dueBy={dueBy} />
     </div>
@@ -70,7 +70,7 @@ function Hero({ view, dueBy }: { readonly view: AvailableView; readonly dueBy: s
         <AvailableSentence view={view} dueBy={dueBy} figureClassName="font-semibold text-ink" />
       </p>
 
-      <dl className="mt-6 grid grid-cols-3 gap-2">
+      <dl className="mt-6 grid grid-cols-3 gap-2 lg:mt-auto lg:pt-8">
         {facts.leftFree !== null && (
           <Fact term="Left free">{Math.round(facts.leftFree * 100)}%</Fact>
         )}

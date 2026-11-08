@@ -34,7 +34,7 @@ export function SetAsideSummary({
   const total = summary(covers);
   const facts = overview(covers);
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-6">
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-6">
       <section
         aria-labelledby="set-aside-total"
         className="flex flex-col overflow-clip rounded-panel border border-line-soft bg-mist/35 p-5 shadow-card md:p-7"
@@ -72,7 +72,7 @@ export function SetAsideSummary({
           Releasing it records no transaction.
         </p>
 
-        <dl className="mt-6 grid grid-cols-3 gap-2">
+        <dl className="mt-6 grid grid-cols-3 gap-2 lg:mt-auto lg:pt-8">
           <Fact term="Purposes">{facts.purposes}</Fact>
           <Fact term="Accounts">{accounts.length}</Fact>
           <Fact term="Still needed">
