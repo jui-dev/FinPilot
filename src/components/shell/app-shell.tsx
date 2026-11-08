@@ -1,9 +1,9 @@
 "use client";
 
-import { Menu, Plus, Settings, type LucideIcon } from "lucide-react";
+import { CircleHelp, Menu, Plus, Settings, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import type { CalendarDate } from "@/domain/calendar-date";
 
@@ -14,10 +14,12 @@ import { cn } from "../ui/cn";
 import { Tag } from "../ui/panel";
 import { ToastProvider } from "../ui/toast";
 import { MenuSheet } from "./menu-sheet";
+import { QuickAddOpener } from "./quick-add-opener";
 import { SECTION_ICONS } from "./nav-icons";
 import {
   ariaCurrent,
   currentSection,
+  GUIDE_PATH,
   HOME_PATH,
   isActive,
   menuTabCurrent,
@@ -58,6 +60,7 @@ export function AppShell({
   const [adding, setAdding] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const section = currentSection(pathname);
+  const openQuickAdd = useCallback(() => setAdding(true), []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -73,116 +76,150 @@ export function AppShell({
 
   return (
     <ToastProvider>
-      <div className="flex min-h-dvh flex-col">
-        <header className="sticky top-0 z-30 border-b border-line bg-surface">
-          <div className={cn(SHELL_WIDTH, "flex h-14 items-center gap-4 lg:gap-6")}>
-            <Link href={HOME_PATH} className="flex items-center gap-2.5 font-semibold">
-              <span aria-hidden className="grid size-7 place-items-center rounded-[7px] bg-navy">
-                <span className="block h-[3px] w-3.5 rounded-full bg-coral" />
-                <span className="sr-only">FinPilot</span>
-              </span>
-              {/* From 768px to 1024px the mark alone (the name stays for screen readers), so the five sections fit. */}
-              <span className="font-brand text-figure font-bold text-navy md:max-lg:sr-only">
-                FinPilot
-              </span>
-            </Link>
-
-            <nav aria-label="Main" className="hidden items-center gap-0.5 md:flex">
-              {SECTIONS.map((s) =>
-                s.pages.length > 1 ? (
-                  <SectionMenu key={s.label} section={s} pathname={pathname} />
-                ) : (
-                  <SectionLink key={s.label} section={s} pathname={pathname} />
-                ),
-              )}
-            </nav>
-
-            <div className="ml-auto flex items-center gap-2 md:gap-3">
-              <span className="hidden text-meta text-ink-2 lg:inline">{longDate(today)}</span>
-              <Tag>Demo</Tag>
-              <button
-                type="button"
-                onClick={() => setAdding(true)}
-                className={cn(buttonClass("accent", "sm"), "gap-2 max-md:hidden")}
-              >
-                <Plus className="size-4" strokeWidth={2.25} />
-                Add
-                <kbd className="rounded border border-ink/30 px-1 text-micro font-medium">N</kbd>
-              </button>
-              <Link
-                href={SETTINGS_PATH}
-                aria-label="Settings"
-                aria-current={isActive(pathname, SETTINGS_PATH) ? "page" : undefined}
-                className={cn(
-                  "grid size-9 place-items-center rounded-control text-ink-2 transition-colors hover:bg-surface-hover hover:text-ink",
-                  isActive(pathname, SETTINGS_PATH) && "bg-surface-hover text-ink",
-                )}
-              >
-                <Settings className="size-[18px]" strokeWidth={1.75} />
+      <QuickAddOpener.Provider value={openQuickAdd}>
+        <div className="flex min-h-dvh flex-col">
+          <header className="sticky top-0 z-30 border-b border-line bg-surface">
+            <div className={cn(SHELL_WIDTH, "flex h-14 items-center gap-4 lg:gap-6")}>
+              <Link href={HOME_PATH} className="flex items-center gap-2.5 font-semibold">
+                <span aria-hidden className="grid size-7 place-items-center rounded-[7px] bg-navy">
+                  <span className="block h-[3px] w-3.5 rounded-full bg-coral" />
+                  <span className="sr-only">FinPilot</span>
+                </span>
+                {/* From 768px to 1024px the mark alone (the name stays for screen readers), so the five sections fit. */}
+                <span className="font-brand text-figure font-bold text-navy md:max-lg:sr-only">
+                  FinPilot
+                </span>
               </Link>
+
+              <nav aria-label="Main" className="hidden items-center gap-0.5 md:flex">
+                {SECTIONS.map((s) =>
+                  s.pages.length > 1 ? (
+                    <SectionMenu key={s.label} section={s} pathname={pathname} />
+                  ) : (
+                    <SectionLink key={s.label} section={s} pathname={pathname} />
+                  ),
+                )}
+              </nav>
+
+              <div className="ml-auto flex items-center gap-2 md:gap-3">
+                <span className="hidden text-meta text-ink-2 lg:inline">{longDate(today)}</span>
+                <Tag>Demo</Tag>
+                <button
+                  type="button"
+                  onClick={() => setAdding(true)}
+                  className={cn(buttonClass("accent", "sm"), "gap-2 max-md:hidden")}
+                >
+                  <Plus className="size-4" strokeWidth={2.25} />
+                  Add
+                  <kbd className="rounded border border-ink/30 px-1 text-micro font-medium">N</kbd>
+                </button>
+                <div className="flex items-center gap-1">
+                  <HeaderIconLink
+                    href={GUIDE_PATH}
+                    label="Guide"
+                    icon={CircleHelp}
+                    pathname={pathname}
+                  />
+                  <HeaderIconLink
+                    href={SETTINGS_PATH}
+                    label="Settings"
+                    icon={Settings}
+                    pathname={pathname}
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
 
-        {section && section.pages.length > 1 && (
-          <SectionNav section={section} pathname={pathname} className={SHELL_WIDTH} />
-        )}
+          {section && section.pages.length > 1 && (
+            <SectionNav section={section} pathname={pathname} className={SHELL_WIDTH} />
+          )}
 
-        <main className={cn(SHELL_WIDTH, "flex-1 pt-6 pb-28 md:pb-12")}>{children}</main>
+          <main className={cn(SHELL_WIDTH, "flex-1 pt-6 pb-28 md:pb-12")}>{children}</main>
 
-        <nav
-          aria-label="Main"
-          className="fixed inset-x-0 bottom-0 z-30 grid border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
-          style={{ gridTemplateColumns: `repeat(${PHONE_TABS.length + 2}, minmax(0, 1fr))` }}
-        >
-          {PHONE_TABS.slice(0, TABS_BEFORE_ADD).map((s) => (
-            <TabLink
-              key={s.label}
-              href={sectionHref(s)}
-              label={s.label}
-              icon={SECTION_ICONS[s.label]!}
-              state={navState(pathname, s)}
-            />
-          ))}
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="flex flex-col items-center justify-center py-1.5"
-            aria-label="Add a transaction"
+          <nav
+            aria-label="Main"
+            className="fixed inset-x-0 bottom-0 z-30 grid border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
+            style={{ gridTemplateColumns: `repeat(${PHONE_TABS.length + 2}, minmax(0, 1fr))` }}
           >
-            <span className="-mt-5 grid size-12 place-items-center rounded-[14px] bg-coral text-ink shadow-overlay">
-              <Plus className="size-6" strokeWidth={2.25} />
-            </span>
-          </button>
-          {PHONE_TABS.slice(TABS_BEFORE_ADD).map((s) => (
-            <TabLink
-              key={s.label}
-              href={sectionHref(s)}
-              label={s.label}
-              icon={SECTION_ICONS[s.label]!}
-              state={navState(pathname, s)}
-            />
-          ))}
-          {/* Every page, two taps away; current wherever no other tab is (Accounts, Insights, Settings). */}
-          <button
-            type="button"
-            onClick={() => setMenuOpen(true)}
-            aria-haspopup="dialog"
-            className={tabClass}
-          >
-            <TabFace icon={Menu} label="Menu" active={menuOpen || menuTabCurrent(pathname)} />
-          </button>
-        </nav>
-      </div>
+            {PHONE_TABS.slice(0, TABS_BEFORE_ADD).map((s) => (
+              <TabLink
+                key={s.label}
+                href={sectionHref(s)}
+                label={s.label}
+                icon={SECTION_ICONS[s.label]!}
+                state={navState(pathname, s)}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              className="flex flex-col items-center justify-center py-1.5"
+              aria-label="Add a transaction"
+            >
+              <span className="-mt-5 grid size-12 place-items-center rounded-[14px] bg-coral text-ink shadow-overlay">
+                <Plus className="size-6" strokeWidth={2.25} />
+              </span>
+            </button>
+            {PHONE_TABS.slice(TABS_BEFORE_ADD).map((s) => (
+              <TabLink
+                key={s.label}
+                href={sectionHref(s)}
+                label={s.label}
+                icon={SECTION_ICONS[s.label]!}
+                state={navState(pathname, s)}
+              />
+            ))}
+            {/* Every page, two taps away; current wherever no other tab is (Accounts, Insights, Settings). */}
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              aria-haspopup="dialog"
+              className={tabClass}
+            >
+              <TabFace icon={Menu} label="Menu" active={menuOpen || menuTabCurrent(pathname)} />
+            </button>
+          </nav>
+        </div>
 
-      <MenuSheet open={menuOpen} onOpenChange={setMenuOpen} pathname={pathname} />
-      {/* Mounted only while open, so every entry starts from the remembered defaults. */}
-      {adding && <QuickAdd onClose={() => setAdding(false)} data={quickAdd} />}
+        <MenuSheet open={menuOpen} onOpenChange={setMenuOpen} pathname={pathname} />
+        {/* Mounted only while open, so every entry starts from the remembered defaults. */}
+        {adding && <QuickAdd onClose={() => setAdding(false)} data={quickAdd} />}
+      </QuickAddOpener.Provider>
     </ToastProvider>
   );
 }
 
 const tabClass = "flex flex-col items-center gap-0.5 pt-1.5 pb-2";
+
+/** An icon-only page link at the header's end: the Guide and Settings. */
+function HeaderIconLink({
+  href,
+  label,
+  icon: Icon,
+  pathname,
+}: {
+  readonly href: string;
+  readonly label: string;
+  readonly icon: LucideIcon;
+  readonly pathname: string;
+}) {
+  const current = isActive(pathname, href);
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      title={label}
+      aria-current={current ? "page" : undefined}
+      className={cn(
+        "grid size-9 place-items-center rounded-control text-ink-2 transition-colors hover:bg-surface-hover hover:text-ink",
+        current && "bg-surface-hover text-ink",
+      )}
+    >
+      <Icon className="size-[18px]" strokeWidth={1.75} />
+    </Link>
+  );
+}
 
 function TabLink({
   href,

@@ -462,6 +462,12 @@ The two inputs to Available: money already obligated and money deliberately set 
 - **Built:** type → amount → what it will do (*before › after* per account, only once the amount and accounts are there) → the relationship rows (Category and Paid from / Received in; From and To with swap and the card-payment label) opening searchable lists inside the dialog, Recent categories first from the remembered defaults → an optional transfer fee with its explicit category → Today · Yesterday · Earlier and "+ Add description" → one navy Save. The preview restates the ledger's sign rule through the domain's `balanceDeltas` over `toLedgerRow`, kept equal to recorded effects by a differential test ([domain-model.md §5](domain-model.md), [design-direction.md §6](design-direction.md)).
 - **Done (2026-10-01):** `8d42599` (balance projection), `ee2beb2` (interaction primitives), `2790ede` (the flow). The full Playwright suite passes on the production build.
 
+#### Guide (2026-11-07)
+- **Question:** *How does FinPilot work, and where do I start?* The product's own ideas (Available, Spoken for, Set aside, Verify) were explained only page by page, never as a whole.
+- **Built:** `/guide`, reached by the **?** beside the Settings gear and from the phone's Menu sheet, outside the sections. How FinPilot works (Record → Verify → Understand → Available), Getting started as six step cards with a Good to know line, a link (Quick Add opens in place) and a simplified drawing each, Words you'll see, and Where things are drawn from the navigation ([design-direction.md §6](design-direction.md)).
+- **Rules:** it reads no data, and every figure is a labelled example, so it never has to agree with the ledger. Every link must be a page in the navigation (a test checks it). No tour and no overlays.
+- **Not built:** a first-run checklist on the Overview (decided 2026-11-07).
+
 #### 13 — Monthly Plan
 - **Question:** *What do I intend to spend or set aside this month, and how did that go?* It is optional, it never feeds Available, and it never rewrites the ledger ([domain-model.md §7](domain-model.md)).
 - **Resolve first:** effective-dated or month-specific intentions (§8.5).

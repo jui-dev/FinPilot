@@ -72,7 +72,7 @@ test("on a phone the Menu sheet reaches every page, and Menu is current where no
 
   const sheet = page.getByRole("dialog", { name: "Menu" });
   await expect(sheet).toBeVisible();
-  await expect(sheet.getByRole("link")).toHaveCount(11);
+  await expect(sheet.getByRole("link")).toHaveCount(12); // ten pages, the Guide and Settings
   await sheet.getByRole("link", { name: /^Calendar/ }).click();
 
   await expect(page).toHaveURL(/\/calendar$/);
@@ -89,4 +89,30 @@ test("on a phone the Menu sheet reaches every page, and Menu is current where no
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow).toBe(0);
+});
+
+test("the ? in the header opens the Guide, whose steps lead to their pages", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 844 });
+  await page.goto("/");
+  const guide = page.getByRole("link", { name: "Guide", exact: true });
+  await expect(guide).not.toHaveAttribute("aria-current");
+  await guide.click();
+
+  await expect(page).toHaveURL(/\/guide$/);
+  await expect(page.getByRole("heading", { level: 1, name: "How FinPilot works" })).toBeVisible();
+  await expect(guide).toHaveAttribute("aria-current", "page");
+  // The Guide belongs to no section: none is current, and there is no section row.
+  await expect(desktopNav(page).locator("[aria-current]")).toHaveCount(0);
+
+  // Step 2 opens Quick Add in place.
+  await expect(async () => {
+    await page.getByRole("button", { name: "Open Quick Add" }).click();
+    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 20_000 });
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toBeHidden();
+
+  // Step 4 leads to its page.
+  await page.getByRole("link", { name: "Open Commitments" }).click();
+  await expect(page).toHaveURL(/\/commitments$/);
 });

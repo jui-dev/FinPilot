@@ -92,7 +92,7 @@ describe("navigation", () => {
   });
 
   it("makes the Menu tab current exactly where no other tab is", () => {
-    for (const path of ["/accounts", "/cash-flow", "/trends", "/calendar", "/settings"]) {
+    for (const path of ["/accounts", "/cash-flow", "/trends", "/calendar", "/settings", "/guide"]) {
       expect(current(path, PHONE_TABS)).toEqual([]);
       expect(menuTabCurrent(path)).toBe(true);
     }

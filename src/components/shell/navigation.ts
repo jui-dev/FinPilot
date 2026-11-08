@@ -18,6 +18,8 @@
  */
 export const HOME_PATH = "/";
 export const SETTINGS_PATH = "/settings";
+/** The Guide: how FinPilot works. Like Settings it belongs to no section; the ? in the header leads there. */
+export const GUIDE_PATH = "/guide";
 
 export interface NavPage {
   readonly href: string;

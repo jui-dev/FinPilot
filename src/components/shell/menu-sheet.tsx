@@ -1,16 +1,16 @@
 "use client";
 
-import { Settings } from "lucide-react";
+import { CircleHelp, Settings, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 
 import { cn } from "../ui/cn";
 import { Modal } from "../ui/overlay";
-import { isActive, SECTIONS, SETTINGS_PATH } from "./navigation";
+import { GUIDE_PATH, isActive, SECTIONS, SETTINGS_PATH } from "./navigation";
 import { PageEntry } from "./section-menu";
 
 /**
  * The phone's Menu tab: every section and page, each with what it answers,
- * and Settings last. A bottom sheet, so every page is two taps from anywhere.
+ * then the Guide and Settings. A bottom sheet, so every page is two taps from anywhere.
  */
 export function MenuSheet({
   open,
@@ -22,7 +22,6 @@ export function MenuSheet({
   readonly pathname: string;
 }) {
   const close = () => onOpenChange(false);
-  const settingsCurrent = isActive(pathname, SETTINGS_PATH);
   return (
     <Modal open={open} onOpenChange={onOpenChange} title="Menu">
       <nav aria-label="All pages" className="-mx-2 flex flex-col divide-y divide-line-soft">
@@ -43,25 +42,58 @@ export function MenuSheet({
           </section>
         ))}
         <div className="pt-1.5">
-          <Link
+          <UtilityEntry
+            href={GUIDE_PATH}
+            label="Guide"
+            icon={CircleHelp}
+            pathname={pathname}
+            onNavigate={close}
+          />
+          <UtilityEntry
             href={SETTINGS_PATH}
-            aria-current={settingsCurrent ? "page" : undefined}
-            onClick={close}
-            className={cn(
-              "flex items-center gap-3 rounded-control px-3 py-2.5 transition-colors",
-              settingsCurrent ? "bg-mist" : "hover:bg-surface-subtle",
-            )}
-          >
-            <span
-              aria-hidden
-              className="grid size-8 shrink-0 place-items-center rounded-control border border-line-soft bg-surface-subtle text-ocean"
-            >
-              <Settings className="size-4" strokeWidth={1.75} />
-            </span>
-            <span className="text-body font-semibold text-ink">Settings</span>
-          </Link>
+            label="Settings"
+            icon={Settings}
+            pathname={pathname}
+            onNavigate={close}
+          />
         </div>
       </nav>
     </Modal>
+  );
+}
+
+/** A page outside the sections, after them: the Guide and Settings. */
+function UtilityEntry({
+  href,
+  label,
+  icon: Icon,
+  pathname,
+  onNavigate,
+}: {
+  readonly href: string;
+  readonly label: string;
+  readonly icon: LucideIcon;
+  readonly pathname: string;
+  readonly onNavigate: () => void;
+}) {
+  const current = isActive(pathname, href);
+  return (
+    <Link
+      href={href}
+      aria-current={current ? "page" : undefined}
+      onClick={onNavigate}
+      className={cn(
+        "flex items-center gap-3 rounded-control px-3 py-2.5 transition-colors",
+        current ? "bg-mist" : "hover:bg-surface-subtle",
+      )}
+    >
+      <span
+        aria-hidden
+        className="grid size-8 shrink-0 place-items-center rounded-control border border-line-soft bg-surface-subtle text-ocean"
+      >
+        <Icon className="size-4" strokeWidth={1.75} />
+      </span>
+      <span className="text-body font-semibold text-ink">{label}</span>
+    </Link>
   );
 }
