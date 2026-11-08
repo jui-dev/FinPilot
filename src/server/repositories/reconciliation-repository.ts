@@ -1,7 +1,7 @@
 import type { AppDatabase } from "@/db/client";
 import { reconciliationCheckpoints } from "@/db/schema";
 import type { CalendarDate } from "@/domain/calendar-date";
-import { signedBalance } from "@/domain/ledger/input";
+import { statedBalance } from "@/domain/ledger/input";
 import { reconcile } from "@/domain/ledger/reconciliation";
 import { money, type Money } from "@/domain/money";
 import type { WriteContext } from "@/server/context";
@@ -21,8 +21,10 @@ import { accountFacts, IMMEDIATE, insertDraft } from "@/server/repositories/ledg
 export interface VerifyBalanceInput {
   readonly accountId: string;
   readonly asOf: CalendarDate;
-  /** The magnitude the person counted; the sign comes from the account's type. */
+  /** The magnitude the person counted; the sign comes from the account's type (and inCredit). */
   readonly countedAmount: Money;
+  /** A card that holds credit rather than owing (docs/domain-model.md §5). Cards only. */
+  readonly inCredit?: boolean;
 }
 
 export interface VerifyBalanceResult {
@@ -57,7 +59,10 @@ export function verifyBalance(
       throw new LedgerRuleError("before_opened_on", "The date is before the account was opened.");
     }
 
-    const stated = signedBalance(account.type, input.countedAmount);
+    const stated = statedBalance(account.type, input.countedAmount, input.inCredit);
+    if (stated === null) {
+      throw new LedgerRuleError("credit_not_liability", "Only a card can be in credit.");
+    }
     const recorded = money(accountBalanceAsOf(tx, ctx.ownerId, input.accountId, input.asOf));
     const { difference, needsAdjustment } = reconcile(recorded, stated);
 

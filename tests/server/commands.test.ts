@@ -304,6 +304,37 @@ describe("accounts", () => {
 });
 
 describe("verifyBalance", () => {
+  it("verifies a card in credit as credit, and an owing card as owed", async () => {
+    const { ctx, visa } = await ledger(); // Visa owes 12,000
+    expect(
+      ok(
+        await verifyBalance(ctx, {
+          accountId: visa,
+          asOf: "2026-09-20",
+          countedAmount: "500",
+          inCredit: true,
+        }),
+      ),
+    ).toMatchObject({ recorded: taka(-12_000), stated: taka(500), difference: taka(12_500) });
+    expect(await balance(ctx, visa)).toBe(taka(500));
+
+    ok(await verifyBalance(ctx, { accountId: visa, asOf: "2026-09-21", countedAmount: "300" }));
+    expect(await balance(ctx, visa)).toBe(taka(-300));
+  });
+
+  it("refuses credit on an account that is not a card", async () => {
+    const { ctx, cash } = await ledger();
+    expect(
+      await verifyBalance(ctx, {
+        accountId: cash,
+        asOf: "2026-09-20",
+        countedAmount: "100",
+        inCredit: true,
+      }),
+    ).toMatchObject({ ok: false, message: "Only a card can be in credit." });
+    expect(await balance(ctx, cash)).toBe(taka(3_000));
+  });
+
   it("records what was counted and reports the correction", async () => {
     const { ctx, cash } = await ledger();
     const result = ok(

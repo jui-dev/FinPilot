@@ -232,7 +232,21 @@ export const verifyBalanceInputSchema = z.object({
   accountId: reference("Choose an account."),
   asOf: date,
   countedAmount: nonNegativeAmount,
+  /** A card holding credit rather than owing: the amount is credit, not debt. Cards only. */
+  inCredit: z.boolean().optional().default(false),
 });
+
+/**
+ * The balance a verification states, signed as the ledger stores it. On a
+ * card the amount is what is owed (stored negative), unless the card is in
+ * credit, when it is the credit it holds (stored positive). Only a liability
+ * can hold credit this way; an asset's balance is simply what is there.
+ * Returns null when `inCredit` is claimed for an asset.
+ */
+export function statedBalance(type: AccountType, amount: Money, inCredit = false): Money | null {
+  if (!inCredit) return signedBalance(type, amount);
+  return accountClass(type) === "liability" ? amount : null;
+}
 
 export type VerifyBalanceInput = z.input<typeof verifyBalanceInputSchema>;
 

@@ -10,6 +10,7 @@ import { formatMoney, type Money as MoneyValue } from "@/domain/money";
 import type { FieldErrors } from "@/server/commands";
 
 import { Button } from "../ui/button";
+import { Segmented } from "../ui/choice";
 import { errorProps, Field, FormMessage } from "../ui/field";
 import { Money } from "../ui/money";
 import { MoneyInput } from "../ui/money-input";
@@ -51,13 +52,15 @@ export function VerifyBalanceButton({
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  const owed = accountClass(type) === "liability";
-  // A liability's balance is negative when money is owed; the person states the
-  // amount owed as a positive number, and the ledger re-applies the sign. The
-  // recorded balance reads as owed or as credit; the question still asks for
-  // an amount owed, so a card's credit cannot be stated here (a known V1
-  // limitation, docs/roadmap.md §8.5).
+  const card = accountClass(type) === "liability";
+  // A card's balance is negative when money is owed, positive when it holds
+  // credit. The person states a magnitude and says which; the ledger applies
+  // the sign. The switch starts where the recorded balance stands.
   const recorded = balanceReading(type, balance);
+  const [standing, setStanding] = useState<"owe" | "credit">(
+    recorded.note === "credit" ? "credit" : "owe",
+  );
+  const inCredit = card && standing === "credit";
   const recordedLabel =
     recorded.note === "owed"
       ? "Recorded as owed"
@@ -69,7 +72,12 @@ export function VerifyBalanceButton({
     setPending(true);
     setErrors({});
     setMessage(null);
-    const result = await verifyBalanceAction({ accountId: id, asOf: today, countedAmount });
+    const result = await verifyBalanceAction({
+      accountId: id,
+      asOf: today,
+      countedAmount,
+      inCredit,
+    });
     setPending(false);
     if (!result.ok) {
       setErrors(result.fieldErrors);
@@ -95,6 +103,7 @@ export function VerifyBalanceButton({
         icon={<CheckCircle2 className="size-4" />}
         onClick={() => {
           setCountedAmount("");
+          setStanding(recorded.note === "credit" ? "credit" : "owe");
           setErrors({});
           setMessage(null);
           setOpen(true);
@@ -125,8 +134,26 @@ export function VerifyBalanceButton({
             </span>
           </div>
 
+          {card && (
+            <Segmented
+              label="The card"
+              value={standing}
+              onChange={setStanding}
+              options={[
+                { value: "owe", label: "You owe" },
+                { value: "credit", label: "In credit" },
+              ]}
+            />
+          )}
+
           <Field
-            label={owed ? "How much do you actually owe?" : "How much is actually there?"}
+            label={
+              !card
+                ? "How much is actually there?"
+                : inCredit
+                  ? "How much credit does the card hold?"
+                  : "How much do you actually owe?"
+            }
             htmlFor="verify-counted"
             error={errors.countedAmount}
             hint="Enter zero if it is empty."
