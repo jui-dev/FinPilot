@@ -325,3 +325,35 @@ test("an archived account's entries open read-only, with the way back", async ({
   await expect(panel.getByRole("button", { name: "Save changes" })).toHaveCount(0);
   await expect(panel.getByRole("link", { name: "Accounts" })).toHaveAttribute("href", "/accounts");
 });
+
+for (const delay of [0, 150]) {
+  test(`a row opened ${delay} ms into a typed search stays open when the search lands`, async ({
+    page,
+  }) => {
+    await page.goto("/activity");
+    await filtersReady(page);
+    const row = page.locator('main a[href*="tx="]').first();
+    const tx = new URL((await row.getAttribute("href"))!, page.url()).searchParams.get("tx")!;
+
+    // A search nothing matches, still settling (250 ms) when the row is opened.
+    const query = `nothing-matches-${Date.now().toString(36)}`;
+    await search(page).fill(query);
+    if (delay) await page.waitForTimeout(delay);
+    await row.click();
+
+    // The search lands: the list behind follows it, and the opened row stays open.
+    await expect(page).toHaveURL(new RegExp(`q=${query}`));
+    await expect(page).toHaveURL(new RegExp(`tx=${tx}`));
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(page.getByText("Nothing matches these filters")).toBeAttached();
+
+    // Closing it keeps the search, and the panel stays closed as typing goes on.
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect(page).not.toHaveURL(/tx=/);
+    await search(page).fill(`${query}-more`);
+    await expect(page).toHaveURL(new RegExp(`q=${query}-more`));
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect(page).not.toHaveURL(/tx=/);
+  });
+}

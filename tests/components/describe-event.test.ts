@@ -82,7 +82,9 @@ describe("how an Activity row reads in columns", () => {
       account: { label: "City Bank", icon: accountIcon("bank") },
       amount: taka(95_000),
       sign: "always",
-      amountClass: "text-positive",
+      // The type's mark (mist), and a plus; never green.
+      tone: "info",
+      amountClass: "text-ink",
     });
   });
 
@@ -99,7 +101,9 @@ describe("how an Activity row reads in columns", () => {
       title: "Returned sandals",
       category: "Shopping",
       detail: "Refund of Bata",
-      tag: { label: "Refund", tone: "positive" },
+      // It gives money back to a spending category: the warm family.
+      tone: "warm",
+      tag: { label: "Refund", tone: "info" },
       amount: taka(800),
       sign: "always",
     });
@@ -194,5 +198,23 @@ describe("which archived account freezes an Activity event", () => {
     });
     expect(archivedAccountOf(withFee, accounts("visa"))).toBe("Visa card");
     expect(archivedAccountOf(withFee, accounts("visa", "bank"))).toBe("City Bank");
+  });
+});
+
+describe("each entry type's mark, as Quick Add and Categories draw it", () => {
+  it("is warm for spending, mist for income, an ocean tint for transfers, neutral otherwise", () => {
+    const tone = (r: ActivityRow) => describeEvent(item(r)).tone;
+    expect(tone(row("expense", -450))).toBe("warm");
+    expect(tone(row("income", 1_000))).toBe("info");
+    expect(tone(row("refund", 200))).toBe("warm");
+    expect(tone(row("transfer", -500, { counterAccount: bank }))).toBe("transfer");
+    expect(tone(row("opening_balance", 3_000))).toBe("neutral");
+    expect(tone(row("adjustment", -50))).toBe("neutral");
+  });
+
+  it("never colours an amount green or red", () => {
+    for (const r of [row("expense", -450), row("income", 1_000), row("refund", 200)]) {
+      expect(describeEvent(item(r)).amountClass).not.toMatch(/positive|negative/);
+    }
   });
 });

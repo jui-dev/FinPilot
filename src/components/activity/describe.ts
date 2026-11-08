@@ -60,7 +60,7 @@ export function describeEvent(item: ActivityItem, perspectiveAccountId?: string)
         account: own,
         detail: note,
         icon: categoryIcon(row.category?.name),
-        tone: "neutral",
+        tone: "warm",
         tag: null,
         amount: negate(magnitude),
         sign: "negative",
@@ -77,11 +77,11 @@ export function describeEvent(item: ActivityItem, perspectiveAccountId?: string)
         account: own,
         detail: note,
         icon: categoryIcon(row.category?.name),
-        tone: "positive",
+        tone: "info",
         tag: null,
         amount: magnitude,
         sign: "always",
-        amountClass: "text-positive",
+        amountClass: "text-ink",
         fee: null,
       };
     }
@@ -96,11 +96,11 @@ export function describeEvent(item: ActivityItem, perspectiveAccountId?: string)
         // The title already names the original when there is no description.
         detail: note ?? (row.description && original ? `Refund of ${original}` : null),
         icon: RefundIcon,
-        tone: "positive",
-        tag: { label: "Refund", tone: "positive" },
+        tone: "warm",
+        tag: { label: "Refund", tone: "info" },
         amount: magnitude,
         sign: "always",
-        amountClass: "text-positive",
+        amountClass: "text-ink",
         fee: null,
       };
     }
@@ -120,7 +120,7 @@ export function describeEvent(item: ActivityItem, perspectiveAccountId?: string)
         account: { label: route, icon: null },
         detail: note,
         icon: TransferIcon,
-        tone: "info",
+        tone: "transfer",
         tag: cardPayment ? { label: "Card payment", tone: "info" } : null,
         amount: outgoing ? negate(magnitude) : magnitude,
         sign: incoming ? "always" : outgoing ? "negative" : "none",

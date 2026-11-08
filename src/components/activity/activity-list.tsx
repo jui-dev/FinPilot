@@ -124,9 +124,10 @@ function ActivityRow({
           open ? "bg-mist" : "hover:bg-mist/25",
         )}
       >
-        {/* One treatment for every row, as on Cash flow: the icon names the kind;
-            direction is carried by the amount's sign and colour. */}
-        <Glyph icon={event.icon} tone="info" className="col-start-1 row-[1/3] md:size-8" />
+        {/* The entry type's mark, as Quick Add and Categories draw it: expenses
+            warm, income mist, transfers an ocean tint. The icon names the kind;
+            direction is carried by the amount's sign, never red or green. */}
+        <Glyph icon={event.icon} tone={event.tone} className="col-start-1 row-[1/3] md:size-8" />
 
         <span
           className={cn(

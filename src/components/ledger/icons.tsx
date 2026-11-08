@@ -61,7 +61,14 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   "Fees & Charges": Receipt,
 };
 
-export type GlyphTone = "neutral" | "positive" | "info" | "warm";
+export type GlyphTone = "neutral" | "positive" | "info" | "warm" | "transfer";
+
+/**
+ * A transfer's mark: money staying yours, in an ocean tint. Quick Add's
+ * Transfer and Activity's transfer rows share it (docs/design-direction.md §2).
+ */
+export const TRANSFER_MARK =
+  "bg-[color-mix(in_srgb,var(--color-ocean)_14%,var(--color-surface))] text-navy";
 
 const tones: Record<GlyphTone, string> = {
   neutral: "bg-surface-hover text-ink-2",
@@ -69,6 +76,7 @@ const tones: Record<GlyphTone, string> = {
   info: "bg-mist text-ocean",
   /** The warm spending family (a soft coral tint): Expense Categories. */
   warm: "bg-[color-mix(in_srgb,var(--color-coral)_16%,var(--color-surface-hover))] text-ink-2",
+  transfer: TRANSFER_MARK,
 };
 
 /** A small round icon badge in front of a row. */

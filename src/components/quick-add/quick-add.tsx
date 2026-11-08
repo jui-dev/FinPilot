@@ -19,6 +19,7 @@ import {
   accountIcon,
   categoryIcon,
   Glyph,
+  TRANSFER_MARK,
   TransferIcon,
   type GlyphTone,
 } from "../ledger/icons";
@@ -72,7 +73,7 @@ const TYPES: Record<
   transfer: {
     label: "Transfer",
     icon: TransferIcon,
-    mark: "bg-[color-mix(in_srgb,var(--color-ocean)_14%,var(--color-surface))] text-navy",
+    mark: TRANSFER_MARK,
   },
 };
 

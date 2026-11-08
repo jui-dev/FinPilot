@@ -1,7 +1,7 @@
 "use client";
 
 import { LoaderCircle, Search, X } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import { inclusiveRange } from "@/domain/calendar-date";
@@ -86,6 +86,28 @@ export function ActivityFilters({
     requested.current = values;
   }, [values, pending]);
 
+  // The transaction a row click asked to open, until the URL shows it open. A
+  // search typed just before the click can land after it; without this it
+  // would rebuild the URL from the filters alone and close what was opened.
+  // The click wins: the panel stays, and the list behind it follows the search
+  // (even when the opened row is no longer in it).
+  const opening = useRef<string | null>(null);
+  const openTx = useSearchParams().get("tx");
+  useEffect(() => {
+    if (openTx && openTx === opening.current) opening.current = null;
+  }, [openTx]);
+  useEffect(() => {
+    const onClick = (event: MouseEvent) => {
+      const link = (event.target as HTMLElement | null)?.closest<HTMLAnchorElement>("a[href]");
+      if (!link) return;
+      const url = new URL(link.href, window.location.href);
+      const tx = url.pathname === window.location.pathname ? url.searchParams.get("tx") : null;
+      if (tx) opening.current = tx;
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, []);
+
   const apply = (changes: Partial<FilterValues>) => {
     const next = { ...requested.current, ...changes };
     requested.current = next;
@@ -93,6 +115,9 @@ export function ActivityFilters({
     if (changes.q !== undefined) setText(changes.q);
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(next)) if (value) params.set(key, value);
+    // An open transaction stays open, whether its URL has landed or only its click.
+    const tx = new URLSearchParams(window.location.search).get("tx") ?? opening.current;
+    if (tx) params.set("tx", tx);
     const query = params.toString();
     startTransition(() =>
       router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false }),
@@ -165,7 +190,7 @@ export function ActivityFilters({
           type="search"
           value={text}
           onChange={(event) => setText(event.target.value)}
-          placeholder="Search description, category, account or amount"
+          placeholder="Search transactions or an amount"
           aria-label="Search transactions"
           className={cn(controlClass({ size: "sm", subtle: true }), "pr-9 pl-9 max-md:h-10")}
         />
