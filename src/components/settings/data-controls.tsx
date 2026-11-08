@@ -1,7 +1,7 @@
 "use client";
 
 import { RotateCcw, Trash2 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 
 import { clearAllDataAction, resetDemoDataAction } from "@/app/_server/actions";
 import { CLEAR_CONFIRMATION } from "@/domain/clear-confirmation";
@@ -11,6 +11,7 @@ import { Field, FormMessage, Input } from "../ui/field";
 import { Modal } from "../ui/overlay";
 import { Panel, PanelHeader } from "../ui/panel";
 import { useToast } from "../ui/toast";
+import { ControlRow } from "./control-row";
 
 /** Shown when an action fails unexpectedly: both operations are all-or-nothing. */
 const UNEXPECTED = "Something went wrong, and nothing was changed. Try again.";
@@ -42,32 +43,12 @@ export function DataControls() {
         />
         <ControlRow
           title="Clear all data"
-          description="Permanently remove your financial records and return FinPilot to a fresh-start state."
+          description="Permanently remove your financial records and return FinPilot to a fresh-start state. Download a backup first if you may want them back."
         >
           <ClearAll />
         </ControlRow>
       </Panel>
     </>
-  );
-}
-
-function ControlRow({
-  title,
-  description,
-  children,
-}: {
-  readonly title: string;
-  readonly description: string;
-  readonly children: ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 md:px-5">
-      <div className="min-w-0">
-        <h3 className="text-body font-semibold">{title}</h3>
-        <p className="mt-0.5 max-w-prose text-meta text-ink-2">{description}</p>
-      </div>
-      <div className="shrink-0">{children}</div>
-    </div>
   );
 }
 

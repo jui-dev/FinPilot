@@ -468,6 +468,13 @@ The two inputs to Available: money already obligated and money deliberately set 
 - **Rules:** it reads no data, and every figure is a labelled example, so it never has to agree with the ledger. Every link must be a page in the navigation (a test checks it). No tour and no overlays.
 - **Not built:** a first-run checklist on the Overview (decided 2026-11-07).
 
+#### Export and backup (2026-11-08)
+- **Question:** *How do I keep a copy of my data, or take it somewhere else?* The ledger lived in one SQLite file, and Settings could clear it but not save it.
+- **Built:** Settings' **Your data**, always offered (it changes nothing, so it is not behind `FINPILOT_DATA_CONTROLS`): **Download backup** (`GET /export/backup`) and **Export transactions** (`GET /export/transactions`), built fresh on each request and never cached.
+  - **Backup (JSON):** `format: "finpilot-backup"`, `version: 1`, the schema it was written in (applied migrations), the owner's settings and every owned table as stored, parents first, deleted entries included, read in one transaction so the tables agree. Only the owner's own rows.
+  - **Transactions (CSV):** every active transaction, oldest first: Date, Type, Amount (signed effect on Account, a plain decimal), Account, To account, Category, Description, Note. A transfer is one row and its fee its own expense row. UTF-8 with a byte-order mark for Excel; text a spreadsheet would run as a formula is prefixed with an apostrophe.
+- **Next:** restore from a backup, through the same whole-ledger replace that Reset to demo data uses (`replaceOwnerData`).
+
 #### 13 — Monthly Plan
 - **Cut from V1 (2026-11-08, owner's decision).** It answers a question FinPilot's core does not need (it never feeds Available), and V1 is closed without it: A-40 and M1-4 stay deferred, as the V1 exit criterion already allows. What follows is kept as the design if it is ever reopened.
 - **Question:** *What do I intend to spend or set aside this month, and how did that go?* It is optional, it never feeds Available, and it never rewrites the ledger ([domain-model.md §7](domain-model.md)).

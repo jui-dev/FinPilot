@@ -1,4 +1,4 @@
-import { eq, getTableColumns, sql } from "drizzle-orm";
+import { eq, getTableColumns, getTableName, sql } from "drizzle-orm";
 
 import type { AppDatabase, SyncDb } from "@/db/client";
 import { OWNED_TABLES, OWNED_TABLES_CHILDREN_FIRST } from "@/db/owned-tables";
@@ -151,6 +151,43 @@ export function replaceOwnerData(
     assertNoBrokenReferences(tx);
     return target;
   }, IMMEDIATE);
+}
+
+/** One owner's whole ledger, as stored: what a backup holds. */
+export interface OwnerDataSnapshot {
+  /** How many schema migrations the database has applied: the shape the rows are in. */
+  readonly appliedMigrations: number;
+  readonly owner: Record<string, unknown>;
+  /** Every owned table by its name, parents first, rows in insertion order, deleted ones included. */
+  readonly tables: ReadonlyArray<{
+    readonly name: string;
+    readonly rows: Record<string, unknown>[];
+  }>;
+}
+
+/**
+ * Reads the owner's ledger, every owned table as stored, in one read
+ * transaction so the tables agree with each other even while something else
+ * writes. Soft-deleted rows are included: a backup keeps what Undo can restore.
+ */
+export function readOwnerData(db: AppDatabase, ownerId: string): OwnerDataSnapshot {
+  return db.transaction((tx) => {
+    const owner = tx.all<Record<string, unknown>>(
+      sql`SELECT * FROM ${owners} WHERE id = ${ownerId}`,
+    )[0];
+    if (!owner) throw new LedgerRuleError("owner_not_found", "The owner does not exist.");
+    const migrations = tx.all<{ n: number }>(sql`SELECT count(*) AS n FROM __drizzle_migrations`);
+    return {
+      appliedMigrations: Number(migrations[0]?.n ?? 0),
+      owner,
+      tables: OWNED_TABLES.map((table) => ({
+        name: getTableName(table),
+        rows: tx.all<Record<string, unknown>>(
+          sql`SELECT * FROM ${table} WHERE owner_id = ${ownerId} ORDER BY rowid`,
+        ),
+      })),
+    };
+  });
 }
 
 function insertRows(
